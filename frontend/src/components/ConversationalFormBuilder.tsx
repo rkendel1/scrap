@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
+import { Mail, Sheet, Slack, Link, Zap } from 'lucide-react'; // Import Lucide icons
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
@@ -60,11 +61,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
 
-  const destinationIcons: Record<string, string> = {
-    email: '📧',
-    googlesheets: '📊',
-    slack: '💬',
-    webhook: '🔗',
+  const destinationIcons: Record<string, JSX.Element> = {
+    email: <Mail size={16} />,
+    googlesheets: <Sheet size={16} />,
+    slack: <Slack size={16} />,
+    webhook: <Link size={16} />,
+    zapier: <Zap size={16} />, // Added Zapier icon
   };
 
   // List of predefined form purposes for matching
@@ -90,7 +92,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       summaryParts.push(`🎯 ${formData.purpose}`);
     }
     if (formData.destinationType) {
-      const icon = destinationIcons[formData.destinationType] || '';
+      const icon = destinationIcons[formData.destinationType] ? ' ' : ''; // Placeholder for icon
       summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
     }
     setCurrentContextSummary(summaryParts.join(' | '));
@@ -206,7 +208,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
 
     // Check for destination type
-    const destinationKeywords = ['email', 'google sheets', 'slack', 'webhook'];
+    const destinationKeywords = ['email', 'google sheets', 'slack', 'webhook', 'zapier']; // Added Zapier
     for (const keyword of destinationKeywords) {
       if (lowerInput.includes(keyword)) {
         parsed.destinationType = keyword.replace(/\s/g, ''); // Normalize to 'googlesheets'
@@ -288,10 +290,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           } else {
             // If it's not a destination type, it's an invalid input for this step.
             // Provide a clear error message and re-prompt for destination type.
-            addError('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
+            addError('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".');
             addPrompt(
               "Where should I send the form submissions?",
-              ['Email', 'Google Sheets', 'Slack', 'Webhook']
+              ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier'] // Added Zapier
             );
           }
           break;
@@ -317,6 +319,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                         break;
                     case 'webhook':
                         configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
+                        break;
+                    case 'zapier':
+                        configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").';
                         break;
                 }
                 addPrompt(configPrompt); // No quick responses here, just the prompt
@@ -439,21 +444,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     setCurrentStep('ASK_DESTINATION_TYPE'); 
     addPrompt(
-      `Excellent! I've instantly generated a form for "${purpose}" using the extracted design tokens. You can see it live on the right. Where should this data go when submitted?`,
-      ['Email', 'Google Sheets', 'Slack', 'Webhook'] // Pass string array
+      <>
+        Excellent! I've instantly generated a form for "{purpose}" using the extracted design tokens. You can see it live on the right. Where should this data go when submitted?
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>Choose a destination:</div>
+      </>,
+      ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier'] // Added Zapier
     );
   };
 
   const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
-    const availableTypes = ['email', 'googlesheets', 'slack', 'webhook']; // Match backend connector types
+    const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier']; // Match backend connector types
 
     if (!availableTypes.includes(normalizedType)) {
-      addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, or Webhook.');
+      addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.');
       // Re-prompt with quick responses
       addPrompt(
-        "Where should I send the form submissions?",
-        ['Email', 'Google Sheets', 'Slack', 'Webhook']
+        <>
+          Where should I send the form submissions?
+          <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>Choose a destination:</div>
+        </>,
+        ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
       );
       return;
     }
@@ -479,6 +490,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
         case 'webhook':
           configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
+          break;
+        case 'zapier':
+          configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").';
           break;
       }
       addPrompt(configPrompt);
@@ -520,7 +534,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         break;
       case 'slack':
       case 'webhook':
-        expectedInputPrompt = 'Please provide a valid URL for the webhook (e.g., "https://hooks.slack.com/services/...").';
+      case 'zapier': // Zapier also uses a webhook URL
+        expectedInputPrompt = 'Please provide a valid URL for the webhook (e.g., "https://hooks.slack.com/services/..." or "https://hooks.zapier.com/hooks/catch/...").';
         if (!/^https?:\/\/\S+/.test(configInput)) {
           validationError = 'That doesn\'t look like a valid URL.';
         } else {
@@ -621,6 +636,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const getDestinationLabel = (type: string) => {
+    switch (type) {
+      case 'email': return 'Email';
+      case 'googlesheets': return 'Google Sheets';
+      case 'slack': return 'Slack';
+      case 'webhook': return 'Webhook';
+      case 'zapier': return 'Zapier';
+      default: return type;
+    }
+  };
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
@@ -652,12 +677,20 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           ))}
           {/* Quick responses rendered *inside* the chat history div, at the end */}
           {currentQuickResponses && (
-            <div className="quick-reply-container">
-              {currentQuickResponses.map((response, idx) => (
-                <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
-                  {response}
-                </button>
-              ))}
+            <div style={{ width: '100%' }}> {/* Wrapper for quick responses */}
+              {currentStep === 'ASK_DESTINATION_TYPE' && (
+                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                  Use the buttons above to select your destination
+                </div>
+              )}
+              <div className="quick-reply-container">
+                {currentQuickResponses.map((response, idx) => (
+                  <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
+                    {destinationIcons[response.toLowerCase().replace(/\s/g, '')]}
+                    {getDestinationLabel(response.toLowerCase().replace(/\s/g, ''))}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -668,7 +701,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder={isLoading ? 'Please wait...' : 'Choose destination (Email, Google Sheets, Slack, Webhook)'}
+          placeholder={isLoading ? 'Please wait...' : 'Type your response here... (e.g., "help" or "start over")'}
           className="form-input"
           disabled={isLoading}
         />
