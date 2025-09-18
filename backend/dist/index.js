@@ -9,6 +9,7 @@ const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const extractor_1 = require("./extractor");
 const database_service_1 = require("./database-service");
 const auth_service_1 = require("./auth-service");
@@ -26,11 +27,33 @@ const authService = new auth_service_1.AuthService();
 const llmService = new llm_service_1.LLMService();
 const saasService = new saas_service_1.SaaSService();
 // Middleware
-app.use((0, helmet_1.default)());
-// CORS configuration
+app.use('/embed.html', (req, res, next) => {
+    // Disable CSP for embed.html
+    res.removeHeader('Content-Security-Policy');
+    next();
+});
+app.use('/embed.js', (req, res, next) => {
+    // Disable CSP for embed.js
+    res.removeHeader('Content-Security-Policy');
+    next();
+});
+app.use((0, helmet_1.default)({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "http://localhost:3001"],
+            frameAncestors: ["*"], // Allow embedding in any frame
+        },
+    },
+    frameguard: false, // Disable frame guard to allow embedding
+}));
+// CORS configuration - Allow all origins for embed functionality
 const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true,
+    origin: true, // Allow all origins for embed script
+    credentials: false, // Don't need credentials for embed
     methods: ['GET', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 };
@@ -437,6 +460,170 @@ app.patch('/api/forms/:id/toggle-live', authService.authenticateToken, async (re
         res.status(500).json({
             error: 'Failed to toggle form status',
             message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Development: Create test form (remove in production)
+app.post('/api/dev/create-test-form', async (req, res) => {
+    try {
+        // Create a test form directly in the database
+        const testForm = {
+            user_id: null,
+            guest_token_id: null,
+            url: 'https://example.com',
+            form_name: 'Test Contact Form',
+            form_description: 'A test form for embed functionality',
+            is_live: true,
+            embed_code: 'test_embed_123',
+            title: 'Contact Us',
+            description: 'Get in touch with our team',
+            favicon: 'https://example.com/favicon.ico',
+            color_palette: JSON.stringify(['#007bff', '#6c757d', '#28a745']),
+            primary_colors: JSON.stringify(['#007bff']),
+            color_usage: JSON.stringify({}),
+            font_families: JSON.stringify(['system-ui', 'Arial']),
+            headings: JSON.stringify([]),
+            text_samples: JSON.stringify([]),
+            margins: JSON.stringify([]),
+            paddings: JSON.stringify([]),
+            spacing_scale: JSON.stringify([]),
+            layout_structure: JSON.stringify({}),
+            grid_system: JSON.stringify({}),
+            breakpoints: JSON.stringify([]),
+            buttons: JSON.stringify([]),
+            form_fields: JSON.stringify([
+                { type: 'text', name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+                { type: 'email', name: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+                { type: 'textarea', name: 'message', label: 'Message', placeholder: 'Your message', required: true }
+            ]),
+            cards: JSON.stringify([]),
+            navigation: JSON.stringify([]),
+            images: JSON.stringify([]),
+            css_variables: JSON.stringify({}),
+            raw_css: '',
+            form_schema: JSON.stringify([{
+                    title: 'Contact Us',
+                    description: 'Get in touch with our team',
+                    fields: [
+                        { type: 'text', name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+                        { type: 'email', name: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+                        { type: 'textarea', name: 'message', label: 'Message', placeholder: 'Your message', required: true }
+                    ],
+                    ctaText: 'Send Message',
+                    thankYouMessage: 'Thank you for your message! We\'ll get back to you soon.',
+                    styling: {
+                        primaryColor: '#007bff',
+                        backgroundColor: '#ffffff',
+                        fontFamily: 'system-ui',
+                        borderRadius: '8px'
+                    }
+                }]),
+            logo_url: '',
+            brand_colors: JSON.stringify(['#007bff']),
+            icons: JSON.stringify([]),
+            messaging: JSON.stringify([]),
+            preview_html: '',
+            voice_tone: JSON.stringify({}),
+            personality_traits: JSON.stringify([]),
+            audience_analysis: JSON.stringify({}),
+            extracted_at: new Date().toISOString()
+        };
+        // Insert into forms table
+        const formQuery = `
+      INSERT INTO forms (
+        user_id, guest_token_id, url, form_name, form_description, 
+        is_live, embed_code, title, description, favicon,
+        color_palette, primary_colors, color_usage, font_families, 
+        headings, text_samples, margins, paddings, spacing_scale,
+        layout_structure, grid_system, breakpoints, buttons, 
+        form_fields, cards, navigation, images, css_variables, 
+        raw_css, form_schema, logo_url, brand_colors, icons, 
+        messaging, preview_html, voice_tone, personality_traits, 
+        audience_analysis, extracted_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23, $24, $25, $26, $27, $28,
+        $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39
+      )
+      ON CONFLICT (embed_code) DO UPDATE SET
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+        const formValues = [
+            testForm.user_id, testForm.guest_token_id, testForm.url, testForm.form_name, testForm.form_description,
+            testForm.is_live, testForm.embed_code, testForm.title, testForm.description, testForm.favicon,
+            testForm.color_palette, testForm.primary_colors, testForm.color_usage, testForm.font_families,
+            testForm.headings, testForm.text_samples, testForm.margins, testForm.paddings, testForm.spacing_scale,
+            testForm.layout_structure, testForm.grid_system, testForm.breakpoints, testForm.buttons,
+            testForm.form_fields, testForm.cards, testForm.navigation, testForm.images, testForm.css_variables,
+            testForm.raw_css, testForm.form_schema, testForm.logo_url, testForm.brand_colors, testForm.icons,
+            testForm.messaging, testForm.preview_html, testForm.voice_tone, testForm.personality_traits,
+            testForm.audience_analysis, testForm.extracted_at
+        ];
+        const formResult = await database_1.default.query(formQuery, formValues);
+        const createdForm = formResult.rows[0];
+        // Create embed code record
+        await database_1.default.query(`
+      INSERT INTO embed_codes (form_id, code, is_active)
+      VALUES ($1, $2, true)
+      ON CONFLICT (code) DO UPDATE SET
+        is_active = true, form_id = $1
+    `, [createdForm.id, testForm.embed_code]);
+        res.json({
+            success: true,
+            message: 'Test form created successfully',
+            form: createdForm,
+            embedCode: testForm.embed_code,
+            testUrl: `http://localhost:${PORT}/embed.html?code=${testForm.embed_code}`
+        });
+    }
+    catch (error) {
+        console.error('Create test form error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create test form',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Serve embed.html for testing
+app.get('/embed.html', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow framing
+    res.removeHeader('X-Frame-Options'); // Remove default frame blocking
+    res.sendFile(path_1.default.join(__dirname, '../../frontend/public/embed.html'));
+});
+// Serve embed.js script
+app.get('/embed.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for embed script
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.sendFile(path_1.default.join(__dirname, '../../frontend/public/embed.js'));
+});
+// Get form data by embed code (public endpoint)
+app.get('/api/forms/embed/:embedCode', async (req, res) => {
+    try {
+        const { embedCode } = req.params;
+        const formData = await saasService.getFormByEmbedCode(embedCode);
+        if (!formData) {
+            return res.status(404).json({
+                success: false,
+                message: 'Form not found or not active'
+            });
+        }
+        res.json({
+            success: true,
+            data: formData
+        });
+    }
+    catch (error) {
+        console.error('Get form by embed code error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch form data'
         });
     }
 });

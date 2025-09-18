@@ -383,10 +383,11 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
 const Step4Preview: React.FC<{ 
   formData: FormData; 
   generatedForm: any; 
+  createdForm: any;
   user?: any; 
   onFormGenerated: (form: any) => void;
   onBack: () => void;
-}> = ({ formData, generatedForm, user, onFormGenerated, onBack }) => {
+}> = ({ formData, generatedForm, createdForm, user, onFormGenerated, onBack }) => {
   const [showEmbedCode, setShowEmbedCode] = useState(false);
 
   const handlePreviewSubmit = (data: any) => {
@@ -400,7 +401,7 @@ const Step4Preview: React.FC<{
       return;
     }
     setShowEmbedCode(true);
-    onFormGenerated(generatedForm);
+    onFormGenerated(createdForm); // Pass the full form object instead of just generatedForm
   };
 
   return (
@@ -480,10 +481,10 @@ const Step4Preview: React.FC<{
             color: '#333',
             overflowX: 'auto'
           }}>
-            {`<script src="https://formcraft.ai/embed.js" data-form-id="${generatedForm.id}"></script>`}
+            {`<iframe src="https://formcraft.ai/embed.html?code=${createdForm?.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`}
           </div>
           <button 
-            onClick={() => navigator.clipboard.writeText(`<script src="https://formcraft.ai/embed.js" data-form-id="${generatedForm.id}"></script>`)}
+            onClick={() => navigator.clipboard.writeText(`<iframe src="https://formcraft.ai/embed.html?code=${createdForm?.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`)}
             className="btn btn-secondary"
             style={{ marginTop: '12px', fontSize: '14px' }}
           >
@@ -520,6 +521,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<FormData>>({});
   const [generatedForm, setGeneratedForm] = useState(null);
+  const [createdForm, setCreatedForm] = useState(null); // Store the full form object
   const [isLoading, setIsLoading] = useState(false);
 
   const handleNext = async (stepData: Partial<FormData>) => {
@@ -560,6 +562,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         
         if (result.success) {
           setGeneratedForm(result.generatedForm);
+          setCreatedForm(result.form); // Store the full form object with embed code
           setCurrentStep(4);
         } else {
           alert(result.error || 'Failed to generate form');
@@ -683,6 +686,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         <Step4Preview 
           formData={formData as FormData}
           generatedForm={generatedForm}
+          createdForm={createdForm}
           user={user}
           onFormGenerated={onFormGenerated}
           onBack={handleBack}
