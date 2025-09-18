@@ -61,6 +61,32 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
 
+  const destinationIcons: Record<string, string> = {
+    email: '📧',
+    googlesheets: '📊',
+    slack: '💬',
+    webhook: '🔗',
+  };
+
+  // Helper to build the context summary string
+  const buildContextSummary = () => {
+    let summaryParts: string[] = [];
+    if (formData.url) {
+      summaryParts.push(`🌐 ${formData.url.length > 30 ? formData.url.substring(0, 27) + '...' : formData.url}`);
+    }
+    if (formData.purpose) {
+      summaryParts.push(`🎯 ${formData.purpose}`);
+    }
+    if (formData.formLayout) {
+      summaryParts.push(`🖼️ ${formData.formLayout.charAt(0).toUpperCase() + formData.formLayout.slice(1)}`);
+    }
+    if (formData.destinationType) {
+      const icon = destinationIcons[formData.destinationType] || '';
+      summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
+    }
+    setCurrentContextSummary(summaryParts.join(' | '));
+  };
+
   // Scroll to bottom of chat history
   useEffect(() => {
     if (chatHistoryRef.current) {
@@ -77,6 +103,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       extractedDesignTokens,
       extractedVoiceAnalysis,
     });
+    buildContextSummary(); // Update summary whenever formData changes
   }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
 
   const addEntry = (entry: ConversationEntry) => {
@@ -206,7 +233,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setExtractedDesignTokens(designTokens);
     setExtractedVoiceAnalysis(voiceAnalysis);
     setFormData((prev) => ({ ...prev, url }));
-    setCurrentContextSummary(`Current Form: ${url}`);
 
 
     addSuccess('Website analyzed! Now, tell me: What is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
@@ -256,7 +282,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(generateResult.generatedForm);
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
-    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${purpose}`);
 
 
     addPrompt(
@@ -287,7 +312,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     // Update the generated form's layout in state
     setGeneratedForm(prev => prev ? { ...prev, formLayout: normalizedLayout as any } : null);
     setFormData(prev => ({ ...prev, formLayout: normalizedLayout as any }));
-    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${formData.purpose} | Layout: ${layoutInput}`);
+
 
     addPrompt(
       <>
@@ -318,7 +343,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     setSelectedDestinationType(normalizedType);
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
-    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${formData.purpose} | Destination: ${typeInput}`);
 
 
     // Prompt for config based on type
@@ -452,7 +476,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setSelectedDestinationType(null);
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
-      setCurrentContextSummary('');
     } else if (userInput.toLowerCase() === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -467,7 +490,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Form Chatbot</h2>
+      {/* Removed: <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Form Chatbot</h2> */}
       
       {currentContextSummary && (
         <div style={{
@@ -480,40 +503,41 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           color: '#1565c0',
           fontWeight: '500'
         }}>
-          Current Conversation Context: {currentContextSummary}
+          Current Form: {currentContextSummary}
         </div>
       )}
 
       <div
         ref={chatHistoryRef}
         style={{
-          flexGrow: 0, 
+          flexGrow: 1, 
           height: '400px', 
           border: '1px solid #e1e5e9',
-          borderRadius: '8px',
+          borderRadius: '12px',
           padding: '20px',
           overflowY: 'auto',
           marginBottom: '20px',
-          backgroundColor: '#f8f9fa',
+          backgroundColor: '#f0f2f5',
           display: 'flex',
           flexDirection: 'column',
-          gap: '15px',
+          gap: '12px',
+          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
         }}
       >
         {conversationHistory.map((entry, index) => (
           <div key={index} style={{ display: 'flex', flexDirection: entry.type === 'user' ? 'row-reverse' : 'row' }}>
             <div
               style={{
-                maxWidth: '80%',
-                padding: '10px 15px',
-                borderRadius: '18px',
+                maxWidth: '75%',
+                padding: '12px 18px',
+                borderRadius: '20px',
                 fontSize: '15px',
                 lineHeight: '1.4',
                 backgroundColor:
                   entry.type === 'user'
                     ? '#007bff'
                     : entry.type === 'prompt'
-                    ? '#e9ecef'
+                    ? '#e0e0e0' // Slightly lighter for prompts
                     : entry.type === 'loading'
                     ? '#e3f2fd'
                     : entry.type === 'error'
@@ -526,10 +550,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                     ? '#721c24'
                     : entry.type === 'success'
                     ? '#155724'
-                    : '#333',
+                    : '#444', // Darker text for prompts
                 alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
-                borderBottomRightRadius: entry.type === 'user' ? '2px' : '18px',
-                borderBottomLeftRadius: entry.type === 'user' ? '18px' : '2px',
+                borderBottomRightRadius: entry.type === 'user' ? '4px' : '20px',
+                borderBottomLeftRadius: entry.type === 'user' ? '20px' : '4px',
               }}
             >
               {entry.content}
