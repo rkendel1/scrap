@@ -1,659 +1,469 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
+import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
   user?: any;
   guestToken?: string;
-  onStateChange: (state: { 
-    formData: Partial<FormData>; 
-    generatedForm: GeneratedForm | null; 
+  onStateChange: (state: {
+    formData: Partial<FormData>;
+    generatedForm: GeneratedForm | null;
     createdForm: SaaSForm | null;
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
   }) => void;
 }
 
-interface StepProps {
-  formData: Partial<FormData>;
-  onNext: (data: Partial<FormData>) => void;
-  onBack?: () => void;
-  extractedDesignTokens?: any;
-  extractedVoiceAnalysis?: any;
-  createdForm?: SaaSForm | null;
-  generatedForm?: GeneratedForm | null;
-  user?: any;
-  guestToken?: string;
-}
-
-// New Step 1: Website URL & Form Purpose
-const Step1UrlAndPurposeInput: React.FC<StepProps> = ({ formData, onNext, user, guestToken }) => {
-  const { register, handleSubmit, formState: { errors }, watch } = useForm({
-    defaultValues: { 
-      url: formData.url || '',
-      purpose: formData.purpose || ''
-    }
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const formPurposeValue = watch('purpose');
-
-  const onSubmit = async (data: { url: string; purpose: string }) => {
-    setIsLoading(true);
-    try {
-      const authHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-      if (localStorage.getItem('authToken')) {
-        authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
-      }
-
-      // Step 1.1: Extract design tokens
-      const extractResponse = await fetch('/api/forms/extract-design-tokens', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ url: data.url }),
-      });
-
-      const extractResult = await extractResponse.json();
-      
-      if (!extractResult.success) {
-        throw new Error(extractResult.error || 'Failed to analyze website. Please check the URL.');
-      }
-
-      const { id: extractedRecordId, designTokens, voiceAnalysis } = extractResult.data;
-
-      // Step 1.2: Generate form using extracted data
-      const generatePayload = {
-        extractedRecordId,
-        formPurpose: data.purpose,
-        formName: formData.formName,
-        formDescription: formData.formDescription,
-        ...(guestToken && !user && { guestToken })
-      };
-
-      const generateResponse = await fetch('/api/forms/generate', {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify(generatePayload),
-      });
-
-      const generateResult = await generateResponse.json();
-      
-      if (generateResult.success) {
-        onNext({ 
-          url: data.url, 
-          purpose: data.purpose,
-          extractedRecordId,
-          extractedDesignTokens: designTokens,
-          extractedVoiceAnalysis: voiceAnalysis,
-          generatedForm: generateResult.generatedForm,
-          createdForm: generateResult.form,
-        });
-      } else {
-        alert(generateResult.error || 'Failed to generate form');
-        
-        if (generateResult.upgradeRequired) {
-          console.log('Upgrade required for more forms');
-        }
-      }
-    } catch (error: any) {
-      console.error('Form generation error:', error);
-      alert(error.message || 'Failed to generate form. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const commonPurposes = [
-    'Collect leads for our sales team',
-    'Get feedback on our product',
-    'Allow customers to contact support',
-    'Capture newsletter signups',
-    'Register people for events',
-    'Request quotes or consultations',
-    'Gather survey responses'
-  ];
-
-  return (
-    <div className="card">
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h2>✨ Create Your AI-Powered Form</h2>
-        <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          Enter your website URL and tell us what you want to capture. 
-          Our AI will instantly design a form that matches your brand.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="form-group">
-          <label htmlFor="url" className="form-label" style={{ fontSize: '16px', fontWeight: '500' }}>
-            Website URL
-          </label>
-          <input
-            id="url"
-            type="url"
-            className={`form-input ${errors.url ? 'error' : ''}`}
-            placeholder="https://example.com"
-            style={{ fontSize: '16px', padding: '16px' }}
-            {...register('url', {
-              required: 'Website URL is required',
-              pattern: {
-                value: /^https?:\/\/.+/,
-                message: 'Please enter a valid URL starting with http:// or https://'
-              }
-            })}
-          />
-          {errors.url && (
-            <span className="error-message">{errors.url.message as string}</span>
-          )}
-          <small style={{ color: '#666', fontSize: '14px', marginTop: '8px', display: 'block' }}>
-            💡 We'll extract colors, fonts, and styling to match your form perfectly
-          </small>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="purpose" className="form-label" style={{ fontSize: '16px', fontWeight: '500' }}>
-            Form Purpose
-          </label>
-          <textarea
-            id="purpose"
-            className={`form-input ${errors.purpose ? 'error' : ''}`}
-            placeholder="e.g., I want to collect leads from potential customers interested in our consulting services. I need their name, email, company, and what they're looking for help with."
-            rows={4}
-            style={{ fontSize: '16px', padding: '16px', lineHeight: '1.5' }}
-            {...register('purpose', {
-              required: 'Please describe what you want to capture',
-              minLength: {
-                value: 20,
-                message: 'Please provide more detail about your form purpose'
-              }
-            })}
-          />
-          {errors.purpose && (
-            <span className="error-message">{errors.purpose.message as string}</span>
-          )}
-        </div>
-
-        <div style={{ marginBottom: '24px' }}>
-          <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px' }}>
-            💡 Need inspiration? Try one of these:
-          </p>
-          <div style={{ display: 'grid', gap: '8px' }}>
-            {commonPurposes.map((example, index) => (
-              <button
-                key={index}
-                type="button"
-                onClick={() => {
-                  const textarea = document.getElementById('purpose') as HTMLTextAreaElement;
-                  textarea.value = example;
-                  textarea.focus();
-                }}
-                style={{
-                  padding: '12px',
-                  border: '1px solid #e1e5e9',
-                  borderRadius: '6px',
-                  backgroundColor: formPurposeValue === example ? '#e3f2fd' : '#f8f9fa',
-                  textAlign: 'left',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  borderColor: formPurposeValue === example ? '#007bff' : '#e1e5e9',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#e9ecef';
-                  e.currentTarget.style.borderColor = '#007bff';
-                }}
-                onMouseLeave={(e) => {
-                  if (formPurposeValue !== example) {
-                    e.currentTarget.style.backgroundColor = '#f8f9fa';
-                    e.currentTarget.style.borderColor = '#e1e5e9';
-                  }
-                }}
-              >
-                {example}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {!user && (
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffeaa7',
-            borderRadius: '4px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-              🎯 Creating as Guest
-            </div>
-            <div style={{ fontSize: '14px', color: '#856404' }}>
-              Sign up after creating your form to manage it, get analytics, and unlock premium features.
-            </div>
-          </div>
-        )}
-
-        {user?.subscription_tier === 'free' && (
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#e3f2fd',
-            border: '1px solid #bbdefb',
-            borderRadius: '4px',
-            marginBottom: '16px'
-          }}>
-            <div style={{ fontWeight: '500', marginBottom: '4px' }}>
-              📊 Free Tier - 1 Live Form
-            </div>
-            <div style={{ fontSize: '14px', color: '#1565c0' }}>
-              Upgrade to Pro for unlimited forms, premium connectors, and analytics.
-            </div>
-          </div>
-        )}
-
-        <button 
-          type="submit" 
-          className="btn btn-primary"
-          disabled={isLoading}
-          style={{ width: '100%', fontSize: '16px', padding: '16px' }}
-        >
-          {isLoading ? (
-            <>
-              <span>🤖 Analyzing & Generating Form...</span>
-            </>
-          ) : (
-            'Generate AI Form ✨'
-          )}
-        </button>
-      </form>
-
-      <div style={{ 
-        marginTop: '24px', 
-        padding: '16px', 
-        backgroundColor: '#f8f9fa',
-        borderRadius: '4px',
-        fontSize: '14px'
-      }}>
-        <div style={{ fontWeight: '500', marginBottom: '8px' }}>
-          🎨 What our AI does:
-        </div>
-        <ul style={{ margin: 0, paddingLeft: '20px', color: '#666' }}>
-          <li>Analyzes the target website's design tokens and brand colors</li>
-          <li>Extracts voice, tone, and messaging patterns</li>
-          <li>Generates form fields optimized for your purpose</li>
-          <li>Creates copy that matches the website's personality</li>
-          <li>Applies consistent styling and branding</li>
-        </ul>
-      </div>
-    </div>
-  );
+type ConversationEntry = {
+  type: 'prompt' | 'user' | 'loading' | 'error' | 'success';
+  content: string | JSX.Element;
 };
 
-// Step 2: Configure Destination (now with preview)
-const Step2ConfigureDestination: React.FC<StepProps> = ({ formData, onNext, onBack, createdForm, generatedForm }) => {
-  const [selectedType, setSelectedType] = useState<string>(formData.destinationType || '');
-  const [config, setConfig] = useState(formData.destinationConfig || {});
-  const [isSaving, setIsSaving] = useState(false);
+type ConversationStep =
+  | 'ASK_URL'
+  | 'PROCESSING_URL'
+  | 'ASK_PURPOSE'
+  | 'PROCESSING_PURPOSE'
+  | 'ASK_DESTINATION_TYPE'
+  | 'ASK_DESTINATION_CONFIG'
+  | 'PROCESSING_DESTINATION'
+  | 'DONE';
 
-  const destinations = [
-    {
-      id: 'email',
-      name: 'Email',
-      icon: '📧',
-      description: 'Send submissions to your email inbox',
-      fields: ['email']
-    },
-    {
-      id: 'google_sheets',
-      name: 'Google Sheets',
-      icon: '📊',
-      description: 'Add submissions to a Google Sheets spreadsheet',
-      fields: ['sheet_url']
-    },
-    {
-      id: 'slack',
-      name: 'Slack',
-      icon: '💬',
-      description: 'Send notifications to a Slack channel',
-      fields: ['webhook_url']
-    },
-    {
-      id: 'webhook',
-      name: 'Webhook',
-      icon: '🔗',
-      description: 'Send data to your custom endpoint',
-      fields: ['webhook_url']
-    }
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedType) {
-      alert('Please select a destination for your form data');
-      return;
-    }
-
-    // Validate configuration based on destination type
-    const destination = destinations.find(d => d.id === selectedType);
-    if (destination) {
-      const missingFields = destination.fields.filter(field => !config[field]);
-      if (missingFields.length > 0) {
-        alert(`Please fill in the required field: ${missingFields[0]}`);
-        return;
-      }
-    }
-
-    setIsSaving(true);
-    try {
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-      };
-
-      const response = await fetch(`/api/forms/${createdForm?.id}/configure-destination`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          destinationType: selectedType,
-          destinationConfig: config,
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        onNext({ 
-          destinationType: selectedType as any,
-          destinationConfig: config 
-        });
-      } else {
-        alert(result.error || 'Failed to save destination');
-      }
-    } catch (error: any) {
-      console.error('Save destination error:', error);
-      alert(error.message || 'Failed to save destination. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <div className="card">
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h2>📤 Where should the data go?</h2>
-        <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          Choose where you want to receive form submissions.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ display: 'grid', gap: '16px', marginBottom: '24px' }}>
-          {destinations.map((dest) => (
-            <div
-              key={dest.id}
-              onClick={() => setSelectedType(dest.id)}
-              style={{
-                padding: '20px',
-                border: selectedType === dest.id ? '2px solid #007bff' : '1px solid #e1e5e9',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: selectedType === dest.id ? '#f8f9ff' : '#fff',
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '24px', marginRight: '12px' }}>{dest.icon}</span>
-                <h3 style={{ margin: 0, fontSize: '18px' }}>{dest.name}</h3>
-              </div>
-              <p style={{ margin: 0, color: '#666', fontSize: '14px' }}>{dest.description}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Configuration fields for selected destination */}
-        {selectedType && (
-          <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-            <h4 style={{ margin: '0 0 16px 0' }}>Configuration</h4>
-            
-            {selectedType === 'email' && (
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="you@example.com"
-                  value={config.email || ''}
-                  onChange={(e) => setConfig({...config, email: e.target.value})}
-                />
-              </div>
-            )}
-
-            {selectedType === 'google_sheets' && (
-              <div className="form-group">
-                <label className="form-label">Google Sheets URL</label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://docs.google.com/spreadsheets/d/..."
-                  value={config.sheet_url || ''}
-                  onChange={(e) => setConfig({...config, sheet_url: e.target.value})}
-                />
-                <small style={{ color: '#666', fontSize: '12px' }}>
-                  Make sure the sheet is shared with edit permissions
-                </small>
-              </div>
-            )}
-
-            {(selectedType === 'slack' || selectedType === 'webhook') && (
-              <div className="form-group">
-                <label className="form-label">
-                  {selectedType === 'slack' ? 'Slack Webhook URL' : 'Webhook URL'}
-                </label>
-                <input
-                  type="url"
-                  className="form-input"
-                  placeholder="https://hooks.slack.com/services/..."
-                  value={config.webhook_url || ''}
-                  onChange={(e) => setConfig({...config, webhook_url: e.target.value})}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            type="button" 
-            onClick={onBack}
-            className="btn btn-secondary"
-            style={{ flex: '1', fontSize: '16px', padding: '16px' }}
-          >
-            ← Back
-          </button>
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={isSaving}
-            style={{ flex: '2', fontSize: '16px', padding: '16px' }}
-          >
-            {isSaving ? 'Saving Destination...' : 'Save Destination →'}
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-};
-
-// Step 3: Confirmation
-const Step3Confirmation: React.FC<{ 
-  generatedForm: GeneratedForm; 
-  createdForm: SaaSForm;
-  onGoToDashboard: () => void;
-}> = ({ generatedForm, createdForm, onGoToDashboard }) => {
-  return (
-    <div className="card">
-      <div style={{ marginBottom: '24px', textAlign: 'center' }}>
-        <h2>🎉 Your Form is Ready!</h2>
-        <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          Your AI-generated form has been created. You can now manage it in your dashboard.
-        </p>
-      </div>
-
-      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-        <button 
-          onClick={onGoToDashboard}
-          className="btn btn-primary"
-          style={{ fontSize: '16px', padding: '12px 24px' }}
-        >
-          Go to Dashboard →
-        </button>
-      </div>
-    </div>
-  );
-};
-
-export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({ 
-  onFormGenerated, 
+export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
+  onFormGenerated,
   user,
   guestToken,
-  onStateChange
+  onStateChange,
 }) => {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
+  const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
+  const [userInput, setUserInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
-  const [generatedForm, setGeneratedForm] = useState<GeneratedForm | null>(null);
-  const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null);
   const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
   const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [extractedRecordId, setExtractedRecordId] = useState<number | null>(null);
+  const [generatedForm, setGeneratedForm] = useState<GeneratedForm | null>(null);
+  const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null);
+  const [selectedDestinationType, setSelectedDestinationType] = useState<string | null>(null);
+  const [destinationConfig, setDestinationConfig] = useState<any>({});
 
+  const chatHistoryRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom of chat history
   useEffect(() => {
-    onStateChange({ 
-      formData, 
-      generatedForm, 
+    if (chatHistoryRef.current) {
+      chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+    }
+  }, [conversationHistory]);
+
+  // Update parent component's state for LiveFormPreview
+  useEffect(() => {
+    onStateChange({
+      formData,
+      generatedForm,
       createdForm,
       extractedDesignTokens,
       extractedVoiceAnalysis,
     });
   }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
 
-  const handleNext = async (stepData: Partial<FormData>) => {
-    const newFormData = { ...formData, ...stepData };
-    setFormData(newFormData);
+  // Initial prompt
+  useEffect(() => {
+    if (conversationHistory.length === 0 && currentStep === 'ASK_URL') {
+      addPrompt("Hello! I'm your AI form builder. What is the URL of the website you want to create a form for?");
+    }
+  }, [conversationHistory, currentStep]);
 
-    if (stepData.extractedRecordId) {
-      setExtractedDesignTokens(stepData.extractedDesignTokens);
-      setExtractedVoiceAnalysis(stepData.extractedVoiceAnalysis);
-    }
-    if (stepData.generatedForm) {
-      setGeneratedForm(stepData.generatedForm);
-    }
-    if (stepData.createdForm) {
-      setCreatedForm(stepData.createdForm);
-    }
-
-    setCurrentStep(currentStep + 1);
+  const addEntry = (entry: ConversationEntry) => {
+    setConversationHistory((prev) => [...prev, entry]);
   };
 
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-      if (currentStep === 3) { // If going back from final preview, clear generated form
-        setGeneratedForm(null);
-        setCreatedForm(null);
+  const addPrompt = (content: string | JSX.Element) => {
+    addEntry({ type: 'prompt', content });
+  };
+
+  const addUserResponse = (content: string) => {
+    addEntry({ type: 'user', content });
+  };
+
+  const addLoading = (content: string) => {
+    addEntry({ type: 'loading', content: <span className="loading-dots">{content}</span> });
+  };
+
+  const addError = (content: string) => {
+    addEntry({ type: 'error', content });
+  };
+
+  const addSuccess = (content: string) => {
+    addEntry({ type: 'success', content });
+  };
+
+  const handleUserInput = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInput.trim() || isLoading) return;
+
+    const input = userInput.trim();
+    addUserResponse(input);
+    setUserInput('');
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      switch (currentStep) {
+        case 'ASK_URL':
+          await processUrlInput(input);
+          break;
+        case 'ASK_PURPOSE':
+          await processPurposeInput(input);
+          break;
+        case 'ASK_DESTINATION_TYPE':
+          await processDestinationTypeInput(input);
+          break;
+        case 'ASK_DESTINATION_CONFIG':
+          await processDestinationConfigInput(input);
+          break;
+        default:
+          break;
       }
+    } catch (err: any) {
+      console.error('Conversation error:', err);
+      addError(err.message || 'An unexpected error occurred. Please try again.');
+      setIsLoading(false);
     }
   };
 
-  const handleGoToDashboard = () => {
-    if (createdForm) {
-      onFormGenerated(createdForm); // This will trigger App.tsx to update forms and switch view
+  const processUrlInput = async (url: string) => {
+    addLoading('Analyzing website...');
+    try {
+      new URL(url); // Basic URL validation
+    } catch {
+      addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
+      setIsLoading(false);
+      return;
+    }
+
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+      authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+    }
+
+    const extractResponse = await fetch('/api/forms/extract-design-tokens', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({ url }),
+    });
+
+    const extractResult = await extractResponse.json();
+
+    if (!extractResult.success) {
+      addError(extractResult.error || 'Failed to analyze website. Please check the URL.');
+      setIsLoading(false);
+      return;
+    }
+
+    const { id: recordId, designTokens, voiceAnalysis } = extractResult.data;
+    setExtractedRecordId(recordId);
+    setExtractedDesignTokens(designTokens);
+    setExtractedVoiceAnalysis(voiceAnalysis);
+    setFormData((prev) => ({ ...prev, url }));
+
+    addSuccess('Website analyzed! Now, tell me: What is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
+    setCurrentStep('ASK_PURPOSE');
+    setIsLoading(false);
+  };
+
+  const processPurposeInput = async (purpose: string) => {
+    addLoading('Generating form with AI...');
+    if (!extractedRecordId) {
+      addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
+      setCurrentStep('ASK_URL');
+      setIsLoading(false);
+      return;
+    }
+
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+      authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+    }
+
+    const generatePayload = {
+      extractedRecordId,
+      formPurpose: purpose,
+      formName: formData.formName,
+      formDescription: formData.formDescription,
+      ...(guestToken && !user && { guestToken }),
+    };
+
+    const generateResponse = await fetch('/api/forms/generate', {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify(generatePayload),
+    });
+
+    const generateResult = await generateResponse.json();
+
+    if (!generateResult.success) {
+      addError(generateResult.error || 'Failed to generate form. Please try a different purpose or URL.');
+      if (generateResult.upgradeRequired) {
+        addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    setGeneratedForm(generateResult.generatedForm);
+    setCreatedForm(generateResult.form);
+    setFormData((prev) => ({ ...prev, purpose }));
+
+    addSuccess(
+      <>
+        Great! Your AI-generated form is ready. You can see a live preview on the right.
+        <br />
+        Next, where should I send the form submissions? You can choose from:
+        <ul>
+          <li>Email</li>
+          <li>Google Sheets</li>
+          <li>Slack</li>
+          <li>Webhook</li>
+        </ul>
+        Just type your choice (e.g., "Email").
+      </>
+    );
+    setCurrentStep('ASK_DESTINATION_TYPE');
+    setIsLoading(false);
+  };
+
+  const processDestinationTypeInput = async (typeInput: string) => {
+    const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
+    const availableTypes = ['email', 'googlesheets', 'slack', 'webhook']; // Match backend connector types
+
+    if (!availableTypes.includes(normalizedType)) {
+      addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, or Webhook.');
+      setIsLoading(false);
+      return;
+    }
+
+    setSelectedDestinationType(normalizedType);
+    setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
+
+    // Prompt for config based on type
+    let configPrompt = '';
+    switch (normalizedType) {
+      case 'email':
+        configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
+        break;
+      case 'googlesheets':
+        configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
+        break;
+      case 'slack':
+        configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
+        break;
+      case 'webhook':
+        configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
+        break;
+    }
+    addPrompt(configPrompt);
+    setCurrentStep('ASK_DESTINATION_CONFIG');
+    setIsLoading(false);
+  };
+
+  const processDestinationConfigInput = async (configInput: string) => {
+    addLoading('Saving destination configuration...');
+    if (!createdForm?.id || !selectedDestinationType) {
+      addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
+      setCurrentStep('ASK_URL');
+      setIsLoading(false);
+      return;
+    }
+
+    let newConfig: any = {};
+    let validationError = null;
+
+    switch (selectedDestinationType) {
+      case 'email':
+        if (!/\S+@\S+\.\S+/.test(configInput)) {
+          validationError = 'Please enter a valid email address.';
+        } else {
+          newConfig = { to: configInput, subject: `New submission for ${createdForm.form_name}` };
+        }
+        break;
+      case 'googlesheets':
+        // Basic validation for spreadsheet ID (can be more robust)
+        if (!configInput.match(/^[a-zA-Z0-9_-]+$/)) {
+          validationError = 'Please enter a valid Google Sheets Spreadsheet ID.';
+        } else {
+          newConfig = { spreadsheetId: configInput, sheetName: 'Sheet1' };
+        }
+        break;
+      case 'slack':
+      case 'webhook':
+        if (!/^https?:\/\/\S+/.test(configInput)) {
+          validationError = 'Please enter a valid URL for the webhook.';
+        } else {
+          newConfig = { webhookUrl: configInput };
+        }
+        break;
+    }
+
+    if (validationError) {
+      addError(validationError);
+      setIsLoading(false);
+      return;
+    }
+
+    setDestinationConfig(newConfig);
+    setFormData((prev) => ({ ...prev, destinationConfig: newConfig }));
+
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+      authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+    }
+
+    const configureResponse = await fetch(`/api/forms/${createdForm.id}/configure-destination`, {
+      method: 'POST',
+      headers: authHeaders,
+      body: JSON.stringify({
+        destinationType: selectedDestinationType,
+        destinationConfig: newConfig,
+      }),
+    });
+
+    const configureResult = await configureResponse.json();
+
+    if (!configureResult.success) {
+      addError(configureResult.error || 'Failed to save destination configuration.');
+      setIsLoading(false);
+      return;
+    }
+
+    addSuccess('Destination configured successfully! Your form is now fully set up.');
+    addPrompt(
+      <>
+        You can find your form in the "My Forms" dashboard.
+        <br />
+        Would you like to create another form? Type "yes" or "no".
+      </>
+    );
+    setCurrentStep('DONE'); // Transition to a final state where user can restart
+    setIsLoading(false);
+    onFormGenerated(createdForm); // Notify parent that a form was created
+  };
+
+  const handleRestart = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (userInput.toLowerCase() === 'yes') {
+      setConversationHistory([]);
+      setUserInput('');
+      setIsLoading(false);
+      setError(null);
+      setFormData({});
+      setExtractedDesignTokens(null);
+      setExtractedVoiceAnalysis(null);
+      setExtractedRecordId(null);
+      setGeneratedForm(null);
+      setCreatedForm(null);
+      setSelectedDestinationType(null);
+      setDestinationConfig({});
+      setCurrentStep('ASK_URL');
+      addPrompt("Okay, let's create another form! What is the URL of the website you want to create a form for?");
+    } else if (userInput.toLowerCase() === 'no') {
+      addPrompt("Alright! Feel free to come back anytime. Goodbye!");
+      setUserInput('');
+      setIsLoading(false);
+      // Maybe redirect to dashboard or something
+    } else {
+      addError('Please type "yes" or "no".');
+      setIsLoading(false);
     }
   };
 
-  // Progress indicator
-  const ProgressIndicator = () => (
-    <div style={{ marginBottom: '32px', padding: '0 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-        {/* Progress line */}
-        <div style={{
-          position: 'absolute',
-          top: '50%',
-          left: '0',
-          right: '0',
-          height: '2px',
-          backgroundColor: '#e1e5e9',
-          zIndex: 1
-        }}>
-          <div style={{
-            height: '100%',
-            backgroundColor: '#007bff',
-            width: `${((currentStep - 1) / 2) * 100}%`, // Adjusted for 3 steps
-            transition: 'width 0.3s ease'
-          }}></div>
-        </div>
 
-        {[1, 2, 3].map((step) => ( // Adjusted for 3 steps
-          <div
-            key={step}
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: currentStep >= step ? '#007bff' : '#e1e5e9',
-              color: currentStep >= step ? 'white' : '#666',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontWeight: 'bold',
-              fontSize: '16px',
-              zIndex: 2,
-              position: 'relative',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {step}
+  return (
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Form Chatbot</h2>
+      <div
+        ref={chatHistoryRef}
+        style={{
+          flexGrow: 1,
+          border: '1px solid #e1e5e9',
+          borderRadius: '8px',
+          padding: '20px',
+          overflowY: 'auto',
+          marginBottom: '20px',
+          backgroundColor: '#f8f9fa',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '15px',
+        }}
+      >
+        {conversationHistory.map((entry, index) => (
+          <div key={index} style={{ display: 'flex', flexDirection: entry.type === 'user' ? 'row-reverse' : 'row' }}>
+            <div
+              style={{
+                maxWidth: '80%',
+                padding: '10px 15px',
+                borderRadius: '18px',
+                fontSize: '15px',
+                lineHeight: '1.4',
+                backgroundColor:
+                  entry.type === 'user'
+                    ? '#007bff'
+                    : entry.type === 'prompt'
+                    ? '#e9ecef'
+                    : entry.type === 'loading'
+                    ? '#e3f2fd'
+                    : entry.type === 'error'
+                    ? '#f8d7da'
+                    : '#d4edda', // success
+                color:
+                  entry.type === 'user'
+                    ? 'white'
+                    : entry.type === 'error'
+                    ? '#721c24'
+                    : entry.type === 'success'
+                    ? '#155724'
+                    : '#333',
+                alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
+                borderBottomRightRadius: entry.type === 'user' ? '2px' : '18px',
+                borderBottomLeftRadius: entry.type === 'user' ? '18px' : '2px',
+              }}
+            >
+              {entry.content}
+            </div>
           </div>
         ))}
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: '#666' }}>
-        <span>Form Details</span>
-        <span>Destination</span>
-        <span>Confirmation</span>
-      </div>
-    </div>
-  );
 
-  return (
-    <div>
-      <ProgressIndicator />
-      
-      {currentStep === 1 && (
-        <Step1UrlAndPurposeInput 
-          formData={formData} 
-          onNext={handleNext} 
-          user={user} 
-          guestToken={guestToken} 
+      <form onSubmit={currentStep === 'DONE' ? handleRestart : handleUserInput} style={{ display: 'flex', gap: '10px' }}>
+        <input
+          type="text"
+          value={userInput}
+          onChange={(e) => setUserInput(e.target.value)}
+          placeholder={isLoading ? 'Please wait...' : 'Type your response here...'}
+          className="form-input"
+          style={{ flexGrow: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e1e5e9' }}
+          disabled={isLoading}
         />
-      )}
-      
-      {currentStep === 2 && (
-        <Step2ConfigureDestination 
-          formData={formData} 
-          onNext={handleNext} 
-          onBack={handleBack} 
-          createdForm={createdForm}
-          generatedForm={generatedForm}
-        />
-      )}
-      
-      {currentStep === 3 && generatedForm && createdForm && (
-        <Step3Confirmation 
-          generatedForm={generatedForm}
-          createdForm={createdForm}
-          onGoToDashboard={handleGoToDashboard}
-        />
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={isLoading || !userInput.trim()}
+          style={{ padding: '12px 20px', borderRadius: '8px' }}
+        >
+          {isLoading ? 'Sending...' : 'Send'}
+        </button>
+      </form>
+
+      {error && (
+        <div className="error-message" style={{ marginTop: '15px', textAlign: 'center' }}>
+          {error}
+        </div>
       )}
     </div>
   );

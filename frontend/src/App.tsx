@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { UrlForm } from './components/UrlForm';
 import { RecordsTable } from './components/RecordsTable';
-import { ConversationalFormBuilder } from './components/ConversationalFormBuilder';
+import { ConversationalFormBuilder } from './components/ConversationalFormBuilder'; // Updated import
 import { LoginForm, RegisterForm } from './components/AuthForms';
 import { ConnectorManager } from './components/ConnectorManager';
-import { LiveFormPreview } from './components/LiveFormPreview'; // New import
+import { LiveFormPreview } from './components/LiveFormPreview';
 import { apiService } from './services/api';
-import { FormRecord, User, SaaSForm, FormData, GeneratedForm } from './types/api'; // Updated import
+import { FormRecord, User, SaaSForm, FormData, GeneratedForm } from './types/api';
 
 function App() {
   const [records, setRecords] = useState<FormRecord[]>([]);
