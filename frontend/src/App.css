@@ -530,8 +530,8 @@ footer {
   border: 1px solid #e1e5e9;
   border-radius: 12px;
   background-color: #f8f9fa;
-  height: calc(100% - 100px); /* Adjusted height to account for header/badge */
-  overflow: hidden;
+  flex-grow: 1; /* Allow it to grow */
+  overflow: auto; /* Allow scrolling if content is too tall */
   position: relative;
   display: flex;
   align-items: center;
@@ -692,7 +692,8 @@ footer {
   }
 
   .live-preview-content-wrapper {
-    height: 300px; /* Fixed height for preview on smaller screens */
+    height: auto; /* Changed from fixed height */
+    min-height: 300px; /* Ensure a minimum height for the preview area */
   }
 
   .chat-history-container {

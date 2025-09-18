@@ -85,6 +85,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'Inter, system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
+      maxWidth: '500px', // Ensure maxWidth is always set for the mock form
     };
 
     // Mock fields based on purpose
@@ -156,6 +157,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             flexShrink: 0,
             flexDirection: 'column',
             width: '100%', // Allow EmbeddableForm to center itself
+            padding: '20px' // Add some padding to prevent form from touching edges
           }}
         >
           {url || purpose || generatedForm ? (
