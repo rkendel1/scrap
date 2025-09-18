@@ -4,6 +4,7 @@ import { UrlForm } from './components/UrlForm';
 import { RecordsTable } from './components/RecordsTable';
 import { ConversationalFormBuilder } from './components/ConversationalFormBuilder';
 import { LoginForm, RegisterForm } from './components/AuthForms';
+import { ConnectorManager } from './components/ConnectorManager';
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm } from './types/api';
 
@@ -18,7 +19,8 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard'>('builder');
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage'>('builder');
+  const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
 
   // Initialize authentication on app load
   useEffect(() => {
@@ -135,6 +137,16 @@ function App() {
     if (user) {
       setCurrentView('dashboard');
     }
+  };
+
+  const handleManageForm = (formId: number) => {
+    setSelectedFormId(formId);
+    setCurrentView('form-manage');
+  };
+
+  const handleBackToDashboard = () => {
+    setSelectedFormId(null);
+    setCurrentView('dashboard');
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -377,7 +389,14 @@ function App() {
                             <span>📅 {new Date(form.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button 
+                            onClick={() => handleManageForm(form.id)}
+                            className="btn btn-primary" 
+                            style={{ fontSize: '12px' }}
+                          >
+                            🔌 Connectors
+                          </button>
                           <button className="btn btn-secondary" style={{ fontSize: '12px' }}>
                             ⚙️ Edit
                           </button>
@@ -393,6 +412,36 @@ function App() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {currentView === 'form-manage' && user && selectedFormId && (
+          <div>
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
+                <button 
+                  onClick={handleBackToDashboard}
+                  className="btn btn-secondary"
+                  style={{ marginRight: '16px' }}
+                >
+                  ← Back to Dashboard
+                </button>
+                <div>
+                  <h2>🔌 Connector Management</h2>
+                  <p style={{ margin: 0, color: '#666' }}>
+                    Configure where form submissions should be sent
+                  </p>
+                </div>
+              </div>
+              
+              <ConnectorManager 
+                formId={selectedFormId}
+                onSave={() => {
+                  // Optionally refresh forms list or show success message
+                  console.log('Connectors saved successfully');
+                }}
+              />
             </div>
           </div>
         )}

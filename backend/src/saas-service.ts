@@ -535,36 +535,63 @@ export class SaaSService {
   }
 
   private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
-    // Get active connectors for this form
-    const query = `
-      SELECT fc.config, c.type, c.name
-      FROM form_connectors fc
-      JOIN connectors c ON fc.connector_id = c.id
-      WHERE fc.form_id = $1 AND fc.is_active = true
-    `;
-    
-    const result = await pool.query(query, [formId]);
-    
-    if (result.rows.length === 0) {
-      console.log(`No active connectors found for form ${formId}`);
-      return;
-    }
-
-    // Convert database rows to ConnectorConfig format
-    const connectorConfigs: ConnectorConfig[] = result.rows.map(row => ({
-      type: row.type,
-      ...JSON.parse(row.config || '{}')
-    }));
-
     try {
-      // Use the new modular dispatcher
+      // First try to get connectors from the new JSONB column
+      const newFormatQuery = `
+        SELECT connectors
+        FROM forms
+        WHERE id = $1
+      `;
+      
+      const newFormatResult = await pool.query(newFormatQuery, [formId]);
+      
+      if (newFormatResult.rows.length > 0) {
+        const connectors = newFormatResult.rows[0].connectors || [];
+        
+        if (connectors.length > 0) {
+          // Use new JSONB format
+          const dispatchResults = await dispatchToConnectors(submissionData, connectors);
+          
+          // Log results
+          dispatchResults.forEach((result, index) => {
+            const connector = connectors[index];
+            if (result.success) {
+              console.log(`✓ ${connector.type} connector succeeded: ${result.message}`);
+            } else {
+              console.error(`❌ ${connector.type} connector failed: ${result.message}`, result.error);
+            }
+          });
+          return;
+        }
+      }
+
+      // Fallback to old format for backward compatibility
+      const oldFormatQuery = `
+        SELECT fc.config, c.type, c.name
+        FROM form_connectors fc
+        JOIN connectors c ON fc.connector_id = c.id
+        WHERE fc.form_id = $1 AND fc.is_active = true
+      `;
+      
+      const oldFormatResult = await pool.query(oldFormatQuery, [formId]);
+      
+      if (oldFormatResult.rows.length === 0) {
+        console.log(`No connectors configured for form ${formId}`);
+        return;
+      }
+
+      // Convert database rows to ConnectorConfig format
+      const connectorConfigs: ConnectorConfig[] = oldFormatResult.rows.map(row => ({
+        type: row.type,
+        ...JSON.parse(row.config || '{}')
+      }));
+
+      // Use the modular dispatcher
       const results = await dispatchToConnectors(submissionData, connectorConfigs);
       
       // Log results
       results.forEach((result, index) => {
-        const connectorName = result.success 
-          ? `${connectorConfigs[index].type} connector`
-          : `${connectorConfigs[index].type} connector`;
+        const connectorName = `${connectorConfigs[index].type} connector`;
         
         if (result.success) {
           console.log(`✅ ${connectorName}: ${result.message}`);
@@ -851,6 +878,118 @@ export class SaaSService {
     } catch (error) {
       console.error('Secure form submission error:', error);
       return { success: false, message: 'Failed to submit form. Please try again.' };
+    }
+  }
+
+  /**
+   * Get connectors configured for a specific form (new JSONB format)
+   */
+  async getFormConnectors(formId: number, userId: number): Promise<any[] | null> {
+    try {
+      const query = `
+        SELECT connectors
+        FROM forms
+        WHERE id = $1 AND user_id = $2
+      `;
+      
+      const result = await pool.query(query, [formId, userId]);
+      
+      if (result.rows.length === 0) {
+        return null; // Form not found
+      }
+
+      return result.rows[0].connectors || [];
+    } catch (error) {
+      console.error('Error getting form connectors:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save connectors for a specific form (new JSONB format)
+   */
+  async saveFormConnectors(formId: number, connectors: any[], userId: number): Promise<boolean> {
+    try {
+      // Validate connector configurations before saving
+      const { validateConnectorConfig } = await import('./connectors/connectorDefinitions');
+      
+      for (const connector of connectors) {
+        const validation = validateConnectorConfig(connector.type, connector.settings || {});
+        if (!validation.valid) {
+          console.error(`Invalid connector config for ${connector.type}:`, validation.errors);
+          return false;
+        }
+      }
+
+      const query = `
+        UPDATE forms
+        SET connectors = $1
+        WHERE id = $2 AND user_id = $3
+      `;
+      
+      const result = await pool.query(query, [JSON.stringify(connectors), formId, userId]);
+      
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error saving form connectors:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Test a connector with mock data
+   */
+  async testConnector(formId: number, connectorType: string, settings: any, userId: number): Promise<any | null> {
+    try {
+      // Verify user owns the form
+      const formQuery = `
+        SELECT id FROM forms WHERE id = $1 AND user_id = $2
+      `;
+      const formResult = await pool.query(formQuery, [formId, userId]);
+      
+      if (formResult.rows.length === 0) {
+        return null; // Form not found or not owned by user
+      }
+
+      // Validate connector configuration
+      const { validateConnectorConfig } = await import('./connectors/connectorDefinitions');
+      const validation = validateConnectorConfig(connectorType, settings);
+      
+      if (!validation.valid) {
+        return {
+          success: false,
+          message: 'Invalid connector configuration',
+          errors: validation.errors
+        };
+      }
+
+      // Create mock submission data
+      const mockSubmission = {
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        message: 'This is a test submission to verify your connector configuration.',
+        timestamp: new Date().toISOString(),
+        formId: formId
+      };
+
+      // Create connector config
+      const connectorConfig = {
+        type: connectorType,
+        settings: settings
+      };
+
+      // Test the connector
+      const connectorModule = await import(`./connectors/${connectorType}.js`);
+      const result = await connectorModule.send(mockSubmission, connectorConfig);
+
+      return result;
+    } catch (error) {
+      console.error('Error testing connector:', error);
+      return {
+        success: false,
+        message: 'Failed to test connector',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
 }
