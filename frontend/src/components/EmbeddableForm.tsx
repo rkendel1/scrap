@@ -195,7 +195,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         fontFamily: form.styling.fontFamily || 'system-ui',
         textAlign: 'center' as const,
         border: '1px solid #e1e5e9',
-        maxWidth: form.styling.maxWidth || '500px' // Use maxWidth here
+        // maxWidth: form.styling.maxWidth || '500px' // REMOVED THIS LINE
       }}>
         <div style={{ 
           color: form.styling.primaryColor || '#28a745',
@@ -221,7 +221,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
       borderRadius: form.styling.borderRadius || '8px',
       fontFamily: form.styling.fontFamily || 'system-ui',
       border: '1px solid #e1e5e9',
-      maxWidth: form.styling.maxWidth || '500px' // Use maxWidth here
+      // maxWidth: form.styling.maxWidth || '500px' // REMOVED THIS LINE
     }}>
       <div style={{ marginBottom: '24px' }}>
         <h3 style={{ 
