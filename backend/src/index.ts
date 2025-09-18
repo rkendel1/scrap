@@ -17,6 +17,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173'; // Explicitly define frontend URL
 
 // Initialize services
 let extractor: WebsiteExtractor;
@@ -37,41 +38,34 @@ try {
   process.exit(1); // Exit if services fail to initialize
 }
 
-// Middleware
-app.use('/embed.html', (req, res, next) => {
-  // Disable CSP for embed.html
-  res.removeHeader('Content-Security-Policy');
-  next();
-});
-
-app.use('/embed.js', (req, res, next) => {
-  // Disable CSP for embed.js
-  res.removeHeader('Content-Security-Policy');
-  next();
-});
-
+// Helmet configuration (applied globally, but frameguard and CSP adjusted for embeds)
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // 'unsafe-inline' needed for embed.js dynamic script
+      styleSrc: ["'self'", "'unsafe-inline'"], // 'unsafe-inline' needed for embed.js inline styles
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "http://localhost:3001"],
+      connectSrc: ["'self'", FRONTEND_URL, "http://localhost:3001"], // Allow frontend URL and backend itself
       frameAncestors: ["*"], // Allow embedding in any frame
     },
   },
   frameguard: false, // Disable frame guard to allow embedding
 }));
 
-// CORS configuration - Allow all origins for embed functionality
-const corsOptions = {
-  origin: true, // Allow all origins for embed script
-  credentials: false, // Don't need credentials for embed
-  methods: ['GET', 'POST', 'DELETE'],
+// Specific CORS for embed.html and embed.js (more permissive)
+// These routes should reflect the origin and not require credentials
+app.use('/embed.html', cors({ origin: true, credentials: false }));
+app.use('/embed.js', cors({ origin: true, credentials: false }));
+
+// General CORS for main API routes (more restrictive, specific to frontend URL)
+const mainApiCorsOptions = {
+  origin: FRONTEND_URL,
+  credentials: true, // Allow cookies/auth headers for main app
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'], // Added PUT/PATCH for completeness
   allowedHeaders: ['Content-Type', 'Authorization']
 };
-app.use(cors(corsOptions));
+app.use('/api', cors(mainApiCorsOptions)); // Apply only to /api routes
 
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
@@ -1022,71 +1016,6 @@ app.get('/embed.js', (req, res) => {
   `;
   
   res.send(embedScript);
-});
-
-// Get form data with secure token validation
-app.post('/api/forms/embed-secure', async (req, res) => {
-  try {
-    const { token, hostname } = req.body;
-    
-    if (!token || !hostname) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token and hostname are required'
-      });
-    }
-    
-    const formData = await saasService.getFormByEmbedToken(token, hostname);
-    
-    if (!formData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form not found, token invalid, or domain not authorized'
-      });
-    }
-    
-    res.json({
-      success: true,
-      data: formData
-    });
-  } catch (error) {
-    console.error('Secure embed form fetch error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch form data'
-    });
-  }
-});
-
-// Submit form with secure token validation
-app.post('/api/forms/submit-secure', async (req, res) => {
-  try {
-    const { token, data: submissionData, hostname } = req.body;
-    
-    if (!token || !submissionData) {
-      return res.status(400).json({
-        success: false,
-        message: 'Token and data are required'
-      });
-    }
-    
-    const metadata = {
-      submittedFromUrl: req.headers.referer,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent'],
-      hostname: hostname
-    };
-    
-    const result = await saasService.submitFormSecure(token, submissionData, metadata);
-    
-    res.json(result);
-  } catch (error) {
-    console.error('Secure form submission error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to submit form'
-    });
-  }
 });
 
 // Submit form (public endpoint)
