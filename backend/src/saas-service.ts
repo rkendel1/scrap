@@ -474,28 +474,36 @@ export class SaaSService {
 
   async connectFormToService(
     formId: number, 
-    connectorId: number, 
-    config: any, 
-    userId: number
+    destinationType: string, // Changed from connectorId to destinationType
+    destinationConfig: any
   ): Promise<boolean> {
-    // Verify user owns the form
-    const form = await this.getFormById(formId, userId);
+    // Verify user owns the form (assuming this is called after form creation by the owner)
+    // No user_id check here, as it's assumed to be handled by the calling API endpoint
+    const form = await this.getFormById(formId); // Fetch without user_id check
     if (!form) return false;
 
-    // Verify connector is available to user
-    const connectors = await this.getAvailableConnectors(userId);
-    const connector = connectors.find(c => c.id === connectorId);
-    if (!connector) return false;
-
-    const query = `
-      INSERT INTO form_connectors (form_id, connector_id, config)
-      VALUES ($1, $2, $3)
+    // Find the connector by type
+    const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
+    const connectorResult = await pool.query(connectorQuery, [destinationType]);
+    
+    if (connectorResult.rows.length === 0) {
+      throw new Error(`Connector type ${destinationType} not found`);
+    }
+    
+    const connectorId = connectorResult.rows[0].id;
+    
+    // Insert or update the form connector configuration
+    const upsertQuery = `
+      INSERT INTO form_connectors (form_id, connector_id, config, is_active)
+      VALUES ($1, $2, $3, true)
       ON CONFLICT (form_id, connector_id) 
-      DO UPDATE SET config = $3, is_active = true
+      DO UPDATE SET 
+        config = EXCLUDED.config,
+        is_active = EXCLUDED.is_active
       RETURNING id
     `;
     
-    const result = await pool.query(query, [formId, connectorId, JSON.stringify(config)]);
+    const result = await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
     return result.rows.length > 0;
   }
 
@@ -624,7 +632,7 @@ export class SaaSService {
     formId: number, 
     destinationType: string, 
     destinationConfig: any
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       // First, find the connector by type
       const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
@@ -649,6 +657,7 @@ export class SaaSService {
       await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
       
       console.log(`Configured ${destinationType} destination for form ${formId}`);
+      return true;
     } catch (error) {
       console.error('Error configuring form destination:', error);
       throw error;

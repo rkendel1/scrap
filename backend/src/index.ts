@@ -383,21 +383,63 @@ app.post('/api/auth/guest', async (req, res) => {
 
 // ====== SAAS FORM ENDPOINTS ======
 
-// Create AI-generated form from website
+// NEW: Extract design tokens and voice analysis for a URL
+app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (req: AuthRequest, res) => {
+  try {
+    const { url } = req.body;
+
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
+    }
+
+    try {
+      new URL(url);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid URL format' });
+    }
+
+    console.log(`Extracting design tokens for: ${url}`);
+    const extractedData = await extractor.extractWebsiteData(url);
+    const savedRecord = await dbService.saveExtractedData(extractedData);
+
+    res.json({
+      success: true,
+      message: 'Website data extracted and saved successfully',
+      data: {
+        id: savedRecord.id,
+        url: savedRecord.url,
+        designTokens: {
+          colorPalette: savedRecord.color_palette,
+          primaryColors: savedRecord.primary_colors,
+          fontFamilies: savedRecord.font_families,
+          messaging: savedRecord.messaging,
+        },
+        voiceAnalysis: savedRecord.voice_tone,
+      }
+    });
+  } catch (error) {
+    console.error('Design token extraction error:', error);
+    res.status(500).json({
+      error: 'Failed to extract design tokens',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+
+// MODIFIED: Create AI-generated form from pre-extracted website data
 app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthRequest, res) => {
   try {
     const { 
-      url, 
+      extractedRecordId, // Now expects an ID instead of a URL
       formPurpose, 
       formName, 
       formDescription, 
-      destinationType,
-      destinationConfig,
       guestToken 
     } = req.body;
 
-    if (!url || !formPurpose) {
-      return res.status(400).json({ error: 'URL and form purpose are required' });
+    if (!extractedRecordId || !formPurpose) {
+      return res.status(400).json({ error: 'Extracted record ID and form purpose are required' });
     }
 
     // Check form limits for authenticated users
@@ -411,19 +453,48 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
       }
     }
 
-    console.log(`Generating form for: ${url}`);
+    // Fetch the previously extracted data
+    const extractedDataRecord = await dbService.getRecordById(extractedRecordId);
+    if (!extractedDataRecord) {
+      return res.status(404).json({ error: 'Extracted website data not found' });
+    }
 
-    // Extract website data
-    const extractedData = await extractor.extractWebsiteData(url);
-    
+    console.log(`Generating form for record ID: ${extractedRecordId}`);
+
     // Generate form with LLM
     const generatedForm = await llmService.generateFormFromWebsite({
-      url: extractedData.url,
-      title: extractedData.title,
-      description: extractedData.description,
-      voiceAnalysis: extractedData.voiceAnalysis,
-      designTokens: extractedData.designTokens,
-      messaging: extractedData.designTokens.messaging || []
+      url: extractedDataRecord.url,
+      title: extractedDataRecord.title,
+      description: extractedDataRecord.description,
+      voiceAnalysis: extractedDataRecord.voice_tone,
+      designTokens: {
+        colorPalette: extractedDataRecord.color_palette,
+        primaryColors: extractedDataRecord.primary_colors,
+        colorUsage: extractedDataRecord.color_usage,
+        fontFamilies: extractedDataRecord.font_families,
+        headings: extractedDataRecord.headings,
+        textSamples: extractedDataRecord.text_samples,
+        margins: extractedDataRecord.margins,
+        paddings: extractedDataRecord.paddings,
+        spacingScale: extractedDataRecord.spacing_scale,
+        layoutStructure: extractedDataRecord.layout_structure,
+        gridSystem: extractedDataRecord.grid_system,
+        breakpoints: extractedDataRecord.breakpoints,
+        buttons: extractedDataRecord.buttons,
+        formFields: extractedDataRecord.form_fields,
+        cards: extractedDataRecord.cards,
+        navigation: extractedDataRecord.navigation,
+        images: extractedDataRecord.images,
+        cssVariables: extractedDataRecord.css_variables,
+        rawCSS: extractedDataRecord.raw_css,
+        formSchema: extractedDataRecord.form_schema,
+        logoUrl: extractedDataRecord.logo_url,
+        brandColors: extractedDataRecord.brand_colors,
+        icons: extractedDataRecord.icons,
+        messaging: extractedDataRecord.messaging,
+        previewHTML: extractedDataRecord.preview_html,
+      },
+      messaging: extractedDataRecord.messaging || []
     }, formPurpose);
 
     // Get guest token ID if provided
@@ -434,25 +505,49 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
       guestTokenId = guestResult.rows[0]?.id || null;
     }
 
-    // Save form to database
+    // Save form to database (without destination config initially)
     const form = await saasService.createForm(
       req.user?.id || null,
       guestTokenId,
-      url,
+      extractedDataRecord.url,
       formName || generatedForm.title,
       formDescription || generatedForm.description,
       generatedForm,
-      extractedData
+      { // Pass relevant extracted data fields
+        title: extractedDataRecord.title,
+        description: extractedDataRecord.description,
+        favicon: extractedDataRecord.favicon,
+        designTokens: {
+          colorPalette: extractedDataRecord.color_palette,
+          primaryColors: extractedDataRecord.primary_colors,
+          colorUsage: extractedDataRecord.color_usage,
+          fontFamilies: extractedDataRecord.font_families,
+          headings: extractedDataRecord.headings,
+          textSamples: extractedDataRecord.text_samples,
+          margins: extractedDataRecord.margins,
+          paddings: extractedDataRecord.paddings,
+          spacingScale: extractedDataRecord.spacing_scale,
+          layoutStructure: extractedDataRecord.layout_structure,
+          gridSystem: extractedDataRecord.grid_system,
+          breakpoints: extractedDataRecord.breakpoints,
+          buttons: extractedDataRecord.buttons,
+          formFields: extractedDataRecord.form_fields,
+          cards: extractedDataRecord.cards,
+          navigation: extractedDataRecord.navigation,
+          images: extractedDataRecord.images,
+          cssVariables: extractedDataRecord.css_variables,
+          rawCSS: extractedDataRecord.raw_css,
+          formSchema: extractedDataRecord.form_schema,
+          logoUrl: extractedDataRecord.logo_url,
+          brandColors: extractedDataRecord.brand_colors,
+          icons: extractedDataRecord.icons,
+          messaging: extractedDataRecord.messaging,
+          previewHTML: extractedDataRecord.preview_html,
+        },
+        voiceAnalysis: extractedDataRecord.voice_tone,
+        extractedAt: extractedDataRecord.extracted_at.toISOString()
+      }
     );
-
-    // Handle destination configuration if provided
-    if (destinationType && destinationConfig) {
-      await saasService.configureFormDestination(
-        form.id,
-        destinationType,
-        destinationConfig
-      );
-    }
 
     res.json({
       success: true,
@@ -468,6 +563,40 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
     });
   }
 });
+
+// NEW: Configure destination for an existing form
+app.post('/api/forms/:id/configure-destination', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { destinationType, destinationConfig } = req.body;
+
+    if (isNaN(formId) || !destinationType || !destinationConfig) {
+      return res.status(400).json({ error: 'Form ID, destination type, and configuration are required' });
+    }
+
+    const success = await saasService.configureFormDestination(
+      formId,
+      destinationType,
+      destinationConfig
+    );
+
+    if (!success) {
+      return res.status(400).json({ error: 'Failed to configure form destination' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Form destination configured successfully'
+    });
+  } catch (error) {
+    console.error('Configure destination error:', error);
+    res.status(500).json({
+      error: 'Failed to configure form destination',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 
 // Get user's forms
 app.get('/api/forms', authService.authenticateToken, async (req: AuthRequest, res) => {

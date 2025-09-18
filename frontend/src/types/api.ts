@@ -108,6 +108,18 @@ export interface FormData {
   destinationConfig?: any;
 }
 
+export interface ExtractedDesignTokensData {
+  id: number;
+  url: string;
+  designTokens: {
+    colorPalette: string[];
+    primaryColors: string[];
+    fontFamilies: string[];
+    messaging: string[];
+  };
+  voiceAnalysis: Record<string, any>;
+}
+
 export interface Connector {
   id: number;
   name: string;
@@ -121,7 +133,7 @@ export interface ExtractRequest {
 }
 
 export interface FormGenerationRequest {
-  url: string;
+  extractedRecordId: number; // Changed from url to extractedRecordId
   formPurpose: string;
   formName?: string;
   formDescription?: string;

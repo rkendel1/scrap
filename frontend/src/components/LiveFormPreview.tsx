@@ -7,6 +7,8 @@ interface LiveFormPreviewProps {
   generatedForm: GeneratedForm | null;
   createdForm: SaaSForm | null;
   user?: any;
+  extractedDesignTokens: any | null; // New prop
+  extractedVoiceAnalysis: any | null; // New prop
 }
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
@@ -14,6 +16,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   generatedForm,
   createdForm,
   user,
+  extractedDesignTokens, // Use new prop
+  extractedVoiceAnalysis, // Use new prop
 }) => {
   const { url, purpose } = formData;
 
@@ -23,11 +27,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       return generatedForm;
     }
 
-    // Default styling
+    // Default styling, potentially overridden by extracted tokens
     const defaultStyling = {
-      primaryColor: '#007bff',
+      primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#007bff',
       backgroundColor: '#ffffff',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
+      fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
     };
@@ -44,9 +48,13 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       mockFields.push({ type: 'text', name: 'company', label: 'Company', placeholder: 'Your company', required: false });
     }
 
+    // Use extracted messaging for description if available
+    const descriptionText = extractedDesignTokens?.messaging?.[0] || 
+                            (url ? `This form will adapt to the style of ${url}` : 'Start by entering a website URL.');
+
     return {
       title: purpose ? `AI Form: ${purpose}` : 'Your AI-Powered Form',
-      description: url ? `This form will adapt to the style of ${url}` : 'Start by entering a website URL.',
+      description: descriptionText,
       fields: mockFields,
       ctaText: purpose?.toLowerCase().includes('subscribe') ? 'Subscribe' : 'Submit',
       thankYouMessage: 'Thank you for your submission!',

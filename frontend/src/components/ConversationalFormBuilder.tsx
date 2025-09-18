@@ -1,18 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
+import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
   user?: any;
   guestToken?: string;
-  onStateChange: (state: { formData: Partial<FormData>; generatedForm: GeneratedForm | null; createdForm: SaaSForm | null }) => void;
+  onStateChange: (state: { 
+    formData: Partial<FormData>; 
+    generatedForm: GeneratedForm | null; 
+    createdForm: SaaSForm | null;
+    extractedDesignTokens: any | null;
+    extractedVoiceAnalysis: any | null;
+  }) => void;
 }
 
 interface StepProps {
   formData: Partial<FormData>;
   onNext: (data: Partial<FormData>) => void;
   onBack?: () => void;
+  extractedDesignTokens?: any;
+  extractedVoiceAnalysis?: any;
+  createdForm?: SaaSForm | null;
+  generatedForm?: GeneratedForm | null;
 }
 
 // Step 1: Where will this live?
@@ -25,15 +35,37 @@ const Step1UrlInput: React.FC<StepProps> = ({ formData, onNext }) => {
   const onSubmit = async (data: { url: string }) => {
     setIsLoading(true);
     try {
-      // For demo purposes, we'll proceed without actual validation
-      // In production, this would validate the URL by attempting to scrape it
-      setTimeout(() => {
-        onNext({ url: data.url });
-        setIsLoading(false);
-      }, 1000);
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (localStorage.getItem('authToken')) {
+        headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+      } else if (localStorage.getItem('guestToken')) {
+        // Guest token is not directly used for this endpoint, but good to have auth context
+      }
+
+      const response = await fetch('/api/forms/extract-design-tokens', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ url: data.url }),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        onNext({ 
+          url: data.url, 
+          extractedRecordId: result.data.id,
+          extractedDesignTokens: result.data.designTokens,
+          extractedVoiceAnalysis: result.data.voiceAnalysis,
+        });
+      } else {
+        alert(result.error || 'Failed to analyze website. Please check the URL.');
+      }
     } catch (error: any) {
-      console.error('URL validation error:', error);
-      alert('Failed to analyze website. Please check the URL.');
+      console.error('URL extraction error:', error);
+      alert(error.message || 'Failed to analyze website. Please try again.');
+    } finally {
       setIsLoading(false);
     }
   };
@@ -93,13 +125,58 @@ const Step1UrlInput: React.FC<StepProps> = ({ formData, onNext }) => {
 };
 
 // Step 2: What do you want to capture?
-const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack }) => {
+const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack, extractedDesignTokens, extractedVoiceAnalysis }) => {
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: { purpose: formData.purpose || '' }
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const onSubmit = (data: { purpose: string }) => {
-    onNext({ purpose: data.purpose });
+  const onSubmit = async (data: { purpose: string }) => {
+    setIsLoading(true);
+    try {
+      const payload = {
+        extractedRecordId: formData.extractedRecordId,
+        formPurpose: data.purpose,
+        formName: formData.formName,
+        formDescription: formData.formDescription,
+        ...(localStorage.getItem('guestToken') && !localStorage.getItem('authToken') && { guestToken: localStorage.getItem('guestToken') })
+      };
+
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      if (localStorage.getItem('authToken')) {
+        headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+      }
+
+      const response = await fetch('/api/forms/generate', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        onNext({ 
+          purpose: data.purpose,
+          generatedForm: result.generatedForm,
+          createdForm: result.form,
+        });
+      } else {
+        alert(result.error || 'Failed to generate form');
+        
+        if (result.upgradeRequired) {
+          console.log('Upgrade required for more forms');
+        }
+      }
+    } catch (error: any) {
+      console.error('Form generation error:', error);
+      alert(error.message || 'Failed to generate form');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const commonPurposes = [
@@ -197,9 +274,14 @@ const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack }) =>
           <button 
             type="submit" 
             className="btn btn-primary"
+            disabled={isLoading}
             style={{ flex: '2', fontSize: '16px', padding: '16px' }}
           >
-            Generate Form Fields →
+            {isLoading ? (
+              <>🤖 Generating form...</>
+            ) : (
+              'Generate Form Fields →'
+            )}
           </button>
         </div>
       </form>
@@ -207,10 +289,11 @@ const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack }) =>
   );
 };
 
-// Step 3: Where should the data go?
-const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }) => {
+// Step 3: Configure Destination (now with preview)
+const Step3ConfigureDestination: React.FC<StepProps> = ({ formData, onNext, onBack, createdForm, generatedForm }) => {
   const [selectedType, setSelectedType] = useState<string>(formData.destinationType || '');
   const [config, setConfig] = useState(formData.destinationConfig || {});
+  const [isSaving, setIsSaving] = useState(false);
 
   const destinations = [
     {
@@ -243,7 +326,7 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
     }
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!selectedType) {
@@ -261,10 +344,38 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
       }
     }
 
-    onNext({ 
-      destinationType: selectedType as any,
-      destinationConfig: config 
-    });
+    setIsSaving(true);
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+      };
+
+      const response = await fetch(`/api/forms/${createdForm?.id}/configure-destination`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          destinationType: selectedType,
+          destinationConfig: config,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        onNext({ 
+          destinationType: selectedType as any,
+          destinationConfig: config 
+        });
+      } else {
+        alert(result.error || 'Failed to save destination');
+      }
+    } catch (error: any) {
+      console.error('Save destination error:', error);
+      alert(error.message || 'Failed to save destination. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -363,9 +474,10 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
           <button 
             type="submit" 
             className="btn btn-primary"
+            disabled={isSaving}
             style={{ flex: '2', fontSize: '16px', padding: '16px' }}
           >
-            Create Form →
+            {isSaving ? 'Saving Destination...' : 'Save Destination →'}
           </button>
         </div>
       </form>
@@ -373,8 +485,8 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
   );
 };
 
-// Step 4: Final Preview and Go to Dashboard
-const Step4FinalPreview: React.FC<{ 
+// Step 4: Confirmation
+const Step4Confirmation: React.FC<{ 
   generatedForm: GeneratedForm; 
   createdForm: SaaSForm;
   onGoToDashboard: () => void;
@@ -410,66 +522,37 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<FormData>>({});
   const [generatedForm, setGeneratedForm] = useState<GeneratedForm | null>(null);
-  const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null); // Store the full form object
+  const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null);
+  const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
+  const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    onStateChange({ formData, generatedForm, createdForm });
-  }, [formData, generatedForm, createdForm, onStateChange]);
+    onStateChange({ 
+      formData, 
+      generatedForm, 
+      createdForm,
+      extractedDesignTokens,
+      extractedVoiceAnalysis,
+    });
+  }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
 
   const handleNext = async (stepData: Partial<FormData>) => {
     const newFormData = { ...formData, ...stepData };
     setFormData(newFormData);
 
-    if (currentStep === 1) {
-      setCurrentStep(2);
-    } else if (currentStep === 2) {
-      setCurrentStep(3);
-    } else if (currentStep === 3) {
-      // Generate the form
-      setIsLoading(true);
-      try {
-        const payload = {
-          url: newFormData.url,
-          formPurpose: newFormData.purpose,
-          formName: newFormData.formName, // Assuming formName can be passed from a previous step if added
-          formDescription: newFormData.formDescription, // Assuming formDescription can be passed
-          destinationType: newFormData.destinationType,
-          destinationConfig: newFormData.destinationConfig,
-          ...(guestToken && !user && { guestToken })
-        };
-
-        const headers: HeadersInit = {
-          'Content-Type': 'application/json',
-        };
-
-        if (user?.token) {
-          headers['Authorization'] = `Bearer ${user.token}`;
-        }
-
-        const response = await fetch('/api/forms/generate', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-
-        const result = await response.json();
-        
-        if (result.success) {
-          setGeneratedForm(result.generatedForm);
-          setCreatedForm(result.form); // Store the full form object with embed code
-          setCurrentStep(4);
-          onFormGenerated(result.form); // Notify parent that a form was generated
-        } else {
-          alert(result.error || 'Failed to generate form');
-        }
-      } catch (error: any) {
-        console.error('Form generation error:', error);
-        alert(error.message || 'Failed to generate form');
-      } finally {
-        setIsLoading(false);
-      }
+    if (stepData.extractedRecordId) {
+      setExtractedDesignTokens(stepData.extractedDesignTokens);
+      setExtractedVoiceAnalysis(stepData.extractedVoiceAnalysis);
     }
+    if (stepData.generatedForm) {
+      setGeneratedForm(stepData.generatedForm);
+    }
+    if (stepData.createdForm) {
+      setCreatedForm(stepData.createdForm);
+    }
+
+    setCurrentStep(currentStep + 1);
   };
 
   const handleBack = () => {
@@ -487,36 +570,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       onFormGenerated(createdForm); // This will trigger App.tsx to update forms and switch view
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="card" style={{ textAlign: 'center', padding: '60px 40px' }}>
-        <h2>🤖 Creating Your Form...</h2>
-        <p style={{ fontSize: '18px', color: '#666', margin: '16px 0 32px 0' }}>
-          Our AI is analyzing your website and generating the perfect form.
-        </p>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #f3f3f3',
-            borderTop: '4px solid #007bff',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite'
-          }}></div>
-          <span style={{ fontSize: '16px', color: '#666' }}>This usually takes 10-15 seconds...</span>
-        </div>
-        <style>
-          {`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}
-        </style>
-      </div>
-    );
-  }
 
   // Progress indicator
   const ProgressIndicator = () => (
@@ -567,7 +620,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         <span>Website</span>
         <span>Purpose</span>
         <span>Destination</span>
-        <span>Preview</span>
+        <span>Confirmation</span>
       </div>
     </div>
   );
@@ -581,15 +634,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       )}
       
       {currentStep === 2 && (
-        <Step2PurposeInput formData={formData} onNext={handleNext} onBack={handleBack} />
+        <Step2PurposeInput 
+          formData={formData} 
+          onNext={handleNext} 
+          onBack={handleBack} 
+          extractedDesignTokens={extractedDesignTokens}
+          extractedVoiceAnalysis={extractedVoiceAnalysis}
+        />
       )}
       
       {currentStep === 3 && (
-        <Step3DestinationInput formData={formData} onNext={handleNext} onBack={handleBack} />
+        <Step3ConfigureDestination 
+          formData={formData} 
+          onNext={handleNext} 
+          onBack={handleBack} 
+          createdForm={createdForm}
+          generatedForm={generatedForm}
+        />
       )}
       
       {currentStep === 4 && generatedForm && createdForm && (
-        <Step4FinalPreview 
+        <Step4Confirmation 
           generatedForm={generatedForm}
           createdForm={createdForm}
           onGoToDashboard={handleGoToDashboard}

@@ -27,11 +27,15 @@ function App() {
   const [builderState, setBuilderState] = useState<{ 
     formData: Partial<FormData>; 
     generatedForm: GeneratedForm | null; 
-    createdForm: SaaSForm | null 
+    createdForm: SaaSForm | null;
+    extractedDesignTokens: any | null;
+    extractedVoiceAnalysis: any | null;
   }>({
     formData: {},
     generatedForm: null,
     createdForm: null,
+    extractedDesignTokens: null,
+    extractedVoiceAnalysis: null,
   });
 
   // Initialize authentication on app load
@@ -370,6 +374,8 @@ function App() {
                 generatedForm={builderState.generatedForm}
                 createdForm={builderState.createdForm}
                 user={user}
+                extractedDesignTokens={builderState.extractedDesignTokens} // Pass new state
+                extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
               />
             </div>
           </div>
