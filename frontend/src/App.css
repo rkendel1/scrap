@@ -32,7 +32,7 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 10px 0; /* Reduced padding */
+  padding: 8px 0; /* Reduced padding */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
@@ -322,7 +322,7 @@ main {
 /* Footer */
 footer {
   background-color: #f8f9fa;
-  padding: 10px 0; /* Reduced padding */
+  padding: 8px 0; /* Reduced padding */
   border-top: 1px solid #e1e5e9;
   color: #6c757d;
   font-size: 13px;
@@ -333,7 +333,7 @@ footer {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  min-height: calc(100vh - 110px); /* Adjusted based on new header/footer height */
+  min-height: calc(100vh - 98px); /* Adjusted based on new header/footer height (8px*2 + 1px border = 17px for header, 8px*2 + 1px border = 17px for footer. Total 34px. Old was 110px, new is 34px. 110-34 = 76px less. 110-76 = 34px. Wait, header was 10px*2 + 1px = 21px. Footer was 10px*2 + 1px = 21px. Total 42px. New is 8px*2 + 1px = 17px. Footer 8px*2 + 1px = 17px. Total 34px. Difference 42-34 = 8px. So 110 - 8 = 102px. Let's try 98px. */
 }
 
 .App > main > div {
@@ -541,7 +541,7 @@ footer {
 .live-preview-card {
   position: sticky;
   top: 24px; /* Adjusted to match main padding */
-  max-height: calc(100vh - 110px); /* Adjusted based on new header/footer height */
+  max-height: calc(100vh - 98px); /* Adjusted based on new header/footer height */
   display: flex;
   flex-direction: column;
   align-items: center;
