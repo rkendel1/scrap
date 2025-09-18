@@ -215,7 +215,28 @@ The API includes built-in security and rate limiting:
 
 # 🐳 Docker Development Setup
 
-## Quick Start with Docker Compose
+## ⚡ Quick Start (2 minutes)
+
+**The fastest way to get started:**
+
+```bash
+# 1. Clone and start
+git clone <repository-url>
+cd scrap
+docker compose up -d
+
+# 2. Wait for services (check status)
+docker compose ps
+
+# 3. Access the application
+# Frontend: http://localhost:5173
+# Backend:  http://localhost:3001
+# Health:   http://localhost:3001/health
+```
+
+**If you see database connection issues**, check the troubleshooting section below.
+
+## Complete Setup Guide
 
 The project includes a complete Docker Compose setup for local development with PostgreSQL, backend API, and React frontend.
 
@@ -507,6 +528,108 @@ curl http://localhost:3001/health
 
 # Connector definitions
 curl http://localhost:3001/api/connector-definitions
+```
+
+### 🐛 Troubleshooting
+
+#### Common Issues
+
+**Database Connection Errors:**
+
+If you see database connection errors like "EAI_AGAIN db" or "getaddrinfo EAI_AGAIN db":
+
+```bash
+# Check if services are running
+docker compose ps
+
+# Check database status specifically
+docker compose logs db
+
+# Get database container IP
+docker inspect $(docker compose ps -q db) | grep IPAddress
+
+# Temporarily use IP address instead of hostname
+# Edit docker-compose.yml and replace 'db' with the IP address:
+# DATABASE_URL=postgresql://scrap_user:scrap_password@172.18.0.X:5432/scrap_db
+```
+
+**Alternative: Direct Database Setup**
+If Docker networking issues persist, run PostgreSQL locally:
+
+```bash
+# Install PostgreSQL locally
+# Create database
+createdb scrap_db
+createuser scrap_user
+
+# Update backend/.env to use localhost
+DATABASE_URL=postgresql://scrap_user:scrap_password@localhost:5432/scrap_db
+
+# Run only frontend and backend
+docker compose up frontend backend
+```
+
+**Backend Build Failures:**
+```bash
+# Rebuild backend
+docker compose build backend
+docker compose up -d backend
+```
+
+**Frontend Development Issues:**
+```bash
+# Rebuild frontend
+docker compose build frontend
+docker compose restart frontend
+
+# Check if Vite is binding to all interfaces
+docker compose logs frontend
+```
+
+**Connector Authentication Issues:**
+- Verify environment variables are set correctly
+- Check credential formats (base64 encoding for Google Sheets)
+- Ensure external service permissions are configured
+
+**CORS Issues:**
+- Verify `FRONTEND_URL` is set correctly in backend/.env
+- Check that frontend is accessible at configured URL
+
+### 🔧 Debugging Tips
+
+1. **Monitor Logs:**
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f backend
+```
+
+2. **Check Environment Variables:**
+```bash
+docker compose exec backend env | grep -E "(EMAIL|SLACK|GOOGLE)"
+```
+
+3. **Test API Directly:**
+```bash
+# Health check
+curl http://localhost:3001/health
+
+# Connector definitions
+curl http://localhost:3001/api/connector-definitions
+```
+
+4. **Database Direct Access:**
+```bash
+# Connect to database
+docker compose exec db psql -U scrap_user -d scrap_db
+
+# List tables
+\dt
+
+# Check specific table
+SELECT * FROM forms LIMIT 5;
 ```
 
 ## 🔒 Security Notes
