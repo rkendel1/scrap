@@ -38,7 +38,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   onStateChange,
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
-  const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
+    { type: 'prompt', content: "Hello! I'm your AI form builder. What is the URL of the website you want to create a form for?" }
+  ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,13 +74,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       extractedVoiceAnalysis,
     });
   }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
-
-  // Initial prompt
-  useEffect(() => {
-    if (conversationHistory.length === 0 && currentStep === 'ASK_URL') {
-      addPrompt("Hello! I'm your AI form builder. What is the URL of the website you want to create a form for?");
-    }
-  }, [conversationHistory, currentStep]);
 
   const addEntry = (entry: ConversationEntry) => {
     setConversationHistory((prev) => [...prev, entry]);
@@ -358,7 +353,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const handleRestart = (e: React.FormEvent) => {
     e.preventDefault();
     if (userInput.toLowerCase() === 'yes') {
-      setConversationHistory([]);
+      setConversationHistory([
+        { type: 'prompt', content: "Okay, let's create another form! What is the URL of the website you want to create a form for?" }
+      ]);
       setUserInput('');
       setIsLoading(false);
       setError(null);
@@ -371,7 +368,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setSelectedDestinationType(null);
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
-      addPrompt("Okay, let's create another form! What is the URL of the website you want to create a form for?");
     } else if (userInput.toLowerCase() === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -390,7 +386,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       <div
         ref={chatHistoryRef}
         style={{
-          flexGrow: 1,
+          flexGrow: 0, // Changed from 1 to 0
+          height: '400px', // Fixed height
           border: '1px solid #e1e5e9',
           borderRadius: '8px',
           padding: '20px',
