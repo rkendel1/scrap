@@ -26,8 +26,6 @@ type ConversationStep =
   | 'PROCESSING_URL'
   | 'ASK_PURPOSE'
   | 'PROCESSING_PURPOSE'
-  | 'ASK_FORM_LAYOUT' // New step
-  | 'PROCESSING_FORM_LAYOUT' // New step
   | 'ASK_DESTINATION_TYPE'
   | 'ASK_DESTINATION_CONFIG'
   | 'PROCESSING_DESTINATION'
@@ -77,9 +75,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (formData.purpose) {
       summaryParts.push(`🎯 ${formData.purpose}`);
     }
-    if (formData.formLayout) {
-      summaryParts.push(`🖼️ ${formData.formLayout.charAt(0).toUpperCase() + formData.formLayout.slice(1)}`);
-    }
+    // Removed formLayout from summary
     if (formData.destinationType) {
       const icon = destinationIcons[formData.destinationType] || '';
       summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
@@ -148,9 +144,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_PURPOSE':
           await processPurposeInput(input);
           break;
-        case 'ASK_FORM_LAYOUT': // New case
-          await processFormLayoutInput(input);
-          break;
         case 'ASK_DESTINATION_TYPE':
           await processDestinationTypeInput(input);
           break;
@@ -179,9 +172,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     try {
       // Directly call the processing function for the current step
       switch (currentStep) {
-        case 'ASK_FORM_LAYOUT':
-          await processFormLayoutInput(response);
-          break;
         case 'ASK_DESTINATION_TYPE':
           await processDestinationTypeInput(response);
           break;
@@ -285,43 +275,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
 
     // Set the step FIRST
-    setCurrentStep('ASK_FORM_LAYOUT'); 
+    setCurrentStep('ASK_DESTINATION_TYPE'); 
 
     // Then add the prompt with quick response buttons
     addPrompt(
       <>
-        Your AI-generated form is ready! Now, how would you like this form to be displayed?
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Inline')}>Inline</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Modal')}>Modal</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Banner')}>Banner</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Standalone')}>Standalone Page</button>
-        </div>
-      </>
-    );
-    setIsLoading(false); // Finally, set loading to false
-  };
-
-  const processFormLayoutInput = async (layoutInput: string) => {
-    const normalizedLayout = layoutInput.toLowerCase().replace(/\s/g, '');
-    const availableLayouts = ['inline', 'modal', 'banner', 'standalone'];
-
-    if (!availableLayouts.includes(normalizedLayout)) {
-      addError('I don\'t recognize that layout type. Please choose from Inline, Modal, Banner, or Standalone Page.');
-      setIsLoading(false);
-      return;
-    }
-
-    // Update the generated form's layout in state
-    setGeneratedForm(prev => prev ? { ...prev, formLayout: normalizedLayout as any } : null);
-    setFormData(prev => ({ ...prev, formLayout: normalizedLayout as any }));
-
-
-    addPrompt(
-      <>
-        Great! The form preview on the right has been updated to reflect the "{layoutInput}" layout.
-        <br />
-        Next, where should I send the form submissions?
+        Your AI-generated form is ready! Next, where should I send the form submissions?
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
           <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Email')}>Email</button>
           <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
@@ -330,9 +289,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </>
     );
-    setCurrentStep('ASK_DESTINATION_TYPE');
-    setIsLoading(false);
+    setIsLoading(false); // Finally, set loading to false
   };
+
+  // Removed processFormLayoutInput function
 
   const processDestinationTypeInput = async (typeInput: string) => {
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
