@@ -16,7 +16,7 @@ export interface User {
 }
 
 export interface AuthRequest extends Request {
-  user?: User;
+  user?: User | null; // Allow user to be null for optional auth
 }
 
 export class AuthService {
@@ -187,16 +187,22 @@ export class AuthService {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
+    req.user = null; // Initialize req.user to null for optional auth
+
     if (token) {
-      const decoded = this.verifyToken(token);
-      if (decoded) {
-        const user = await this.getUserById(decoded.userId);
-        if (user) {
-          req.user = user;
+      try {
+        const decoded = this.verifyToken(token);
+        if (decoded) {
+          const user = await this.getUserById(decoded.userId);
+          if (user) {
+            req.user = user;
+          }
         }
+      } catch (error) {
+        console.warn('Optional auth: Invalid or expired token, proceeding as guest.');
+        // req.user remains null
       }
     }
-
     next();
   };
 }
