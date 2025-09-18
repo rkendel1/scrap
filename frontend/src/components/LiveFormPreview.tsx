@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EmbeddableForm } from './EmbeddableForm';
 import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
-import { CheckCircle } from 'lucide-react'; // Import CheckCircle icon
+import { CheckCircle, Lock } from 'lucide-react'; // Import CheckCircle and Lock icon
 
 // Helper to determine if a color is light (simplified for demo)
 const isLightColor = (color: string): boolean => {
@@ -229,6 +229,24 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       {generatedForm && (
         <div className="ai-generated-badge">
           ✅ AI-generated form preview.
+        </div>
+      )}
+
+      {/* Ready to Embed Section */}
+      {generatedForm && createdForm && (
+        <div className="ready-to-embed-card">
+          <h3>Ready to embed?</h3>
+          <p>
+            Your form is configured and ready to use. Get the embed code
+            to add it to your website.
+          </p>
+          <button 
+            onClick={() => { /* TODO: Implement navigation to embed code or auth modal */ }}
+            className="btn-embed-code"
+          >
+            <Lock size={18} />
+            Sign in to get embed code
+          </button>
         </div>
       )}
     </div>
