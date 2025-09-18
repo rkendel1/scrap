@@ -199,6 +199,27 @@ function App() {
     await fetchRecords();
   };
 
+  const fetchRecords = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = searchQuery
+        ? await apiService.searchRecords(searchQuery)
+        : await apiService.getAllRecords();
+      
+      if (response.success && response.data) {
+        setRecords(response.data);
+      } else {
+        setError(response.error || 'Failed to fetch records');
+      }
+    } catch (err: any) {
+      console.error('Failed to fetch records:', err);
+      setError('Failed to fetch records. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (currentView === 'legacy') {
       fetchRecords();
@@ -288,12 +309,7 @@ function App() {
               📊 My Forms ({forms.length})
             </button>
           )}
-          <button
-            onClick={() => setCurrentView('legacy')}
-            className={`btn ${currentView === 'legacy' ? 'btn-primary' : 'btn-secondary'}`}
-          >
-            🔧 Design Extractor
-          </button>
+          {/* Removed 'Design Extractor' button */}
         </div>
 
         {/* Auth Modal */}
