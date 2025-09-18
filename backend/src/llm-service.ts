@@ -215,13 +215,16 @@ Return a JSON object with this structure:
 
   private parseFormResponse(response: string, designTokens: any): GeneratedForm {
     try {
-      // Extract JSON from response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
+      let jsonString: string;
+
+      if (jsonMatch && jsonMatch[0]) {
+        jsonString = jsonMatch[0];
+      } else {
         throw new Error('No JSON found in response');
       }
 
-      const parsed = JSON.parse(jsonMatch![0]); // Added non-null assertion here
+      const parsed = JSON.parse(jsonString);
       
       // Validate and set defaults
       return {
@@ -326,7 +329,6 @@ Return an array of ${count} JSON objects with the same structure as the original
       }
 
       // Try to parse multiple variations
-      const variations: GeneratedForm[] = [];
       const jsonMatches = response.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g);
       
       if (jsonMatches) {
