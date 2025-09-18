@@ -45,79 +45,84 @@
                 return;
             }
 
-            // Create a simple mock form for demonstration
-            const mockForm = {
-                title: "Contact Us",
-                description: "Get in touch with our team",
-                fields: [
-                    { type: "text", name: "name", label: "Full Name", placeholder: "Enter your name", required: true },
-                    { type: "email", name: "email", label: "Email Address", placeholder: "your@email.com", required: true },
-                    { type: "textarea", name: "message", label: "Message", placeholder: "How can we help you?", required: true }
-                ],
-                ctaText: "Send Message",
-                thankYouMessage: "Thank you for your message! We'll get back to you soon.",
-                styling: {
-                    primaryColor: "#007bff",
-                    backgroundColor: "#ffffff",
-                    fontFamily: "system-ui",
-                    borderRadius: "8px"
+            // Configuration
+            const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
+
+            // Fetch form data from API
+            fetch(`${API_BASE}/api/forms/embed/${embedCode}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.message || 'Failed to load form');
+                    }
+                    renderForm(data.data, embedCode, true);
+                })
+                .catch(error => {
+                    console.error('Error loading form:', error);
+                    document.getElementById('formcraft-embed-container').innerHTML = 
+                        `<div class="error-message">Error loading form: ${error.message}</div>`;
+                });
+
+            function renderForm(formData, embedCode, showBranding) {
+                const form = formData.generated_form;
+                if (!form) {
+                    document.getElementById('formcraft-embed-container').innerHTML = 
+                        '<div class="error-message">Form configuration not found</div>';
+                    return;
                 }
-            };
 
-            renderForm(mockForm, embedCode, true);
-
-            function renderForm(form, embedCode, showBranding) {
+                const styling = formData.styling || {};
                 const container = document.getElementById('formcraft-embed-container');
                 
                 // Create form HTML
                 let formHTML = `
                     <div style="
-                        background-color: ${form.styling.backgroundColor || '#fff'};
+                        background-color: ${styling.backgroundColor || '#fff'};
                         padding: 24px;
-                        border-radius: ${form.styling.borderRadius || '8px'};
-                        font-family: ${form.styling.fontFamily || 'system-ui'};
+                        border-radius: ${styling.borderRadius || '8px'};
+                        font-family: ${styling.fontFamily || 'system-ui'};
                         border: 1px solid #e1e5e9;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     ">
                         <div style="margin-bottom: 24px;">
                             <h3 style="margin: 0 0 8px 0; color: #333; font-size: 20px;">
-                                ${escapeHtml(form.title)}
+                                ${escapeHtml(form.title || formData.title)}
                             </h3>
-                            ${form.description ? `
+                            ${form.description || formData.description ? `
                                 <p style="margin: 0; color: #666; font-size: 14px;">
-                                    ${escapeHtml(form.description)}
+                                    ${escapeHtml(form.description || formData.description)}
                                 </p>
                             ` : ''}
                         </div>
 
                         <form id="formcraft-form">
-                            ${renderFields(form.fields)}
+                            ${renderFields(form.fields || [])}
                             
                             <div id="form-message" style="margin-bottom: 16px; display: none;"></div>
                             
                             <button type="submit" id="submit-btn" style="
-                                background-color: ${form.styling.primaryColor || '#007bff'};
+                                background-color: ${styling.primaryColor || '#007bff'};
                                 color: white;
                                 padding: 12px 24px;
                                 border: none;
-                                border-radius: ${form.styling.borderRadius || '4px'};
+                                border-radius: ${styling.borderRadius || '4px'};
                                 font-size: 16px;
                                 font-weight: 500;
                                 cursor: pointer;
                                 width: 100%;
-                                font-family: ${form.styling.fontFamily || 'inherit'};
+                                font-family: ${styling.fontFamily || 'inherit'};
                                 transition: opacity 0.2s;
                             ">
-                                ${escapeHtml(form.ctaText)}
+                                ${escapeHtml(form.ctaText || 'Submit')}
                             </button>
                         </form>
 
                         <div id="thank-you-message" style="display: none; text-align: center; padding: 20px;">
-                            <div style="color: ${form.styling.primaryColor || '#28a745'}; font-size: 18px; font-weight: bold; margin-bottom: 8px;">
+                            <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 18px; font-weight: bold; margin-bottom: 8px;">
                                 ✓ Thank You!
                             </div>
                             <p style="margin: 0; color: #666;">
-                                ${escapeHtml(form.thankYouMessage)}
+                                ${escapeHtml(form.thankYouMessage || 'Thank you for your submission!')}
                             </p>
                         </div>
 
@@ -213,7 +218,7 @@
                 }).join('');
             }
 
-            function handleFormSubmission(form, embedCode) {
+            function handleFormSubmission(formData, embedCode) {
                 const formElement = document.getElementById('formcraft-form');
                 const submitBtn = document.getElementById('submit-btn');
                 const messageDiv = document.getElementById('form-message');
@@ -224,19 +229,52 @@
                 submitBtn.textContent = 'Submitting...';
 
                 // Collect form data
-                const formData = new FormData(formElement);
+                const formDataObj = new FormData(formElement);
                 const data = {};
-                for (let [key, value] of formData.entries()) {
+                for (let [key, value] of formDataObj.entries()) {
                     data[key] = value;
                 }
 
-                // Simulate API submission for demo
-                setTimeout(() => {
-                    // Show success message
-                    formElement.style.display = 'none';
-                    document.getElementById('thank-you-message').style.display = 'block';
-                    console.log('Form submitted with data:', data);
-                }, 1000);
+                // Submit to API
+                fetch(`${API_BASE}/api/forms/submit/${embedCode}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        // Show success message
+                        formElement.style.display = 'none';
+                        document.getElementById('thank-you-message').style.display = 'block';
+                    } else {
+                        throw new Error(result.message || 'Submission failed');
+                    }
+                })
+                .catch(error => {
+                    console.error('Submission error:', error);
+                    
+                    // Show error message
+                    messageDiv.innerHTML = `
+                        <div style="
+                            padding: 12px;
+                            background-color: #f8d7da;
+                            color: #721c24;
+                            border-radius: 4px;
+                            font-size: 14px;
+                        ">
+                            ${error.message}
+                        </div>
+                    `;
+                    messageDiv.style.display = 'block';
+                    
+                    // Re-enable form
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.textContent = formData.generated_form?.ctaText || 'Submit';
+                });
             }
 
             function escapeHtml(text) {
