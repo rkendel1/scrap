@@ -217,11 +217,12 @@ Return a JSON object with this structure:
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       
-      if (!jsonMatch || !jsonMatch[0]) {
-        throw new Error('No JSON found in response');
+      // Explicitly check for null and ensure it's a string before parsing
+      if (!jsonMatch || jsonMatch.length === 0 || typeof jsonMatch[0] !== 'string') {
+        throw new Error('No valid JSON string found in response');
       }
 
-      const jsonString = jsonMatch[0]; // jsonString is now definitely a string here
+      const jsonString: string = jsonMatch[0]; 
       const parsed = JSON.parse(jsonString);
       
       // Validate and set defaults
@@ -327,7 +328,7 @@ Return an array of ${count} JSON objects with the same structure as the original
       }
 
       // Try to parse multiple variations
-      const variations: GeneratedForm[] = []; // Declared here
+      const variations: GeneratedForm[] = []; 
       const jsonMatches = response.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g);
       
       if (jsonMatches) {
