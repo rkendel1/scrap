@@ -17,7 +17,7 @@ interface ConversationalFormBuilderProps {
 }
 
 type ConversationEntry = {
-  type: 'prompt' | 'user' | 'loading' | 'error' | 'success';
+  type: 'prompt' | 'user' | 'error' | 'success'; // Removed 'loading' type from history
   content: string | JSX.Element;
 };
 
@@ -43,6 +43,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [currentLoadingMessage, setCurrentLoadingMessage] = useState<string | null>(null); // New state for temporary loading message
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
 
@@ -107,22 +108,32 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const addPrompt = (content: string | JSX.Element) => {
     addEntry({ type: 'prompt', content });
+    setIsLoading(false); // Ensure loading is off after a prompt
+    setCurrentLoadingMessage(null); // Clear loading message
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
+    setIsLoading(false); // Ensure loading is off after user response
+    setCurrentLoadingMessage(null); // Clear loading message
   };
 
   const addLoading = (content: string) => {
-    addEntry({ type: 'loading', content: <span className="loading-dots">{content}</span> });
+    setIsLoading(true);
+    setCurrentLoadingMessage(content);
+    // Do NOT add to conversationHistory
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
+    setIsLoading(false); // Ensure loading is off after an error
+    setCurrentLoadingMessage(null); // Clear loading message
   };
 
-  const addSuccess = (content: string) => {
+  const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
+    setIsLoading(false); // Ensure loading is off after success
+    setCurrentLoadingMessage(null); // Clear loading message
   };
 
   // Helper to parse user input for various intents
@@ -209,27 +220,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (!userInput.trim() || isLoading) return;
 
     const input = userInput.trim();
-    addUserResponse(input);
+    addUserResponse(input); // Add user's response to history
     setUserInput('');
     setError(null);
-    setIsLoading(true);
+    // setIsLoading(true); // This is now handled by addLoading
 
     const parsedInput = parseUserInput(input);
 
     // Handle commands first
     if (parsedInput.command === 'help') {
       addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt
       return;
     }
     if (parsedInput.command === 'start over') {
       handleRestartConversation();
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt in restart
       return;
     }
     if (currentStep === 'DONE' && (parsedInput.command === 'yes' || parsedInput.command === 'no')) {
       handleRestart(parsedInput.command);
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt in restart
       return;
     }
 
@@ -241,7 +252,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processUrlInput(parsedInput.url);
           } else {
             addError('Please provide a valid URL starting with http:// or https://');
-            setIsLoading(false);
+            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -253,7 +264,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processUrlInput(parsedInput.url);
           } else {
             addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form").');
-            setIsLoading(false);
+            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -265,7 +276,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processUrlInput(parsedInput.url);
           } else {
             addError('Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
-            setIsLoading(false);
+            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -293,7 +304,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                         break;
                 }
                 addPrompt(`You've already selected ${selectedDestinationType}. ${configPrompt}`);
-                setIsLoading(false);
+                // setIsLoading(false); // Handled by addPrompt
             } else {
                 // User provided a *different* destination type, switch to it
                 await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
@@ -301,7 +312,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           } else {
             // No config or destination type provided, invalid input for this step
             addError('Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").');
-            setIsLoading(false);
+            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -309,18 +320,18 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           // This case should be handled by the command check above for 'yes'/'no'
           // If we reach here, it means an unexpected input in DONE state
           addError('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
-          setIsLoading(false);
+          // setIsLoading(false); // Handled by addError
           break;
 
         default:
           addError('I\'m not sure how to respond to that. Can you rephrase or type "help"?');
-          setIsLoading(false);
+          // setIsLoading(false); // Handled by addError
           break;
       }
     } catch (err: any) {
       console.error('Conversation error:', err);
       addError(err.message || 'An unexpected error occurred. Please try again.');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
     }
   };
 
@@ -331,7 +342,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addUserResponse(response);
     setUserInput(''); // Clear input field immediately
     setError(null);
-    setIsLoading(true);
+    // setIsLoading(true); // This is now handled by addLoading
 
     // Directly call handleUserInput with the quick response
     // This allows the full parsing and step logic to apply
@@ -344,7 +355,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       new URL(url); // Basic URL validation
     } catch {
       addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -363,7 +374,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!extractResult.success) {
       addError(extractResult.error || 'Failed to analyze website. Please check the URL.');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -376,7 +387,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     addSuccess('Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
     setCurrentStep('ASK_PURPOSE');
-    setIsLoading(false);
+    // setIsLoading(false); // Handled by addSuccess
   };
 
   const processPurposeInput = async (purpose: string) => {
@@ -384,7 +395,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (!extractedRecordId) {
       addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
       setCurrentStep('ASK_URL');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -414,7 +425,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (generateResult.upgradeRequired) {
         addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
       }
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError or addPrompt
       return;
     }
 
@@ -438,7 +449,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </>
     );
-    setIsLoading(false); // Finally, set loading to false
+    // setIsLoading(false); // Handled by addPrompt
   };
 
   const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
@@ -447,7 +458,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!availableTypes.includes(normalizedType)) {
       addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, or Webhook.');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -476,7 +487,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       }
       addPrompt(configPrompt);
       setCurrentStep('ASK_DESTINATION_CONFIG');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt
     }
   };
 
@@ -487,7 +498,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
       setCurrentStep('ASK_URL');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -526,7 +537,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (validationError) {
       addError(`${validationError} ${expectedInputPrompt}`);
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -557,7 +568,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!configureResult.success) {
       addError(configureResult.error || 'Failed to save destination configuration.');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -570,7 +581,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       </>
     );
     setCurrentStep('DONE'); // Transition to a final state where user can restart
-    setIsLoading(false);
+    // setIsLoading(false); // Handled by addPrompt
     onFormGenerated(createdForm); // Notify parent that a form was created
   };
 
@@ -580,7 +591,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         { type: 'prompt', content: "Okay, let's create another form! What's the URL of the website you want to create a form for?" }
       ]);
       setUserInput('');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt
       setError(null);
       setFormData({});
       setExtractedDesignTokens(null);
@@ -595,7 +606,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
-      setIsLoading(false);
+      // setIsLoading(false); // Handled by addPrompt
       // Maybe redirect to dashboard or something
     }
   };
@@ -605,7 +616,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       { type: 'prompt', content: "Okay, let's start over! What's the URL of the website you want to create a form for?" }
     ]);
     setUserInput('');
-    setIsLoading(false);
+    // setIsLoading(false); // Handled by addPrompt
     setError(null);
     setFormData({});
     setExtractedDesignTokens(null);
@@ -668,8 +679,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                     ? '#007bff'
                     : entry.type === 'prompt'
                     ? '#e0e0e0' // Slightly lighter for prompts
-                    : entry.type === 'loading'
-                    ? '#e3f2fd'
                     : entry.type === 'error'
                     ? '#f8d7da'
                     : '#d4edda', // success
@@ -691,6 +700,21 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           </div>
         ))}
       </div>
+
+      {currentLoadingMessage && (
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #bbdefb',
+          borderRadius: '8px',
+          marginBottom: '12px',
+          fontSize: '14px',
+          color: '#1565c0',
+          textAlign: 'center'
+        }}>
+          <span className="loading-dots">{currentLoadingMessage}</span>
+        </div>
+      )}
 
       <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
         <input
