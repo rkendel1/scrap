@@ -631,9 +631,35 @@ export class SaaSService {
   async configureFormDestination(
     formId: number, 
     destinationType: string, 
-    destinationConfig: any
+    destinationConfig: any,
+    userId: number | null, // Added userId
+    guestToken: string | null // Added guestToken
   ): Promise<boolean> {
     try {
+      // Verify form ownership
+      const formQuery = `SELECT user_id, guest_token_id FROM forms WHERE id = $1`;
+      const formResult = await pool.query(formQuery, [formId]);
+      if (formResult.rows.length === 0) {
+        throw new Error('Form not found');
+      }
+      const formOwner = formResult.rows[0];
+
+      let isAuthorized = false;
+      if (userId && formOwner.user_id === userId) {
+        isAuthorized = true;
+      } else if (guestToken) {
+        const guestTokenQuery = `SELECT id FROM guest_tokens WHERE token = $1`;
+        const guestTokenResult = await pool.query(guestTokenQuery, [guestToken]);
+        const guestTokenId = guestTokenResult.rows[0]?.id;
+        if (guestTokenId && formOwner.guest_token_id === guestTokenId) {
+          isAuthorized = true;
+        }
+      }
+
+      if (!isAuthorized) {
+        throw new Error('Unauthorized to configure this form');
+      }
+
       // First, find the connector by type
       const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
       const connectorResult = await pool.query(connectorQuery, [destinationType]);

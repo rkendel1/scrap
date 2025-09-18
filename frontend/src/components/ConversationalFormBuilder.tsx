@@ -352,13 +352,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
     }
 
+    const configurePayload: any = {
+      destinationType: selectedDestinationType,
+      destinationConfig: newConfig,
+    };
+
+    if (!user && guestToken) {
+      configurePayload.guestToken = guestToken;
+    }
+
     const configureResponse = await fetch(`/api/forms/${createdForm.id}/configure-destination`, {
       method: 'POST',
       headers: authHeaders,
-      body: JSON.stringify({
-        destinationType: selectedDestinationType,
-        destinationConfig: newConfig,
-      }),
+      body: JSON.stringify(configurePayload),
     });
 
     const configureResult = await configureResponse.json();

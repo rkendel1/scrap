@@ -572,20 +572,24 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
   }
 });
 
-// NEW: Configure destination for an existing form
-app.post('/api/forms/:id/configure-destination', authService.authenticateToken, async (req: AuthRequest, res) => {
+// MODIFIED: Configure destination for an existing form
+app.post('/api/forms/:id/configure-destination', authService.optionalAuth, async (req: AuthRequest, res) => {
   try {
     const formId = parseInt(req.params.id);
-    const { destinationType, destinationConfig } = req.body;
+    const { destinationType, destinationConfig, guestToken } = req.body; // Get guestToken from body
 
     if (isNaN(formId) || !destinationType || !destinationConfig) {
       return res.status(400).json({ error: 'Form ID, destination type, and configuration are required' });
     }
 
+    const userId = req.user?.id || null; // Get userId if authenticated
+
     const success = await saasService.configureFormDestination(
       formId,
       destinationType,
-      destinationConfig
+      destinationConfig,
+      userId,
+      guestToken // Pass guestToken
     );
 
     if (!success) {
@@ -1059,9 +1063,9 @@ app.get('/embed.js', (req, res) => {
       }
       
       function renderFields(fields) {
+        const baseStyle = 'width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;';
+        
         return fields.map(field => {
-          const baseStyle = 'width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;';
-          
           switch (field.type) {
             case 'textarea':
               return \`
@@ -1073,6 +1077,45 @@ app.get('/embed.js', (req, res) => {
                     \${field.required ? 'required' : ''}
                     style="\${baseStyle} min-height: 100px; resize: vertical;"
                   ></textarea>
+                </div>
+              \`;
+            case 'select':
+              const options = field.options ? field.options.map(option => 
+                \`<option value="\${escapeHtml(option)}">\${escapeHtml(option)}</option>\`
+              ).join('') : '';
+              return \`
+                <div style="margin-bottom: 16px;">
+                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
+                  <select name="\${field.name}" \${field.required ? 'required' : ''} style="\${baseStyle}">
+                      <option value="">\${escapeHtml(field.placeholder || 'Select an option')}</option>
+                      \${options}
+                  </select>
+                </div>
+              \`;
+            case 'checkbox':
+              const checkboxes = field.options ? field.options.map(option => \`
+                <label style="display: block; margin-bottom: 4px;">
+                  <input type="checkbox" name="\${field.name}" value="\${escapeHtml(option)}" style="margin-right: 8px;" />
+                  \${escapeHtml(option)}
+                </label>
+              \`).join('') : '';
+              return \`
+                <div style="margin-bottom: 16px;">
+                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
+                  \${checkboxes}
+                </div>
+              \`;
+            case 'radio':
+              const radios = field.options ? field.options.map(option => \`
+                <label style="display: block; margin-bottom: 4px;">
+                  <input type="radio" name="\${field.name}" value="\${escapeHtml(option)}" \${field.required ? 'required' : ''} style="margin-right: 8px;" />
+                  \${escapeHtml(option)}
+                </label>
+              \`).join('') : '';
+              return \`
+                <div style="margin-bottom: 16px;">
+                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
+                  \${radios}
                 </div>
               \`;
             default:
