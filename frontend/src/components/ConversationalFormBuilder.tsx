@@ -284,6 +284,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, purpose }));
 
 
+    // Set the step FIRST
+    setCurrentStep('ASK_FORM_LAYOUT'); 
+
+    // Then add the prompt with quick response buttons
     addPrompt(
       <>
         Your AI-generated form is ready! Now, how would you like this form to be displayed?
@@ -295,8 +299,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </>
     );
-    setCurrentStep('ASK_FORM_LAYOUT'); // Transition to new step
-    setIsLoading(false);
+    setIsLoading(false); // Finally, set loading to false
   };
 
   const processFormLayoutInput = async (layoutInput: string) => {
