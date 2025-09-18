@@ -545,6 +545,42 @@ export class SaaSService {
 
   private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
     try {
+      // Check if form has customer mapping for n8n routing
+      const { customerConfigService } = await import('./customer-config-service');
+      const customerId = await customerConfigService.getFormCustomerMapping(formId);
+      
+      if (customerId) {
+        const customerConfig = await customerConfigService.getCustomerConfig(customerId);
+        if (customerConfig && customerConfig.routing_config.routing_rules) {
+          // Create n8n connector config from customer configuration
+          const routingRules = customerConfig.routing_config.routing_rules;
+          const n8nRule = routingRules.find((rule: any) => rule.action === 'n8n' || rule.action === 'webhook');
+          
+          if (n8nRule) {
+            const n8nConnector = {
+              type: 'n8n',
+              settings: {
+                webhookUrl: n8nRule.target || 'http://n8n:5678/webhook/form-submission',
+                customerId: customerId,
+                workflowId: 'form-data-router'
+              }
+            };
+            
+            // Send to n8n first for customer-specific routing
+            const { dispatchToConnectors } = await import('./connectors/dispatcher');
+            const n8nResults = await dispatchToConnectors(submissionData, [n8nConnector]);
+            
+            // Log n8n result
+            if (n8nResults[0]?.success) {
+              console.log(`✓ n8n customer routing succeeded for customer ${customerId}: ${n8nResults[0].message}`);
+            } else {
+              console.error(`❌ n8n customer routing failed for customer ${customerId}: ${n8nResults[0]?.message}`, n8nResults[0]?.error);
+            }
+          }
+        }
+      }
+
+      // Continue with existing connector logic
       // First try to get connectors from the new JSONB column
       const newFormatQuery = `
         SELECT connectors

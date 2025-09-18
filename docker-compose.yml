@@ -49,7 +49,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "npm install && npm run build && npm run migrate && npm start"
+    command: sh -c "npm install && npm run dev"
 
   # Frontend React App
   frontend:
@@ -74,5 +74,39 @@ services:
       - backend
     command: npm run dev -- --host 0.0.0.0
 
+  # n8n Workflow Automation
+  n8n:
+    image: n8nio/n8n:latest
+    environment:
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=development
+      - WEBHOOK_URL=http://localhost:5678/
+      - GENERIC_TIMEZONE=UTC
+      - N8N_LOG_LEVEL=info
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=admin123
+      - N8N_DISABLE_PRODUCTION_MAIN_PROCESS=true
+      - DATABASE_TYPE=postgresdb
+      - DATABASE_HOST=db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${DB_NAME:-scrap_db}
+      - DATABASE_USER=${DB_USER:-scrap_user}
+      - DATABASE_PASSWORD=${DB_PASSWORD:-scrap_password}
+      - DATABASE_SCHEMA=n8n
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/.n8n/workflows
+      - ./n8n/customer-configs:/home/node/.n8n/customer-configs
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   postgres_data:
+  n8n_data:
