@@ -79,7 +79,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
-      maxWidth: '500px', // Default maxWidth for preview
+      // Removed maxWidth from here, let the parent container manage it
     };
 
     // Mock fields based on purpose
@@ -118,16 +118,19 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       if (previewContainerRef.current && formNaturalSizeRef.current) {
         const containerHeight = previewContainerRef.current.clientHeight; // Available height of the fixed container
         const contentNaturalHeight = formNaturalSizeRef.current.scrollHeight; // Natural height of the form content
+        const containerWidth = previewContainerRef.current.clientWidth; // Available width of the fixed container
+        const contentNaturalWidth = formNaturalSizeRef.current.scrollWidth; // Natural width of the form content
 
-        if (contentNaturalHeight > containerHeight) {
-          const newScale = containerHeight / contentNaturalHeight;
-          setScale(newScale);
-          // Set the height of the scaled content wrapper to its scaled natural height
-          setCurrentFormHeight(`${contentNaturalHeight * newScale}px`);
-        } else {
-          setScale(1);
-          setCurrentFormHeight('auto'); // Reset if no scaling needed
+        let newScale = 1;
+        if (contentNaturalHeight > containerHeight || contentNaturalWidth > containerWidth) {
+          const scaleY = containerHeight / contentNaturalHeight;
+          const scaleX = containerWidth / contentNaturalWidth;
+          newScale = Math.min(scaleY, scaleX); // Scale down to fit both dimensions
         }
+        
+        setScale(newScale);
+        // Set the height of the scaled content wrapper to its scaled natural height
+        setCurrentFormHeight(`${contentNaturalHeight * newScale}px`);
       }
     }, 50); // Small delay to allow DOM to settle
 
@@ -167,7 +170,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             position: 'absolute', // Position absolutely to not affect parent layout
             visibility: 'hidden', // Hide it
             pointerEvents: 'none', // Disable pointer events
-            width: previewForm.styling.maxWidth || '500px', // Use the form's max width for measurement
+            width: '100%', // Allow it to take full width for measurement
             // No transform here, this is for measuring natural size
           }}
         >
@@ -179,7 +182,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           style={{
             transform: `scale(${scale})`,
             transformOrigin: 'top center',
-            width: previewForm.styling.maxWidth || '500px', // Maintain original max width for scaling context
+            width: '100%', // Allow it to take full width for scaling context
             height: currentFormHeight, // Adjust height based on scaling
             display: 'flex',
             justifyContent: 'center',

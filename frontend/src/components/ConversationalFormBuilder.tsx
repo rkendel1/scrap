@@ -17,18 +17,18 @@ interface ConversationalFormBuilderProps {
 }
 
 type ConversationEntry = {
-  type: 'prompt' | 'user' | 'error' | 'success'; // Removed 'loading' type from history
-  content: string | JSX.Element;
+  type: 'prompt' | 'user' | 'error' | 'success';
+  content: string | JSX.Element; // Content can now be JSX
 };
 
 type ConversationStep =
   | 'ASK_URL'
-  | 'PROCESSING_URL' // New step for URL analysis
+  | 'PROCESSING_URL'
   | 'ASK_PURPOSE'
-  | 'PROCESSING_PURPOSE' // New step for form generation
+  | 'PROCESSING_PURPOSE'
   | 'ASK_DESTINATION_TYPE'
   | 'ASK_DESTINATION_CONFIG'
-  | 'PROCESSING_DESTINATION' // New step for destination saving
+  | 'PROCESSING_DESTINATION'
   | 'DONE';
 
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
@@ -43,11 +43,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  // Removed currentLoadingMessage state
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  const [currentQuickResponses, setCurrentQuickResponses] = useState<JSX.Element | null>(null); // New state for quick response buttons
-
+  // Removed currentQuickResponses state
 
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -102,7 +100,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory, currentQuickResponses]); // Also scroll when quick responses appear/disappear
+  }, [conversationHistory]); // Only scroll when conversation history changes
 
   // Update parent component's state for LiveFormPreview
   useEffect(() => {
@@ -120,34 +118,24 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, entry]);
   };
 
-  const addPrompt = (content: string | JSX.Element, quickResponses: JSX.Element | null = null) => {
+  const addPrompt = (content: string | JSX.Element) => { // Removed quickResponses parameter
     addEntry({ type: 'prompt', content });
-    setCurrentQuickResponses(quickResponses); // Set quick responses
     setIsLoading(false); // Ensure loading is off after a prompt
-    // Removed setCurrentLoadingMessage
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
-    setCurrentQuickResponses(null); // Clear quick responses after user input
     setIsLoading(false); // Ensure loading is off after user response
-    // Removed setCurrentLoadingMessage
   };
-
-  // Removed addLoading function
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
-    setCurrentQuickResponses(null); // Clear quick responses after an error
     setIsLoading(false); // Ensure loading is off after an error
-    // Removed setCurrentLoadingMessage
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
-    setCurrentQuickResponses(null); // Clear quick responses after success
     setIsLoading(false); // Ensure loading is off after success
-    // Removed setCurrentLoadingMessage
   };
 
   // Helper to parse user input for various intents
@@ -247,24 +235,20 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addUserResponse(input); // Add user's response to history
     setUserInput('');
     setError(null);
-    // setIsLoading(true); // This is now handled by addLoading
 
     const parsedInput = parseUserInput(input);
 
     // Handle commands first
     if (parsedInput.command === 'help') {
       addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
-      // setIsLoading(false); // Handled by addPrompt
       return;
     }
     if (parsedInput.command === 'start over') {
       handleRestartConversation();
-      // setIsLoading(false); // Handled by addPrompt in restart
       return;
     }
     if (currentStep === 'DONE' && (parsedInput.command === 'yes' || parsedInput.command === 'no')) {
       handleRestart(parsedInput.command);
-      // setIsLoading(false); // Handled by addPrompt in restart
       return;
     }
 
@@ -276,7 +260,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processUrlInput(parsedInput.url);
           } else {
             addError('Please provide a valid URL starting with http:// or https://');
-            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -288,7 +271,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processUrlInput(parsedInput.url);
           } else {
             addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form", or even "tool rental form").');
-            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -344,18 +326,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           // This case should be handled by the command check above for 'yes'/'no'
           // If we reach here, it means an unexpected input in DONE state
           addError('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
-          // setIsLoading(false); // Handled by addError
           break;
 
         default:
           addError('I\'m not sure how to respond to that. Can you rephrase or type "help"?');
-          // setIsLoading(false); // Handled by addError
           break;
       }
     } catch (err: any) {
       console.error('Conversation error:', err);
       addError(err.message || 'An unexpected error occurred. Please try again.');
-      // setIsLoading(false); // Handled by addError
     }
   };
 
@@ -366,7 +345,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addUserResponse(response);
     setUserInput(''); // Clear input field immediately
     setError(null);
-    // setIsLoading(true); // This is now handled by addLoading
 
     // Directly call handleUserInput with the quick response
     // This allows the full parsing and step logic to apply
@@ -410,9 +388,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
 
-    addSuccess('Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads", "Customer feedback", or even "Tool rental form")');
+    addPrompt(
+      <>
+        Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads", "Customer feedback", or even "Tool rental form")
+        <div className="quick-reply-container">
+          {formPurposes.slice(0, 3).map((purpose) => (
+            <button key={purpose} className="quick-reply-btn" onClick={() => handleQuickResponseClick(purpose)}>
+              {purpose}
+            </button>
+          ))}
+        </div>
+      </>
+    );
     setCurrentStep('ASK_PURPOSE');
-    // setIsLoading(false); // Handled by addSuccess
   };
 
   const processPurposeInput = async (purpose: string) => {
@@ -465,25 +453,24 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     // Then add the prompt with quick response buttons
     addPrompt(
-      "Your AI-generated form is ready! Next, where should I send the form submissions?",
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
-        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Email')}>Email</button>
-        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
-        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
-        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
-      </div>
+      <>
+        Your AI-generated form is ready! Next, where should I send the form submissions?
+        <div className="quick-reply-container">
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Email')}>Email</button>
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
+        </div>
+      </>
     );
-    // setIsLoading(false); // Handled by addPrompt
   };
 
   const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
-    // No loading message here, as it's handled by the next step if configInput is present
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook']; // Match backend connector types
 
     if (!availableTypes.includes(normalizedType)) {
       addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, or Webhook.');
-      // setIsLoading(false); // Handled by addError
       return;
     }
 
@@ -512,7 +499,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       }
       addPrompt(configPrompt);
       setCurrentStep('ASK_DESTINATION_CONFIG');
-      // setIsLoading(false); // Handled by addPrompt
     }
   };
 
@@ -603,11 +589,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       <>
         You can find your form in the "My Forms" dashboard.
         <br />
-        Would you like to create another form? Type "yes" or "no".
+        Would you like to create another form?
+        <div className="quick-reply-container">
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('yes')}>Yes</button>
+          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('no')}>No</button>
+        </div>
       </>
     );
     setCurrentStep('DONE'); // Transition to a final state where user can restart
-    // setIsLoading(false); // Handled by addPrompt
     onFormGenerated(createdForm); // Notify parent that a form was created
   };
 
@@ -617,7 +606,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         { type: 'prompt', content: "Okay, let's create another form! What's the URL of the website you want to create a form for?" }
       ]);
       setUserInput('');
-      // setIsLoading(false); // Handled by addPrompt
       setError(null);
       setFormData({});
       setExtractedDesignTokens(null);
@@ -629,11 +617,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
-      setCurrentQuickResponses(null); // Clear quick responses on restart
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
-      // setIsLoading(false); // Handled by addPrompt
       // Maybe redirect to dashboard or something
     }
   };
@@ -643,7 +629,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       { type: 'prompt', content: "Okay, let's start over! What's the URL of the website you want to create a form for?" }
     ]);
     setUserInput('');
-    // setIsLoading(false); // Handled by addPrompt
     setError(null);
     setFormData({});
     setExtractedDesignTokens(null);
@@ -655,7 +640,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setDestinationConfig({});
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
-    setCurrentQuickResponses(null); // Clear quick responses on restart
   };
 
 
@@ -663,12 +647,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
       {currentContextSummary && (
         <div style={{
-          padding: '12px',
+          padding: '8px 12px', // Reduced padding
           backgroundColor: '#e3f2fd',
           border: '1px solid #bbdefb',
           borderRadius: '8px',
-          marginBottom: '15px',
-          fontSize: '14px',
+          marginBottom: '10px', // Reduced margin
+          fontSize: '13px', // Reduced font size
           color: '#1565c0',
           fontWeight: '500'
         }}>
@@ -685,11 +669,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             overflowY: 'auto', // Enable vertical scrolling
             border: '1px solid #e1e5e9',
             borderRadius: '12px',
-            padding: '20px',
+            padding: '15px', // Reduced padding
             backgroundColor: '#f0f2f5',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px',
+            gap: '8px', // Reduced gap
             boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
           }}
         >
@@ -698,10 +682,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
               <div
                 style={{
                   maxWidth: '75%',
-                  padding: '12px 18px',
-                  borderRadius: '20px',
-                  fontSize: '15px',
-                  lineHeight: '1.4',
+                  padding: '8px 14px', // Reduced padding
+                  borderRadius: '16px', // Slightly smaller radius
+                  fontSize: '13px', // Reduced font size
+                  lineHeight: '1.3', // Reduced line height
                   backgroundColor:
                     entry.type === 'user'
                       ? '#007bff'
@@ -715,25 +699,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                       ? '#721c24'
                       : '#1565c0', // Unified AI response text color (dark blue)
                   alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
-                  borderBottomRightRadius: entry.type === 'user' ? '4px' : '20px',
-                  borderBottomLeftRadius: entry.type === 'user' ? '20px' : '4px',
+                  borderBottomRightRadius: entry.type === 'user' ? '4px' : '16px',
+                  borderBottomLeftRadius: entry.type === 'user' ? '16px' : '4px',
                 }}
               >
                 {entry.content}
               </div>
             </div>
           ))}
-
-          {/* Quick responses rendered inside the chat history */}
-          {currentQuickResponses && (
-            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-start', flexShrink: 0 }}>
-              {currentQuickResponses}
-            </div>
-          )}
         </div>
       </div>
-
-      {/* Removed currentLoadingMessage */}
 
       <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
         <input
