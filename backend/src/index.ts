@@ -1147,6 +1147,111 @@ app.post('/api/forms/:id/connectors', authService.authenticateToken, async (req:
   }
 });
 
+// New connector management endpoints for schema-driven system
+
+// Get connectors for a specific form (new JSONB format)
+app.get('/api/forms/:id/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    if (isNaN(formId)) {
+      return res.status(400).json({ error: 'Invalid form ID' });
+    }
+
+    const connectors = await saasService.getFormConnectors(formId, req.user!.id);
+    if (connectors === null) {
+      return res.status(404).json({ error: 'Form not found' });
+    }
+
+    res.json({
+      success: true,
+      data: connectors
+    });
+  } catch (error) {
+    console.error('Get form connectors error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch form connectors',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Save connectors for a specific form (new JSONB format)
+app.post('/api/forms/:id/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { connectors } = req.body;
+
+    if (isNaN(formId) || !Array.isArray(connectors)) {
+      return res.status(400).json({ error: 'Form ID and connectors array are required' });
+    }
+
+    const success = await saasService.saveFormConnectors(formId, connectors, req.user!.id);
+    
+    if (!success) {
+      return res.status(400).json({ error: 'Failed to save form connectors' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Connectors saved successfully'
+    });
+  } catch (error) {
+    console.error('Save form connectors error:', error);
+    res.status(500).json({ 
+      error: 'Failed to save form connectors',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Test a connector with mock data
+app.post('/api/forms/:id/test-connector', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { connectorType, settings } = req.body;
+
+    if (isNaN(formId) || !connectorType || !settings) {
+      return res.status(400).json({ error: 'Form ID, connector type, and settings are required' });
+    }
+
+    const result = await saasService.testConnector(formId, connectorType, settings, req.user!.id);
+    
+    if (!result) {
+      return res.status(400).json({ error: 'Failed to test connector or form not found' });
+    }
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Test connector error:', error);
+    res.status(500).json({ 
+      error: 'Failed to test connector',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get connector definitions (schema information)
+app.get('/api/connector-definitions', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { getAllConnectorDefinitions } = await import('./connectors/connectorDefinitions');
+    const definitions = getAllConnectorDefinitions();
+    
+    res.json({
+      success: true,
+      data: definitions
+    });
+  } catch (error) {
+    console.error('Get connector definitions error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch connector definitions',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Get form analytics
 app.get('/api/forms/:id/analytics', authService.authenticateToken, async (req: AuthRequest, res) => {
   try {
