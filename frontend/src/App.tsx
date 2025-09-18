@@ -299,59 +299,6 @@ function App() {
       </header>
 
       <main className="container">
-        {/* Auth Modal */}
-        {showAuth && (
-          <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000
-          }}>
-            <div className="card" style={{
-              maxWidth: '400px',
-              width: '90%',
-              maxHeight: '90vh',
-              overflow: 'auto'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
-                <button 
-                  onClick={() => setShowAuth(false)}
-                  style={{ 
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '24px',
-                    cursor: 'pointer',
-                    color: '#666'
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-              
-              {authMode === 'login' ? (
-                <LoginForm
-                  onSuccess={handleLogin}
-                  onSwitchToRegister={() => setAuthMode('register')}
-                  onError={handleAuthError}
-                />
-              ) : (
-                <RegisterForm
-                  onSuccess={handleLogin}
-                  onSwitchToLogin={() => setAuthMode('login')}
-                  onError={handleAuthError}
-                  guestToken={guestToken || undefined}
-                />
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Error Message */}
         {error && (
           <div className="card">
@@ -571,6 +518,59 @@ function App() {
           <p>FormCraft AI - Create AI-powered forms that perfectly match any website's design and tone</p>
         </div>
       </footer>
+
+      {/* Auth Modal - Moved outside of <main> */}
+      {showAuth && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 9999 // High z-index to cover everything
+        }}>
+          <div className="card" style={{
+            maxWidth: '400px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '16px' }}>
+              <button 
+                onClick={() => setShowAuth(false)}
+                style={{ 
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  color: '#666'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            {authMode === 'login' ? (
+              <LoginForm
+                onSuccess={handleLogin}
+                onSwitchToRegister={() => setAuthMode('register')}
+                onError={handleAuthError}
+              />
+            ) : (
+              <RegisterForm
+                onSuccess={handleLogin}
+                onSwitchToLogin={() => setAuthMode('login')}
+                onError={handleAuthError}
+                guestToken={guestToken || undefined}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
