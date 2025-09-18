@@ -32,7 +32,7 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 8px 0; /* Reduced padding */
+  padding: 6px 0; /* Reduced padding from 8px */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
@@ -70,7 +70,11 @@ main {
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
   /* Set a fixed height for the main content area */
-  height: calc(100vh - 82px); /* 100vh - (header 17px + footer 17px + main-padding-top 24px + main-padding-bottom 24px) */
+  /* Adjusted height calculation: 100vh - (header height + footer height + main-padding-top + main-padding-bottom) */
+  /* Header height: 6px top + 6px bottom padding + 1px border = 13px. Logo height is 32px. So, actual header height is around 32px + 12px padding = 44px. */
+  /* Footer height: 6px top + 6px bottom padding + 1px border = 13px. Text height is around 16px. So, actual footer height is around 16px + 12px padding = 28px. */
+  /* Total fixed vertical space: 44px (header) + 28px (footer) + 24px (main top padding) + 24px (main bottom padding) = 120px */
+  height: calc(100vh - 120px); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -324,7 +328,7 @@ main {
 /* Footer */
 footer {
   background-color: #f8f9fa;
-  padding: 8px 0; /* Reduced padding */
+  padding: 6px 0; /* Reduced padding from 8px */
   border-top: 1px solid #e1e5e9;
   color: #6c757d;
   font-size: 13px;
@@ -335,7 +339,7 @@ footer {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 82px); /* Set static height for main content area */
+  height: calc(100vh - 120px); /* Set static height for main content area */
 }
 
 .App > main > div {
