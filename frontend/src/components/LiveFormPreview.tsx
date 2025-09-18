@@ -187,7 +187,17 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             flexShrink: 0,
           }}
         >
-          {formContent}
+          {url || purpose || generatedForm ? (
+            formContent
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✨</div>
+              <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
+              <p style={{ fontSize: '14px', margin: '0' }}>
+                Start by entering a website URL in the chat to the left to generate your form!
+              </p>
+            </div>
+          )}
         </div>
       </div>
       {generatedForm && (
