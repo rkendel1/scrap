@@ -626,7 +626,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px', maxWidth: '500px' }}>
       {currentContextSummary && (
         <div style={{
           padding: '8px 12px', // Reduced padding
@@ -699,7 +699,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       )}
 
-      <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0, marginTop: '12px' }}>
+      <form onSubmit={handleUserInput} className="form-input-container" style={{ flexShrink: 0, marginTop: '12px' }}>
         <input
           type="text"
           value={userInput}
