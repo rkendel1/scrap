@@ -46,6 +46,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState<string | null>(null); // New state for temporary loading message
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
+  const [currentQuickResponses, setCurrentQuickResponses] = useState<JSX.Element | null>(null); // New state for quick response buttons
 
 
   // Data collected throughout the conversation
@@ -106,14 +107,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, entry]);
   };
 
-  const addPrompt = (content: string | JSX.Element) => {
+  const addPrompt = (content: string | JSX.Element, quickResponses: JSX.Element | null = null) => {
     addEntry({ type: 'prompt', content });
+    setCurrentQuickResponses(quickResponses); // Set quick responses
     setIsLoading(false); // Ensure loading is off after a prompt
     setCurrentLoadingMessage(null); // Clear loading message
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
+    setCurrentQuickResponses(null); // Clear quick responses after user input
     setIsLoading(false); // Ensure loading is off after user response
     setCurrentLoadingMessage(null); // Clear loading message
   };
@@ -121,17 +124,20 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const addLoading = (content: string) => {
     setIsLoading(true);
     setCurrentLoadingMessage(content);
+    setCurrentQuickResponses(null); // Clear quick responses during loading
     // Do NOT add to conversationHistory
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
+    setCurrentQuickResponses(null); // Clear quick responses after an error
     setIsLoading(false); // Ensure loading is off after an error
     setCurrentLoadingMessage(null); // Clear loading message
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
+    setCurrentQuickResponses(null); // Clear quick responses after success
     setIsLoading(false); // Ensure loading is off after success
     setCurrentLoadingMessage(null); // Clear loading message
   };
@@ -303,8 +309,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                         configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
                         break;
                 }
-                addPrompt(`You've already selected ${selectedDestinationType}. ${configPrompt}`);
-                // setIsLoading(false); // Handled by addPrompt
+                addPrompt(configPrompt); // No quick responses here, just the prompt
             } else {
                 // User provided a *different* destination type, switch to it
                 await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
@@ -439,15 +444,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     // Then add the prompt with quick response buttons
     addPrompt(
-      <>
-        Your AI-generated form is ready! Next, where should I send the form submissions?
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Email')}>Email</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
-          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
-        </div>
-      </>
+      "Your AI-generated form is ready! Next, where should I send the form submissions?",
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Email')}>Email</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
+        <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
+      </div>
     );
     // setIsLoading(false); // Handled by addPrompt
   };
@@ -603,6 +606,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
+      setCurrentQuickResponses(null); // Clear quick responses on restart
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -628,6 +632,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setDestinationConfig({});
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
+    setCurrentQuickResponses(null); // Clear quick responses on restart
   };
 
 
@@ -709,6 +714,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           textAlign: 'center'
         }}>
           <span className="loading-dots">{currentLoadingMessage}</span>
+        </div>
+      )}
+
+      {currentQuickResponses && (
+        <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+          {currentQuickResponses}
         </div>
       )}
 
