@@ -284,13 +284,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_DESTINATION_TYPE':
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
-          } else if (parsedInput.url) {
-            addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
-            await processUrlInput(parsedInput.url);
-          } else if (parsedInput.purpose) { // NEW: User entered a purpose when expecting destination
-            addError(`"${parsedInput.purpose}" sounds like a form purpose. I'm currently asking for where to send submissions. Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".`);
           } else {
-            addError('Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
+            // If it's not a destination type, it's an invalid input for this step.
+            // We should explicitly tell the user what's expected.
+            addError('I\'m expecting a destination type (e.g., "Email", "Google Sheets", "Slack", "Webhook"). Please try again.');
           }
           break;
 
@@ -689,15 +686,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
               </div>
             </div>
           ))}
+          {/* Quick responses rendered *inside* the chat history div, at the end */}
+          {currentQuickResponses && (
+            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start', flexShrink: 0 }}>
+              {currentQuickResponses}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Quick responses rendered separately below the chat history */}
-      {currentQuickResponses && (
-        <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start', flexShrink: 0 }}>
-          {currentQuickResponses}
-        </div>
-      )}
 
       <form onSubmit={handleUserInput} className="form-input-container" style={{ flexShrink: 0, marginTop: '12px' }}>
         <input
