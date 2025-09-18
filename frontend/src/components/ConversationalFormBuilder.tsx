@@ -260,12 +260,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_DESTINATION_TYPE':
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
-          } else if (parsedInput.url) {
+          } else if (parsedInput.url) { // User provided URL again
             addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
             await processUrlInput(parsedInput.url);
-          } else if (parsedInput.purpose) {
-            addPrompt("You've already told me the purpose. Now, where should I send the form submissions?");
-            setIsLoading(false);
           } else {
             addError('Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
             setIsLoading(false);
@@ -274,12 +271,36 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
         case 'ASK_DESTINATION_CONFIG':
           if (parsedInput.configInput) {
+            // User provided config input, process it
             await processDestinationConfigInput(parsedInput.configInput);
-          } else if (parsedInput.destinationType) { // User provided type again, re-prompt for config
-            addPrompt(`Okay, you selected ${parsedInput.destinationType}. Now, what's the configuration for that?`);
-            setIsLoading(false);
+          } else if (parsedInput.destinationType) {
+            // User provided a destination type.
+            // If it's the same as the currently selected one, just re-prompt for config.
+            if (parsedInput.destinationType === selectedDestinationType) {
+                let configPrompt = '';
+                switch (selectedDestinationType) {
+                    case 'email':
+                        configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
+                        break;
+                    case 'googlesheets':
+                        configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
+                        break;
+                    case 'slack':
+                        configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
+                        break;
+                    case 'webhook':
+                        configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
+                        break;
+                }
+                addPrompt(`You've already selected ${selectedDestinationType}. ${configPrompt}`);
+                setIsLoading(false);
+            } else {
+                // User provided a *different* destination type, switch to it
+                await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
+            }
           } else {
-            addError('Please provide the configuration details for your selected destination.');
+            // No config or destination type provided, invalid input for this step
+            addError('Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").');
             setIsLoading(false);
           }
           break;
