@@ -39,7 +39,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
-    { type: 'prompt', content: "Hello! I'm your AI form builder. What is the URL of the website you want to create a form for?" }
+    { type: 'prompt', content: "Hello! I'm your AI form builder. What's the URL of the website you want to create a form for?" }
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +75,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (formData.purpose) {
       summaryParts.push(`🎯 ${formData.purpose}`);
     }
-    // Removed formLayout from summary
     if (formData.destinationType) {
       const icon = destinationIcons[formData.destinationType] || '';
       summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
@@ -126,6 +125,85 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addEntry({ type: 'success', content });
   };
 
+  // Helper to parse user input for various intents
+  const parseUserInput = (input: string) => {
+    const parsed: {
+      url?: string;
+      purpose?: string;
+      destinationType?: string;
+      command?: 'help' | 'start over' | 'yes' | 'no';
+      configInput?: string; // For destination config
+    } = {};
+
+    const lowerInput = input.toLowerCase();
+
+    // Check for commands
+    if (lowerInput.includes('help')) {
+      parsed.command = 'help';
+      return parsed;
+    }
+    if (lowerInput.includes('start over') || lowerInput.includes('reset')) {
+      parsed.command = 'start over';
+      return parsed;
+    }
+    if (lowerInput === 'yes') {
+      parsed.command = 'yes';
+      return parsed;
+    }
+    if (lowerInput === 'no') {
+      parsed.command = 'no';
+      return parsed;
+    }
+
+    // Check for URL
+    const urlMatch = input.match(/https?:\/\/[^\s]+/i);
+    if (urlMatch) {
+      parsed.url = urlMatch[0];
+    }
+
+    // Check for purpose (keywords)
+    const purposeKeywords = ['lead generation', 'contact form', 'newsletter signup', 'survey', 'feedback', 'event registration', 'support request', 'quote request', 'demo request', 'consultation booking'];
+    for (const keyword of purposeKeywords) {
+      if (lowerInput.includes(keyword)) {
+        parsed.purpose = keyword;
+        break;
+      }
+    }
+    if (!parsed.purpose && lowerInput.includes('contact')) parsed.purpose = 'contact form';
+    if (!parsed.purpose && lowerInput.includes('newsletter')) parsed.purpose = 'newsletter signup';
+    if (!parsed.purpose && lowerInput.includes('leads')) parsed.purpose = 'lead generation';
+    if (!parsed.purpose && lowerInput.includes('survey')) parsed.purpose = 'survey/feedback';
+
+
+    // Check for destination type
+    const destinationKeywords = ['email', 'google sheets', 'slack', 'webhook'];
+    for (const keyword of destinationKeywords) {
+      if (lowerInput.includes(keyword)) {
+        parsed.destinationType = keyword.replace(/\s/g, ''); // Normalize to 'googlesheets'
+        // If destination type is found, the rest of the input might be the config
+        const configMatch = input.match(new RegExp(`${keyword}\\s*(.*)`, 'i'));
+        if (configMatch && configMatch[1]) {
+          parsed.configInput = configMatch[1].trim();
+        }
+        break;
+      }
+    }
+    
+    // If no specific destination type keyword, but it looks like an email or URL for config
+    if (!parsed.destinationType) {
+      if (lowerInput.includes('@') && lowerInput.includes('.')) {
+        parsed.configInput = lowerInput.match(/\S+@\S+\.\S+/)?.[0];
+        if (parsed.configInput) parsed.destinationType = 'email';
+      } else if (lowerInput.includes('http') || lowerInput.includes('www')) {
+        parsed.configInput = lowerInput.match(/https?:\/\/[^\s]+|www\.[^\s]+/)?.[0];
+        if (parsed.configInput) parsed.destinationType = 'webhook'; // Default to webhook for generic URL
+      }
+    }
+
+
+    return parsed;
+  };
+
   const handleUserInput = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userInput.trim() || isLoading) return;
@@ -136,21 +214,86 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setError(null);
     setIsLoading(true);
 
+    const parsedInput = parseUserInput(input);
+
+    // Handle commands first
+    if (parsedInput.command === 'help') {
+      addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
+      setIsLoading(false);
+      return;
+    }
+    if (parsedInput.command === 'start over') {
+      handleRestartConversation();
+      setIsLoading(false);
+      return;
+    }
+    if (currentStep === 'DONE' && (parsedInput.command === 'yes' || parsedInput.command === 'no')) {
+      handleRestart(parsedInput.command);
+      setIsLoading(false);
+      return;
+    }
+
+    // Process based on current step and detected intents
     try {
       switch (currentStep) {
         case 'ASK_URL':
-          await processUrlInput(input);
+          if (parsedInput.url) {
+            await processUrlInput(parsedInput.url);
+          } else {
+            addError('Please provide a valid URL starting with http:// or https://');
+            setIsLoading(false);
+          }
           break;
+
         case 'ASK_PURPOSE':
-          await processPurposeInput(input);
+          if (parsedInput.purpose) {
+            await processPurposeInput(parsedInput.purpose);
+          } else if (parsedInput.url) { // User provided URL again, restart URL processing
+            addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
+            await processUrlInput(parsedInput.url);
+          } else {
+            addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form").');
+            setIsLoading(false);
+          }
           break;
+
         case 'ASK_DESTINATION_TYPE':
-          await processDestinationTypeInput(input);
+          if (parsedInput.destinationType) {
+            await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
+          } else if (parsedInput.url) {
+            addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
+            await processUrlInput(parsedInput.url);
+          } else if (parsedInput.purpose) {
+            addPrompt("You've already told me the purpose. Now, where should I send the form submissions?");
+            setIsLoading(false);
+          } else {
+            addError('Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
+            setIsLoading(false);
+          }
           break;
+
         case 'ASK_DESTINATION_CONFIG':
-          await processDestinationConfigInput(input);
+          if (parsedInput.configInput) {
+            await processDestinationConfigInput(parsedInput.configInput);
+          } else if (parsedInput.destinationType) { // User provided type again, re-prompt for config
+            addPrompt(`Okay, you selected ${parsedInput.destinationType}. Now, what's the configuration for that?`);
+            setIsLoading(false);
+          } else {
+            addError('Please provide the configuration details for your selected destination.');
+            setIsLoading(false);
+          }
           break;
+
+        case 'DONE':
+          // This case should be handled by the command check above for 'yes'/'no'
+          // If we reach here, it means an unexpected input in DONE state
+          addError('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
+          setIsLoading(false);
+          break;
+
         default:
+          addError('I\'m not sure how to respond to that. Can you rephrase or type "help"?');
+          setIsLoading(false);
           break;
       }
     } catch (err: any) {
@@ -169,24 +312,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setError(null);
     setIsLoading(true);
 
-    try {
-      // Directly call the processing function for the current step
-      switch (currentStep) {
-        case 'ASK_DESTINATION_TYPE':
-          await processDestinationTypeInput(response);
-          break;
-        default:
-          // Fallback or error if quick response is not expected for current step
-          addError('Unexpected quick response. Please follow the current prompt.');
-          setIsLoading(false);
-          break;
-      }
-    } catch (err: any) {
-      console.error('Quick response processing error:', err);
-      addError(err.message || 'An unexpected error occurred. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Directly call handleUserInput with the quick response
+    // This allows the full parsing and step logic to apply
+    await handleUserInput({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const processUrlInput = async (url: string) => {
@@ -225,7 +353,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
 
-    addSuccess('Website analyzed! Now, tell me: What is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
+    addSuccess('Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
     setCurrentStep('ASK_PURPOSE');
     setIsLoading(false);
   };
@@ -292,9 +420,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsLoading(false); // Finally, set loading to false
   };
 
-  // Removed processFormLayoutInput function
-
-  const processDestinationTypeInput = async (typeInput: string) => {
+  const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook']; // Match backend connector types
 
@@ -307,31 +433,37 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setSelectedDestinationType(normalizedType);
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
 
-
-    // Prompt for config based on type
-    let configPrompt = '';
-    switch (normalizedType) {
-      case 'email':
-        configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
-        break;
-      case 'googlesheets':
-        configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
-        break;
-      case 'slack':
-        configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
-        break;
-      case 'webhook':
-        configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
-        break;
+    if (configInput) {
+      // If config was provided with type, process it immediately
+      await processDestinationConfigInput(configInput, normalizedType);
+    } else {
+      // Prompt for config based on type
+      let configPrompt = '';
+      switch (normalizedType) {
+        case 'email':
+          configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
+          break;
+        case 'googlesheets':
+          configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
+          break;
+        case 'slack':
+          configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
+          break;
+        case 'webhook':
+          configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
+          break;
+      }
+      addPrompt(configPrompt);
+      setCurrentStep('ASK_DESTINATION_CONFIG');
+      setIsLoading(false);
     }
-    addPrompt(configPrompt);
-    setCurrentStep('ASK_DESTINATION_CONFIG');
-    setIsLoading(false);
   };
 
-  const processDestinationConfigInput = async (configInput: string) => {
+  const processDestinationConfigInput = async (configInput: string, typeOverride?: string) => {
     addLoading('Saving destination configuration...');
-    if (!createdForm?.id || !selectedDestinationType) {
+    const currentDestinationType = typeOverride || selectedDestinationType;
+
+    if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
       setCurrentStep('ASK_URL');
       setIsLoading(false);
@@ -342,7 +474,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     let validationError = null;
     let expectedInputPrompt = '';
 
-    switch (selectedDestinationType) {
+    switch (currentDestinationType) {
       case 'email':
         expectedInputPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
         if (!/\S+@\S+\.\S+/.test(configInput)) {
@@ -386,7 +518,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
 
     const configurePayload: any = {
-      destinationType: selectedDestinationType,
+      destinationType: currentDestinationType,
       destinationConfig: newConfig,
     };
 
@@ -421,11 +553,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     onFormGenerated(createdForm); // Notify parent that a form was created
   };
 
-  const handleRestart = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (userInput.toLowerCase() === 'yes') {
+  const handleRestart = (command: 'yes' | 'no') => {
+    if (command === 'yes') {
       setConversationHistory([
-        { type: 'prompt', content: "Okay, let's create another form! What is the URL of the website you want to create a form for?" }
+        { type: 'prompt', content: "Okay, let's create another form! What's the URL of the website you want to create a form for?" }
       ]);
       setUserInput('');
       setIsLoading(false);
@@ -440,15 +571,31 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
-    } else if (userInput.toLowerCase() === 'no') {
+    } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
       setIsLoading(false);
       // Maybe redirect to dashboard or something
-    } else {
-      addError('Please type "yes" or "no".');
-      setIsLoading(false);
     }
+  };
+
+  const handleRestartConversation = () => {
+    setConversationHistory([
+      { type: 'prompt', content: "Okay, let's start over! What's the URL of the website you want to create a form for?" }
+    ]);
+    setUserInput('');
+    setIsLoading(false);
+    setError(null);
+    setFormData({});
+    setExtractedDesignTokens(null);
+    setExtractedVoiceAnalysis(null);
+    setExtractedRecordId(null);
+    setGeneratedForm(null);
+    setCreatedForm(null);
+    setSelectedDestinationType(null);
+    setDestinationConfig({});
+    setCurrentStep('ASK_URL');
+    setCurrentContextSummary('');
   };
 
 
@@ -523,12 +670,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         ))}
       </div>
 
-      <form onSubmit={currentStep === 'DONE' ? handleRestart : handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+      <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
         <input
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder={isLoading ? 'Please wait...' : 'Type your response here...'}
+          placeholder={isLoading ? 'Please wait...' : 'Type your response here... (e.g., "help" or "start over")'}
           className="form-input"
           style={{ flexGrow: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e1e5e9' }}
           disabled={isLoading}
