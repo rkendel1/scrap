@@ -219,11 +219,11 @@ Return a JSON object with this structure:
       
       // Ensure jsonMatch is not null and has at least one element
       if (!jsonMatch || jsonMatch.length === 0) {
-        throw new Error('No JSON found in response');
+        throw new Error('No valid JSON string found in response');
       }
 
-      // Now, jsonMatch[0] is guaranteed to exist and be a string
-      const jsonString: string = jsonMatch[0]; 
+      // Use non-null assertion here as we've checked for existence
+      const jsonString: string = jsonMatch[0]!; 
       const parsed = JSON.parse(jsonString);
       
       // Validate and set defaults
