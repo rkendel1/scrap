@@ -230,19 +230,19 @@ body {
 .header {
   background: white;
   border-bottom: 1px solid #e9ecef;
-  padding: 20px 0;
-  margin-bottom: 30px;
+  padding: 10px 0; /* Reduced padding */
+  margin-bottom: 20px; /* Reduced margin */
 }
 
 .header h1 {
   color: #007bff;
-  font-size: 28px;
+  font-size: 20px; /* Reduced font size */
   font-weight: 700;
 }
 
 .header p {
   color: #6c757d;
-  margin-top: 8px;
+  margin-top: 4px; /* Reduced margin */
 }
 
 .search-bar {
