@@ -114,7 +114,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   const previewForm = getPreviewForm();
-  const showBranding = user?.subscription_tier !== 'paid';
+  // const showBranding = user?.subscription_tier !== 'paid'; // Original line
 
   // Conditional rendering for different layouts
   const renderFormContent = () => {
@@ -131,7 +131,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       <EmbeddableForm
         form={previewForm}
         embedCode={createdForm?.embed_code || "preview-mode"} // Use actual embed code if available
-        showBranding={showBranding}
+        showBranding={false} // Always hide branding in preview
         onSubmit={(data) => console.log('Preview submission:', data)} // Mock submission
       />
     );
