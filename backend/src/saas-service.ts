@@ -1,5 +1,6 @@
 import pool from './database';
 import { GeneratedForm } from './llm-service';
+import { EmbedSecurityService, EmbedTokenPayload } from './embed-security-service';
 
 // In-memory storage for testing when database is not available
 const mockForms = new Map();
@@ -89,6 +90,7 @@ export interface Connector {
 }
 
 export class SaaSService {
+  private embedSecurity = new EmbedSecurityService();
   
   async createForm(
     userId: number | null,
@@ -617,6 +619,232 @@ export class SaaSService {
     } catch (error) {
       console.error('Error configuring form destination:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Generate a secure embed token for a form
+   */
+  async generateSecureEmbedToken(formId: number, userId: number): Promise<string | null> {
+    try {
+      // Get form data and user subscription
+      const formQuery = `
+        SELECT f.id, f.user_id, f.allowed_domains, u.subscription_tier, u.subscription_status
+        FROM forms f
+        JOIN users u ON f.user_id = u.id
+        WHERE f.id = $1 AND f.user_id = $2 AND f.is_live = true
+      `;
+      
+      const result = await pool.query(formQuery, [formId, userId]);
+      
+      if (result.rows.length === 0) {
+        return null; // Form not found or not owned by user
+      }
+      
+      const { allowed_domains, subscription_tier, subscription_status } = result.rows[0];
+      
+      // Check if user's subscription is active
+      if (subscription_status !== 'active') {
+        return null; // Inactive subscription
+      }
+      
+      const allowedDomains = allowed_domains || [];
+      
+      return this.embedSecurity.generateEmbedToken(formId, userId, subscription_tier, allowedDomains);
+    } catch (error) {
+      console.error('Error generating secure embed token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update allowed domains for a form
+   */
+  async updateFormAllowedDomains(formId: number, userId: number, allowedDomains: string[]): Promise<boolean> {
+    try {
+      const query = `
+        UPDATE forms
+        SET allowed_domains = $1
+        WHERE id = $2 AND user_id = $3
+      `;
+      
+      const result = await pool.query(query, [allowedDomains, formId, userId]);
+      
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error('Error updating allowed domains:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate embed token and return form data
+   */
+  async getFormByEmbedToken(token: string, hostname: string): Promise<any | null> {
+    try {
+      const tokenPayload = this.embedSecurity.verifyEmbedToken(token);
+      
+      if (!tokenPayload) {
+        return null; // Invalid token
+      }
+      
+      // Check domain restrictions
+      if (!this.embedSecurity.isDomainAllowed(hostname, tokenPayload.allowedDomains)) {
+        return null; // Domain not allowed
+      }
+      
+      // Check if user subscription is still active
+      const subscription = await this.embedSecurity.getUserSubscriptionStatus(tokenPayload.userId);
+      if (!subscription.active) {
+        return null; // Subscription inactive
+      }
+      
+      // Get form data
+      const formData = await this.getFormById(tokenPayload.formId);
+      
+      if (!formData) {
+        return null;
+      }
+      
+      // Convert to the expected format for embed
+      return {
+        id: formData.id,
+        title: formData.title,
+        description: formData.description,
+        generated_form: formData.generated_form,
+        styling: {
+          primaryColor: '#007bff',
+          backgroundColor: '#ffffff',
+          fontFamily: 'system-ui',
+          borderRadius: '8px'
+        },
+        form_name: formData.form_name,
+        form_description: formData.form_description,
+        created_at: formData.created_at
+      };
+    } catch (error) {
+      console.error('Error validating embed token:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Submit form with security validation
+   */
+  async submitFormSecure(
+    token: string,
+    submissionData: any,
+    metadata: {
+      submittedFromUrl?: string;
+      ipAddress?: string;
+      userAgent?: string;
+      hostname?: string;
+    }
+  ): Promise<{ success: boolean; message: string; remaining?: number }> {
+    try {
+      const tokenPayload = this.embedSecurity.verifyEmbedToken(token);
+      
+      if (!tokenPayload) {
+        return { success: false, message: 'Invalid or expired embed token' };
+      }
+      
+      // Check domain restrictions
+      if (metadata.hostname && !this.embedSecurity.isDomainAllowed(metadata.hostname, tokenPayload.allowedDomains)) {
+        return { success: false, message: 'Domain not authorized for this form' };
+      }
+      
+      // Check rate limits
+      const rateLimit = await this.embedSecurity.checkRateLimit(
+        tokenPayload.formId,
+        metadata.ipAddress || '0.0.0.0',
+        metadata.hostname || 'unknown'
+      );
+      
+      if (!rateLimit.allowed) {
+        return { success: false, message: 'Rate limit exceeded. Please try again later.' };
+      }
+      
+      // Check if user subscription is still active
+      const subscription = await this.embedSecurity.getUserSubscriptionStatus(tokenPayload.userId);
+      if (!subscription.active) {
+        return { success: false, message: 'Form is no longer active. Please contact the form owner.' };
+      }
+      
+      // Submit the form using existing method (but with formId from token)
+      const client = await pool.connect();
+      
+      try {
+        await client.query('BEGIN');
+
+        // Get form info
+        const formQuery = `
+          SELECT f.*, ec.id as embed_code_id
+          FROM forms f
+          LEFT JOIN embed_codes ec ON f.id = ec.form_id
+          WHERE f.id = $1 AND f.is_live = true
+        `;
+        
+        const formResult = await client.query(formQuery, [tokenPayload.formId]);
+        
+        if (formResult.rows.length === 0) {
+          return { success: false, message: 'Form not found or not active' };
+        }
+
+        const form = formResult.rows[0];
+        
+        // Create submission record
+        const submissionQuery = `
+          INSERT INTO form_submissions (
+            form_id, embed_code_id, submission_data, 
+            submitted_from_url, ip_address, user_agent
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          RETURNING id
+        `;
+        
+        await client.query(submissionQuery, [
+          tokenPayload.formId,
+          form.embed_code_id,
+          JSON.stringify(submissionData),
+          metadata.submittedFromUrl,
+          metadata.ipAddress,
+          metadata.userAgent
+        ]);
+
+        // Update counters
+        if (form.embed_code_id) {
+          await client.query(`
+            UPDATE embed_codes 
+            SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
+            WHERE id = $1
+          `, [form.embed_code_id]);
+        }
+
+        await client.query(`
+          UPDATE forms 
+          SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
+          WHERE id = $1
+        `, [tokenPayload.formId]);
+
+        await client.query('COMMIT');
+
+        // TODO: Trigger connectors
+        await this.triggerConnectors(tokenPayload.formId, submissionData);
+
+        return { 
+          success: true, 
+          message: 'Form submitted successfully',
+          remaining: rateLimit.remaining 
+        };
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+      
+    } catch (error) {
+      console.error('Secure form submission error:', error);
+      return { success: false, message: 'Failed to submit form. Please try again.' };
     }
   }
 }
