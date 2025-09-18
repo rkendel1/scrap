@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EmbeddableForm } from './EmbeddableForm';
 import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
+import { CheckCircle } from 'lucide-react'; // Import CheckCircle icon
 
 // Helper to determine if a color is light (simplified for demo)
 const isLightColor = (color: string): boolean => {
@@ -50,6 +51,14 @@ const isLightColor = (color: string): boolean => {
   return luminance > 0.7; // Threshold for "light"
 };
 
+interface LiveFormPreviewProps {
+  formData: Partial<FormData>;
+  generatedForm: GeneratedForm | null;
+  createdForm: SaaSForm | null;
+  user?: any;
+  extractedDesignTokens: any | null;
+  extractedVoiceAnalysis: any | null;
+}
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   formData,
@@ -59,7 +68,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   extractedDesignTokens, // Use new prop
   extractedVoiceAnalysis, // Use new prop
 }) => {
-  const { url, purpose } = formData;
+  const { url, purpose, destinationType } = formData;
 
   const previewContainerRef = useRef<HTMLDivElement>(null); // Ref for the fixed-height container
   const formNaturalSizeRef = useRef<HTMLDivElement>(null); // Ref to measure the natural size of the form
@@ -74,8 +83,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
     // Default styling, potentially overridden by extracted tokens
     const defaultStyling = {
-      primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#4f46e5', /* Indigo */
-      backgroundColor: extractedDesignTokens?.colorPalette?.find(color => isLightColor(color)) || '#f8faff', /* Very light blue-gray */
+      primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#007bff', /* Blue */
+      backgroundColor: extractedDesignTokens?.colorPalette?.find(color => isLightColor(color)) || '#ffffff', /* White */
       fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'Inter, system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
@@ -84,8 +93,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
     // Mock fields based on purpose
     let mockFields: FormField[] = [
-      { type: 'text', name: 'name', label: 'Your Name', placeholder: 'Enter your name', required: true },
-      { type: 'email', name: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+      { type: 'email', name: 'email', label: 'Email Address', placeholder: 'Enter your email', required: true },
+      { type: 'text', name: 'name', label: 'Name', placeholder: 'Your name', required: false },
     ];
 
     if (purpose?.toLowerCase().includes('feedback') || purpose?.toLowerCase().includes('message')) {
@@ -99,7 +108,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
                             (url ? `This form will adapt to the style of ${url}` : 'Start by entering a website URL.');
 
     return {
-      title: purpose ? `AI Form: ${purpose}` : 'Your AI-Powered Form',
+      title: purpose ? `AI Form: ${purpose}` : 'Customer feedback', // Default title for preview
       description: descriptionText,
       fields: mockFields,
       ctaText: purpose?.toLowerCase().includes('subscribe') ? 'Subscribe' : 'Submit',
@@ -146,25 +155,25 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     />
   );
 
+  const getDestinationText = () => {
+    if (!destinationType) return '';
+    switch (destinationType) {
+      case 'email': return 'Email';
+      case 'googlesheets': return 'Google Sheets';
+      case 'slack': return 'Slack';
+      case 'webhook': return 'Webhook';
+      default: return '';
+    }
+  };
+
   return (
     <div className="card live-preview-card">
-      <h3>Live Preview</h3>
-      <div
-        ref={previewContainerRef}
-        style={{
-          border: '1px solid #e9edf5',
-          borderRadius: '12px',
-          backgroundColor: '#f0f4f8', /* Slightly darker background for preview area */
-          height: 'calc(100% - 60px)', /* Adjusted height to account for title/badge */
-          overflow: 'hidden',
-          position: 'relative',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '100%',
-          boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.06)'
-        }}
-      >
+      <div className="preview-header">
+        <h3>Live Form Preview</h3>
+        {url && <p>Styled with design tokens from: {url}</p>}
+      </div>
+      
+      <div className="live-preview-content-wrapper">
         {/* This div is to measure the natural size of the form before scaling */}
         <div
           ref={formNaturalSizeRef}
@@ -176,6 +185,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           }}
         >
           {formContent}
+          {destinationType && (
+            <div className="form-submit-status">
+              <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
+            </div>
+          )}
         </div>
 
         {/* This div applies the scaling and is visible */}
@@ -189,12 +203,20 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             justifyContent: 'center',
             alignItems: 'center',
             flexShrink: 0,
+            flexDirection: 'column', // Allow content to stack
           }}
         >
           {url || purpose || generatedForm ? (
-            formContent
+            <>
+              {formContent}
+              {destinationType && (
+                <div className="form-submit-status">
+                  <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
+                </div>
+              )}
+            </>
           ) : (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
               <p className="placeholder-text">

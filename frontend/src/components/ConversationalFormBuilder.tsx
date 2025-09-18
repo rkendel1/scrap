@@ -19,6 +19,7 @@ interface ConversationalFormBuilderProps {
 type ConversationEntry = {
   type: 'prompt' | 'user' | 'error' | 'success';
   content: string | JSX.Element;
+  timestamp?: Date; // Added timestamp
 };
 
 type ConversationStep =
@@ -39,7 +40,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
-    { type: 'prompt', content: "Hello! I'm your AI form builder. What's the URL of the website you want to create a form for?" }
+    { type: 'prompt', content: "Hi! I'm FormCraft AI. I'll help you create a native-looking form in 3 steps. First, where will this live? Please paste a URL.", timestamp: new Date() }
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -115,7 +116,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
 
   const addEntry = (entry: ConversationEntry) => {
-    setConversationHistory((prev) => [...prev, entry]);
+    setConversationHistory((prev) => [...prev, { ...entry, timestamp: new Date() }]);
   };
 
   // Modified addPrompt to accept string[] for quickResponses
@@ -389,7 +390,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
     addPrompt(
-      "Website analyzed! Now, what is the main purpose of this form? (e.g., 'Collect leads', 'Customer feedback', or even 'Tool rental form')",
+      `Perfect! I've analyzed ${url} and extracted the design tokens. I can see they use a modern blue color scheme with clean typography. The preview is updating live with their styles. Now, what do you want to capture with this form?`,
       formPurposes.slice(0, 3) // Pass string array
     );
     setCurrentStep('ASK_PURPOSE');
@@ -438,7 +439,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     setCurrentStep('ASK_DESTINATION_TYPE'); 
     addPrompt(
-      "Your AI-generated form is ready! Next, where should I send the form submissions?",
+      `Excellent! I've instantly generated a form for "${purpose}" using the extracted design tokens. You can see it live on the right. Where should this data go when submitted?`,
       ['Email', 'Google Sheets', 'Slack', 'Webhook'] // Pass string array
     );
   };
@@ -575,7 +576,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const handleRestart = (command: 'yes' | 'no') => {
     if (command === 'yes') {
       setConversationHistory([
-        { type: 'prompt', content: "Okay, let's create another form! What's the URL of the website you want to create a form for?" }
+        { type: 'prompt', content: "Okay, let's create another form! What's the URL of the website you want to create a form for?", timestamp: new Date() }
       ]);
       setUserInput('');
       setError(null);
@@ -591,7 +592,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setCurrentContextSummary('');
       setCurrentQuickResponses(null); // Clear quick responses on restart
     } else if (command === 'no') {
-      addPrompt("Alright! Feel free to come back anytime. Goodbye!");
+      addPrompt("Alright! Feel free to come back anytime. Goodbye!", null);
       setUserInput('');
       setCurrentQuickResponses(null); // Clear quick responses
     }
@@ -599,7 +600,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const handleRestartConversation = () => {
     setConversationHistory([
-      { type: 'prompt', content: "Okay, let's start over! What's the URL of the website you want to create a form for?" }
+      { type: 'prompt', content: "Okay, let's start over! What's the URL of the website you want to create a form for?", timestamp: new Date() }
     ]);
     setUserInput('');
     setError(null);
@@ -614,6 +615,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
     setCurrentQuickResponses(null); // Clear quick responses on restart
+  };
+
+  const formatTimestamp = (date: Date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
 
@@ -637,6 +642,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                 className={`chat-bubble ${entry.type}`}
               >
                 {entry.content}
+                {entry.timestamp && (
+                  <span className="chat-timestamp">
+                    {formatTimestamp(entry.timestamp)}
+                  </span>
+                )}
               </div>
             </div>
           ))}
@@ -658,7 +668,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
-          placeholder={isLoading ? 'Please wait...' : 'Type your response here... (e.g., "help" or "start over")'}
+          placeholder={isLoading ? 'Please wait...' : 'Choose destination (Email, Google Sheets, Slack, Webhook)'}
           className="form-input"
           disabled={isLoading}
         />
@@ -672,7 +682,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             currentStep === 'PROCESSING_PURPOSE' ? 'Generating...' :
             currentStep === 'PROCESSING_DESTINATION' ? 'Saving...' :
             'Sending...'
-          ) : 'Send'}
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          )}
         </button>
       </form>
 

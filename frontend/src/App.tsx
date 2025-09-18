@@ -250,9 +250,9 @@ function App() {
       <header className="header">
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h1>FormCraft AI</h1>
-              {/* Removed the descriptive tagline */}
+            <div className="logo">
+              <div className="logo-icon">F</div>
+              FormCraft AI
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {user ? (
@@ -278,7 +278,7 @@ function App() {
                   </button>
                 </>
               ) : (
-                <button onClick={() => setShowAuth(true)} className="btn btn-primary">
+                <button onClick={() => setShowAuth(true)} className="btn btn-secondary">
                   Sign In / Register
                 </button>
               )}
