@@ -1,0 +1,35 @@
+{
+  "customers": {
+    "customer-001": {
+      "name": "Example Customer",
+      "routing_rules": [
+        {
+          "condition": "all_forms",
+          "action": "webhook",
+          "target": "https://example.com/webhook",
+          "headers": {
+            "Authorization": "Bearer token",
+            "Content-Type": "application/json"
+          }
+        },
+        {
+          "condition": "form_type == 'contact'",
+          "action": "email",
+          "target": "contact@example.com",
+          "template": "New contact form submission from {{name}}: {{message}}"
+        }
+      ]
+    },
+    "customer-002": {
+      "name": "Another Customer", 
+      "routing_rules": [
+        {
+          "condition": "all_forms",
+          "action": "slack",
+          "target": "https://hooks.slack.com/services/...",
+          "template": "New form submission: {{name}} - {{email}}"
+        }
+      ]
+    }
+  }
+}

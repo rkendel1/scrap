@@ -10,6 +10,7 @@ import { DatabaseService } from './database-service';
 import { AuthService, AuthRequest } from './auth-service';
 import { LLMService } from './llm-service';
 import { SaaSService } from './saas-service';
+import { customerConfigService } from './customer-config-service';
 import pool from './database';
 import { VoiceAnalysis } from './extractor'; // Import VoiceAnalysis
 
@@ -1401,6 +1402,148 @@ app.get('/api/connector-definitions', authService.authenticateToken, async (req:
     console.error('Get connector definitions error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch connector definitions',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Customer Configuration Management Endpoints
+
+// Get all customer configurations
+app.get('/api/customer-configs', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const configs = await customerConfigService.getAllCustomerConfigs();
+    res.json({
+      success: true,
+      data: configs
+    });
+  } catch (error) {
+    console.error('Get customer configs error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch customer configurations',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get specific customer configuration
+app.get('/api/customer-configs/:customerId', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { customerId } = req.params;
+    const config = await customerConfigService.getCustomerConfig(customerId);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Customer configuration not found' });
+    }
+    
+    res.json({
+      success: true,
+      data: config
+    });
+  } catch (error) {
+    console.error('Get customer config error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch customer configuration',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Create customer configuration
+app.post('/api/customer-configs', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { customer_id, customer_name, routing_config } = req.body;
+    
+    if (!customer_id || !customer_name || !routing_config) {
+      return res.status(400).json({ error: 'customer_id, customer_name, and routing_config are required' });
+    }
+    
+    const config = await customerConfigService.createCustomerConfig({
+      customer_id,
+      customer_name,
+      routing_config,
+      is_active: true
+    });
+    
+    res.status(201).json({
+      success: true,
+      message: 'Customer configuration created successfully',
+      data: config
+    });
+  } catch (error) {
+    console.error('Create customer config error:', error);
+    res.status(500).json({ 
+      error: 'Failed to create customer configuration',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update customer configuration
+app.put('/api/customer-configs/:customerId', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const { customerId } = req.params;
+    const updates = req.body;
+    
+    const config = await customerConfigService.updateCustomerConfig(customerId, updates);
+    
+    if (!config) {
+      return res.status(404).json({ error: 'Customer configuration not found' });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Customer configuration updated successfully',
+      data: config
+    });
+  } catch (error) {
+    console.error('Update customer config error:', error);
+    res.status(500).json({ 
+      error: 'Failed to update customer configuration',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// n8n Workflow Management Endpoints
+
+// Get all n8n workflows
+app.get('/api/n8n-workflows', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const workflows = await customerConfigService.getAllN8nWorkflows();
+    res.json({
+      success: true,
+      data: workflows
+    });
+  } catch (error) {
+    console.error('Get n8n workflows error:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch n8n workflows',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Map form to customer
+app.post('/api/forms/:id/customer-mapping', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { customer_id } = req.body;
+    
+    if (isNaN(formId) || !customer_id) {
+      return res.status(400).json({ error: 'Valid form ID and customer_id are required' });
+    }
+    
+    await customerConfigService.mapFormToCustomer(formId, customer_id);
+    
+    res.json({
+      success: true,
+      message: 'Form mapped to customer successfully'
+    });
+  } catch (error) {
+    console.error('Map form to customer error:', error);
+    res.status(500).json({ 
+      error: 'Failed to map form to customer',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }

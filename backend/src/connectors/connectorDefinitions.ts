@@ -115,6 +115,48 @@ export const connectorDefinitions: Record<string, ConnectorDefinition> = {
         description: 'Name of the specific sheet tab (defaults to Sheet1)'
       }
     ]
+  },
+
+  n8n: {
+    type: 'n8n',
+    label: 'n8n Workflow Automation',
+    description: 'Route form submissions through n8n workflows for advanced automation and customer-specific routing',
+    icon: '🔄',
+    isPremium: false,
+    fields: [
+      {
+        name: 'webhookUrl',
+        label: 'n8n Webhook URL',
+        type: 'url',
+        required: true,
+        placeholder: 'http://localhost:5678/webhook/form-submission',
+        description: 'n8n webhook endpoint URL'
+      },
+      {
+        name: 'customerId',
+        label: 'Customer ID',
+        type: 'text',
+        required: false,
+        placeholder: 'customer-001',
+        description: 'Customer identifier for routing configuration'
+      },
+      {
+        name: 'workflowId',
+        label: 'Workflow ID',
+        type: 'text',
+        required: false,
+        placeholder: 'form-data-router',
+        description: 'Specific n8n workflow to trigger (optional)'
+      },
+      {
+        name: 'authToken',
+        label: 'Authorization Token',
+        type: 'password',
+        required: false,
+        placeholder: 'Bearer token...',
+        description: 'Optional authentication token for secure webhook access'
+      }
+    ]
   }
 };
 
