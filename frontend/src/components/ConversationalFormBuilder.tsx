@@ -185,7 +185,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         let matchedPurpose: string | undefined;
         for (const purposeOption of formPurposes) {
             const lowerPurposeOption = purposeOption.toLowerCase();
-            if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerPurposeOption)) {
+            if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerInput)) {
                 matchedPurpose = purposeOption;
                 break;
             }
@@ -466,8 +466,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
 
     if (configInput) {
+      // If config was provided with type, process it immediately
       await processDestinationConfigInput(configInput, normalizedType);
     } else {
+      // Prompt for config based on type
       let configPrompt = '';
       switch (normalizedType) {
         case 'email':
