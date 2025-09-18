@@ -111,31 +111,6 @@ function App() {
     }
   };
 
-  const fetchRecords = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      let response;
-      if (searchQuery.trim()) {
-        response = await apiService.searchRecords(searchQuery.trim());
-      } else {
-        response = await apiService.getAllRecords();
-      }
-      
-      if (response.success && response.data) {
-        setRecords(response.data);
-      } else {
-        setError(response.error || 'Failed to fetch records');
-      }
-    } catch (error: any) {
-      console.error('Fetch error:', error);
-      setError(error.response?.data?.message || error.message || 'Failed to fetch records');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleLogin = (userData: User, token: string) => {
     setUser(userData);
     setAuthToken(token);
@@ -151,7 +126,13 @@ function App() {
     setForms([]);
     localStorage.removeItem('authToken');
     localStorage.removeItem('user');
-    createGuestToken(); // Create new guest token
+    // Preserve existing guest token if it exists, otherwise create a new one.
+    const existingGuestToken = localStorage.getItem('guestToken');
+    if (existingGuestToken) {
+      setGuestToken(existingGuestToken);
+    } else {
+      createGuestToken(); // This will fetch a new one from the backend and save to localStorage
+    }
     setShowAuth(false);
   };
 
