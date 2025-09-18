@@ -6,6 +6,8 @@ import { ConversationalFormBuilder } from './components/ConversationalFormBuilde
 import { LoginForm, RegisterForm } from './components/AuthForms';
 import { ConnectorManager } from './components/ConnectorManager';
 import { LiveFormPreview } from './components/LiveFormPreview';
+import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
+import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm } from './types/api';
 
@@ -20,8 +22,8 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage'>('builder');
-  const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'embed-code' | 'analytics'>('builder');
+  const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
   const [builderState, setBuilderState] = useState<{ 
@@ -155,14 +157,33 @@ function App() {
     }
   };
 
-  const handleManageForm = (formId: number) => {
-    setSelectedFormId(formId);
+  const handleManageForm = (form: SaaSForm) => {
+    setSelectedForm(form);
     setCurrentView('form-manage');
   };
 
+  const handleShowEmbedCode = (form: SaaSForm) => {
+    setSelectedForm(form);
+    setCurrentView('embed-code');
+  };
+
+  const handleShowAnalytics = (form: SaaSForm) => {
+    setSelectedForm(form);
+    setCurrentView('analytics');
+  };
+
+  const handleEditForm = (form: SaaSForm) => {
+    // For now, redirect to connector management as a starting point for editing
+    // A full form editor would be more complex
+    setSelectedForm(form);
+    setCurrentView('form-manage');
+    setError('The "Edit" function currently leads to connector management. A full form editor is coming soon!');
+  };
+
   const handleBackToDashboard = () => {
-    setSelectedFormId(null);
+    setSelectedForm(null);
     setCurrentView('dashboard');
+    setError(null); // Clear any previous errors when navigating back
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -420,19 +441,31 @@ function App() {
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button 
-                            onClick={() => handleManageForm(form.id)}
+                            onClick={() => handleManageForm(form)} // Pass full form object
                             className="btn btn-primary" 
                             style={{ fontSize: '12px' }}
                           >
                             🔌 Connectors
                           </button>
-                          <button className="btn btn-secondary" style={{ fontSize: '12px' }}>
+                          <button 
+                            onClick={() => handleEditForm(form)} // Pass full form object
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '12px' }}
+                          >
                             ⚙️ Edit
                           </button>
-                          <button className="btn btn-secondary" style={{ fontSize: '12px' }}>
+                          <button 
+                            onClick={() => handleShowEmbedCode(form)} // Pass full form object
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '12px' }}
+                          >
                             📋 Embed Code
                           </button>
-                          <button className="btn btn-secondary" style={{ fontSize: '12px' }}>
+                          <button 
+                            onClick={() => handleShowAnalytics(form)} // Pass full form object
+                            className="btn btn-secondary" 
+                            style={{ fontSize: '12px' }}
+                          >
                             📈 Analytics
                           </button>
                         </div>
@@ -443,7 +476,7 @@ function App() {
               )}
             </div>
           </div>
-        ) : currentView === 'form-manage' && user && selectedFormId ? (
+        ) : currentView === 'form-manage' && user && selectedForm ? (
           <div>
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
@@ -463,7 +496,7 @@ function App() {
               </div>
               
               <ConnectorManager 
-                formId={selectedFormId}
+                formId={selectedForm.id} // Use selectedForm.id
                 onSave={() => {
                   // Optionally refresh forms list or show success message
                   console.log('Connectors saved successfully');
@@ -471,6 +504,18 @@ function App() {
               />
             </div>
           </div>
+        ) : currentView === 'embed-code' && user && selectedForm ? (
+          <EmbedCodeDisplay 
+            form={selectedForm} 
+            user={user} 
+            onBack={handleBackToDashboard} 
+          />
+        ) : currentView === 'analytics' && user && selectedForm ? (
+          <FormAnalytics 
+            form={selectedForm} 
+            user={user} 
+            onBack={handleBackToDashboard} 
+          />
         ) : currentView === 'legacy' ? (
           <>
             {/* URL Input Form */}
