@@ -32,7 +32,7 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 16px 0;
+  padding: 10px 0; /* Reduced padding */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
@@ -322,7 +322,7 @@ main {
 /* Footer */
 footer {
   background-color: #f8f9fa;
-  padding: 16px 0;
+  padding: 10px 0; /* Reduced padding */
   border-top: 1px solid #e1e5e9;
   color: #6c757d;
   font-size: 13px;
@@ -333,7 +333,7 @@ footer {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  min-height: calc(100vh - 140px); /* Adjusted based on new header/footer height */
+  min-height: calc(100vh - 110px); /* Adjusted based on new header/footer height */
 }
 
 .App > main > div {
@@ -511,7 +511,7 @@ footer {
 .live-preview-card {
   position: sticky;
   top: 24px; /* Adjusted to match main padding */
-  max-height: calc(100vh - 140px); /* Set a max-height instead */
+  max-height: calc(100vh - 110px); /* Adjusted based on new header/footer height */
   display: flex;
   flex-direction: column;
   align-items: center;
