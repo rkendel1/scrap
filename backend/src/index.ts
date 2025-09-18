@@ -705,6 +705,378 @@ app.get('/api/forms/embed/:embedCode', async (req, res) => {
   }
 });
 
+// Generate secure embed token (requires authentication)
+app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const userId = req.user!.id;
+    
+    const token = await saasService.generateSecureEmbedToken(formId, userId);
+    
+    if (!token) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form not found or not accessible'
+      });
+    }
+    
+    res.json({
+      success: true,
+      token,
+      expiresIn: '1h'
+    });
+  } catch (error) {
+    console.error('Generate token error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate embed token'
+    });
+  }
+});
+
+// Update form allowed domains (requires authentication)
+app.put('/api/forms/:id/allowed-domains', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const userId = req.user!.id;
+    const { allowedDomains } = req.body;
+    
+    if (!Array.isArray(allowedDomains)) {
+      return res.status(400).json({
+        success: false,
+        message: 'allowedDomains must be an array'
+      });
+    }
+    
+    const success = await saasService.updateFormAllowedDomains(formId, userId, allowedDomains);
+    
+    if (!success) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form not found or not accessible'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Allowed domains updated successfully'
+    });
+  } catch (error) {
+    console.error('Update allowed domains error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update allowed domains'
+    });
+  }
+});
+
+// Secure embed.js endpoint (requires token in query params)
+app.get('/embed.js', (req, res) => {
+  const { id: formIdParam, key: token } = req.query;
+  
+  if (!formIdParam || !token) {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.status(400).send(`
+      console.error('FormCraft: Missing required parameters. Usage: <script src="/embed.js?id=FORM_ID&key=FORM_KEY"></script>');
+      document.write('<div style="padding: 20px; border: 1px solid #f5c6cb; background: #f8d7da; color: #dc3545; border-radius: 8px;">Error: Missing form ID or key</div>');
+    `);
+    return;
+  }
+  
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Don't cache secure tokens
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  
+  // Inject the secure token into the embed script
+  const embedScript = `
+    (function() {
+      'use strict';
+      
+      // Secure embed configuration
+      const FORM_TOKEN = '${token}';
+      const FORM_ID = '${formIdParam}';
+      const API_BASE = '${process.env.NODE_ENV === 'production' ? 'https://formcraft.ai' : 'http://localhost:3001'}';
+      
+      // Get current hostname for domain validation
+      const currentHostname = window.location.hostname;
+      
+      // Get the script tag that loaded this file
+      const currentScript = document.currentScript || (function() {
+        const scripts = document.getElementsByTagName('script');
+        return scripts[scripts.length - 1];
+      })();
+      
+      const containerId = 'formcraft-embed-' + FORM_ID;
+      
+      // Create container element
+      const container = document.createElement('div');
+      container.id = containerId;
+      container.style.cssText = 'margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif;';
+      
+      // Insert container after the script tag
+      currentScript.parentNode.insertBefore(container, currentScript.nextSibling);
+      
+      // Show loading state
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">Loading form...</div>';
+      
+      // Fetch form data with secure token
+      fetch(API_BASE + '/api/forms/embed-secure', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          token: FORM_TOKEN,
+          hostname: currentHostname
+        })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success) {
+            throw new Error(data.message || 'Failed to load form');
+          }
+          renderForm(data.data, container);
+        })
+        .catch(error => {
+          console.error('FormCraft: Error loading form:', error);
+          container.innerHTML = \`
+            <div style="padding: 20px; text-align: center; color: #dc3545; border: 1px solid #f5c6cb; border-radius: 8px; background: #f8d7da;">
+              <strong>Error loading form:</strong><br>
+              \${error.message}
+            </div>
+          \`;
+        });
+      
+      function renderForm(formData, container) {
+        const form = formData.generated_form;
+        if (!form) {
+          container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Form configuration not found</div>';
+          return;
+        }
+        
+        const styling = formData.styling || {};
+        
+        const formHTML = \`
+          <div style="
+            background-color: \${styling.backgroundColor || '#fff'};
+            padding: 24px;
+            border-radius: \${styling.borderRadius || '8px'};
+            font-family: \${styling.fontFamily || 'system-ui'};
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+          ">
+            <div style="margin-bottom: 24px;">
+              <h3 style="margin: 0 0 8px 0; color: #333; font-size: 20px;">
+                \${escapeHtml(form.title || formData.title)}
+              </h3>
+              \${form.description || formData.description ? \`
+                <p style="margin: 0; color: #666; font-size: 14px;">
+                  \${escapeHtml(form.description || formData.description)}
+                </p>
+              \` : ''}
+            </div>
+            
+            <form id="formcraft-form-\${FORM_ID}">
+              \${renderFields(form.fields || [])}
+              
+              <div id="form-message-\${FORM_ID}" style="margin-bottom: 16px; display: none;"></div>
+              
+              <button type="submit" id="submit-btn-\${FORM_ID}" style="
+                background-color: \${styling.primaryColor || '#007bff'};
+                color: white;
+                padding: 12px 24px;
+                border: none;
+                border-radius: \${styling.borderRadius || '4px'};
+                font-size: 16px;
+                font-weight: 500;
+                cursor: pointer;
+                width: 100%;
+                transition: all 0.2s ease;
+              " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                \${form.ctaText || 'Submit'}
+              </button>
+            </form>
+          </div>
+        \`;
+        
+        container.innerHTML = formHTML;
+        
+        // Add form submission handler
+        const formElement = document.getElementById(\`formcraft-form-\${FORM_ID}\`);
+        if (formElement) {
+          formElement.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleFormSubmission(formData, FORM_ID);
+          });
+        }
+      }
+      
+      function renderFields(fields) {
+        return fields.map(field => {
+          const baseStyle = 'width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;';
+          
+          switch (field.type) {
+            case 'textarea':
+              return \`
+                <div style="margin-bottom: 16px;">
+                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
+                  <textarea 
+                    name="\${field.name}" 
+                    placeholder="\${escapeHtml(field.placeholder || '')}" 
+                    \${field.required ? 'required' : ''}
+                    style="\${baseStyle} min-height: 100px; resize: vertical;"
+                  ></textarea>
+                </div>
+              \`;
+            default:
+              return \`
+                <div style="margin-bottom: 16px;">
+                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
+                  <input 
+                    type="\${field.type || 'text'}" 
+                    name="\${field.name}" 
+                    placeholder="\${escapeHtml(field.placeholder || '')}" 
+                    \${field.required ? 'required' : ''}
+                    style="\${baseStyle}"
+                  />
+                </div>
+              \`;
+          }
+        }).join('');
+      }
+      
+      function handleFormSubmission(formData, formId) {
+        const formElement = document.getElementById(\`formcraft-form-\${formId}\`);
+        const submitBtn = document.getElementById(\`submit-btn-\${formId}\`);
+        const messageDiv = document.getElementById(\`form-message-\${formId}\`);
+        
+        if (!formElement || !submitBtn) return;
+        
+        // Disable submit button
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+        
+        // Collect form data
+        const formDataObj = new FormData(formElement);
+        const data = {};
+        for (let [key, value] of formDataObj.entries()) {
+          data[key] = value;
+        }
+        
+        // Submit with secure token
+        fetch(API_BASE + '/api/forms/submit-secure', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            token: FORM_TOKEN,
+            data: data,
+            hostname: currentHostname
+          })
+        })
+          .then(response => response.json())
+          .then(result => {
+            if (result.success) {
+              messageDiv.style.cssText = 'margin-bottom: 16px; padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; border-radius: 4px; display: block;';
+              messageDiv.textContent = formData.generated_form?.thankYouMessage || 'Thank you for your submission!';
+              formElement.style.display = 'none';
+            } else {
+              throw new Error(result.message || 'Submission failed');
+            }
+          })
+          .catch(error => {
+            console.error('FormCraft: Submission error:', error);
+            messageDiv.style.cssText = 'margin-bottom: 16px; padding: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #dc3545; border-radius: 4px; display: block;';
+            messageDiv.textContent = error.message || 'Failed to submit form. Please try again.';
+            
+            // Re-enable submit button
+            submitBtn.disabled = false;
+            submitBtn.textContent = formData.generated_form?.ctaText || 'Submit';
+          });
+      }
+      
+      function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+    })();
+  `;
+  
+  res.send(embedScript);
+});
+
+// Get form data with secure token validation
+app.post('/api/forms/embed-secure', async (req, res) => {
+  try {
+    const { token, hostname } = req.body;
+    
+    if (!token || !hostname) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and hostname are required'
+      });
+    }
+    
+    const formData = await saasService.getFormByEmbedToken(token, hostname);
+    
+    if (!formData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Form not found, token invalid, or domain not authorized'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: formData
+    });
+  } catch (error) {
+    console.error('Secure embed form fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch form data'
+    });
+  }
+});
+
+// Submit form with secure token validation
+app.post('/api/forms/submit-secure', async (req, res) => {
+  try {
+    const { token, data: submissionData, hostname } = req.body;
+    
+    if (!token || !submissionData) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token and data are required'
+      });
+    }
+    
+    const metadata = {
+      submittedFromUrl: req.headers.referer,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      hostname: hostname
+    };
+    
+    const result = await saasService.submitFormSecure(token, submissionData, metadata);
+    
+    res.json(result);
+  } catch (error) {
+    console.error('Secure form submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to submit form'
+    });
+  }
+});
+
 // Submit form (public endpoint)
 app.post('/api/forms/submit/:embedCode', async (req, res) => {
   try {

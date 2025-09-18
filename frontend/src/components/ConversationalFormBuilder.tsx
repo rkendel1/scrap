@@ -389,19 +389,77 @@ const Step4Preview: React.FC<{
   onBack: () => void;
 }> = ({ formData, generatedForm, createdForm, user, onFormGenerated, onBack }) => {
   const [showEmbedCode, setShowEmbedCode] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState<string[]>(['']);
+  const [embedToken, setEmbedToken] = useState<string>('');
+  const [loadingToken, setLoadingToken] = useState(false);
 
   const handlePreviewSubmit = (data: any) => {
     console.log('Preview form submission:', data);
     alert('This is a preview - form data logged to console');
   };
 
-  const handleGetEmbedCode = () => {
-    if (!user) {
-      alert('Please sign in to get the embed code for your form');
+  const addDomainField = () => {
+    setAllowedDomains([...allowedDomains, '']);
+  };
+
+  const removeDomainField = (index: number) => {
+    setAllowedDomains(allowedDomains.filter((_, i) => i !== index));
+  };
+
+  const updateDomain = (index: number, value: string) => {
+    const newDomains = [...allowedDomains];
+    newDomains[index] = value;
+    setAllowedDomains(newDomains);
+  };
+
+  const generateSecureEmbedCode = async () => {
+    if (!user || !createdForm) {
+      alert('Please sign in and create a form first');
       return;
     }
-    setShowEmbedCode(true);
-    onFormGenerated(createdForm); // Pass the full form object instead of just generatedForm
+    
+    setLoadingToken(true);
+    try {
+      // First, update allowed domains
+      const validDomains = allowedDomains.filter(domain => domain.trim() !== '');
+      if (validDomains.length > 0) {
+        const domainsResponse = await fetch(`/api/forms/${createdForm.id}/allowed-domains`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({ allowedDomains: validDomains })
+        });
+        
+        if (!domainsResponse.ok) {
+          throw new Error('Failed to update allowed domains');
+        }
+      }
+      
+      // Generate secure token
+      const tokenResponse = await fetch(`/api/forms/${createdForm.id}/generate-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
+      });
+      
+      if (!tokenResponse.ok) {
+        throw new Error('Failed to generate embed token');
+      }
+      
+      const tokenData = await tokenResponse.json();
+      setEmbedToken(tokenData.token);
+      setShowEmbedCode(true);
+      onFormGenerated(createdForm);
+    } catch (error: any) {
+      console.error('Error generating secure embed:', error);
+      alert(error.message || 'Failed to generate secure embed code');
+    } finally {
+      setLoadingToken(false);
+    }
   };
 
   return (
@@ -463,50 +521,199 @@ const Step4Preview: React.FC<{
           </button>
         </div>
       ) : showEmbedCode ? (
-        <div style={{
-          padding: '20px',
-          backgroundColor: '#d4edda',
-          border: '1px solid #c3e6cb',
-          borderRadius: '8px',
-          marginBottom: '24px'
-        }}>
-          <h4 style={{ margin: '0 0 12px 0', color: '#155724' }}>📋 Embed Code</h4>
+        <div>
+          {/* Security Notice */}
           <div style={{
-            padding: '12px',
-            backgroundColor: '#fff',
-            border: '1px solid #ced4da',
-            borderRadius: '4px',
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            color: '#333',
-            overflowX: 'auto'
+            padding: '16px',
+            backgroundColor: '#d1ecf1',
+            border: '1px solid #bee5eb',
+            borderRadius: '8px',
+            marginBottom: '16px'
           }}>
-            {`<iframe src="https://formcraft.ai/embed.html?code=${createdForm?.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`}
+            <h5 style={{ margin: '0 0 8px 0', color: '#0c5460' }}>🔒 Secure Embed System</h5>
+            <p style={{ margin: '0', fontSize: '14px', color: '#0c5460' }}>
+              This form uses our secure embed system with domain validation and rate limiting. 
+              The embed token expires in 1 hour for security.
+            </p>
           </div>
-          <button 
-            onClick={() => navigator.clipboard.writeText(`<iframe src="https://formcraft.ai/embed.html?code=${createdForm?.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`)}
-            className="btn btn-secondary"
-            style={{ marginTop: '12px', fontSize: '14px' }}
-          >
-            📋 Copy to Clipboard
-          </button>
+
+          {/* Secure Embed Code */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: '#d4edda',
+            border: '1px solid #c3e6cb',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            <h4 style={{ margin: '0 0 12px 0', color: '#155724' }}>📋 Secure Embed Code</h4>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#155724' }}>
+              Copy this code and paste it into your website where you want the form to appear:
+            </p>
+            <div style={{
+              padding: '12px',
+              backgroundColor: '#fff',
+              border: '1px solid #ced4da',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              color: '#333',
+              overflowX: 'auto'
+            }}>
+              {`<script src="${window.location.protocol}//${window.location.host}/embed.js?id=${createdForm?.id}&key=${embedToken}"></script>`}
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button 
+                onClick={() => navigator.clipboard.writeText(`<script src="${window.location.protocol}//${window.location.host}/embed.js?id=${createdForm?.id}&key=${embedToken}"></script>`)}
+                className="btn btn-secondary"
+                style={{ fontSize: '14px' }}
+              >
+                📋 Copy Code
+              </button>
+              <button 
+                onClick={generateSecureEmbedCode}
+                className="btn btn-outline-primary"
+                style={{ fontSize: '14px' }}
+                disabled={loadingToken}
+              >
+                🔄 Generate New Token
+              </button>
+            </div>
+          </div>
+
+          {/* Domain Configuration */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            <h5 style={{ margin: '0 0 12px 0', color: '#856404' }}>🌐 Allowed Domains</h5>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#856404' }}>
+              Configure which domains can embed this form. Leave empty to allow all domains (not recommended).
+            </p>
+            {allowedDomains.map((domain, index) => (
+              <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <input
+                  type="text"
+                  value={domain}
+                  onChange={(e) => updateDomain(index, e.target.value)}
+                  placeholder="example.com"
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                {allowedDomains.length > 1 && (
+                  <button
+                    onClick={() => removeDomainField(index)}
+                    className="btn btn-outline-danger"
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={addDomainField}
+              className="btn btn-outline-primary"
+              style={{ fontSize: '14px', marginTop: '8px' }}
+            >
+              + Add Domain
+            </button>
+          </div>
+
+          {/* Rate Limiting Info */}
+          <div style={{
+            padding: '16px',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            <h6 style={{ margin: '0 0 8px 0', color: '#495057' }}>⚡ Rate Limits</h6>
+            <p style={{ margin: '0', fontSize: '14px', color: '#6c757d' }}>
+              <strong>Your plan ({user?.subscription_tier || 'free'}):</strong> {' '}
+              {user?.subscription_tier === 'paid' ? '100 submissions/hour' : '10 submissions/hour'} per IP address
+            </p>
+          </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <button 
-            onClick={onBack}
-            className="btn btn-secondary"
-            style={{ fontSize: '16px', padding: '12px 24px' }}
-          >
-            ← Back to Edit
-          </button>
-          <button 
-            onClick={handleGetEmbedCode}
-            className="btn btn-primary"
-            style={{ fontSize: '16px', padding: '12px 24px' }}
-          >
-            Get Embed Code →
-          </button>
+        <div>
+          {/* Domain Configuration Form */}
+          <div style={{
+            padding: '20px',
+            backgroundColor: '#f8f9fa',
+            border: '1px solid #dee2e6',
+            borderRadius: '8px',
+            marginBottom: '20px'
+          }}>
+            <h4 style={{ margin: '0 0 16px 0', color: '#495057' }}>🔒 Security Configuration</h4>
+            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6c757d' }}>
+              Configure security settings for your form before generating the embed code.
+            </p>
+            
+            <h5 style={{ margin: '0 0 12px 0', color: '#495057' }}>Allowed Domains</h5>
+            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#6c757d' }}>
+              Specify which domains can embed this form. This prevents unauthorized use of your form.
+            </p>
+            
+            {allowedDomains.map((domain, index) => (
+              <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                <input
+                  type="text"
+                  value={domain}
+                  onChange={(e) => updateDomain(index, e.target.value)}
+                  placeholder="example.com (leave empty to allow all domains)"
+                  style={{
+                    flex: 1,
+                    padding: '8px',
+                    border: '1px solid #ddd',
+                    borderRadius: '4px',
+                    fontSize: '14px'
+                  }}
+                />
+                {allowedDomains.length > 1 && (
+                  <button
+                    onClick={() => removeDomainField(index)}
+                    className="btn btn-outline-danger"
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            ))}
+            <button
+              onClick={addDomainField}
+              className="btn btn-outline-primary"
+              style={{ fontSize: '14px', marginTop: '8px' }}
+            >
+              + Add Another Domain
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <button 
+              onClick={onBack}
+              className="btn btn-secondary"
+              style={{ fontSize: '16px', padding: '12px 24px' }}
+            >
+              ← Back
+            </button>
+            <button 
+              onClick={generateSecureEmbedCode}
+              className="btn btn-primary"
+              style={{ fontSize: '16px', padding: '12px 24px' }}
+              disabled={loadingToken}
+            >
+              {loadingToken ? 'Generating...' : '🔒 Generate Secure Embed Code →'}
+            </button>
+          </div>
         </div>
       )}
     </div>
