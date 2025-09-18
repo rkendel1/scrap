@@ -24,7 +24,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px; /* Reduced gap between buttons */
-  margin-top: 8px; /* Reduced margin from prompt text */
+  margin-top: 0px; /* Removed margin from prompt text, as they are now separate */
 }
 
 /* Add specific styling for button in the form */

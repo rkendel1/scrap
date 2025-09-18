@@ -18,7 +18,7 @@ interface ConversationalFormBuilderProps {
 
 type ConversationEntry = {
   type: 'prompt' | 'user' | 'error' | 'success';
-  content: string | JSX.Element; // Content can now be JSX
+  content: string | JSX.Element;
 };
 
 type ConversationStep =
@@ -45,7 +45,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  // Removed currentQuickResponses state
+  const [currentQuickResponses, setCurrentQuickResponses] = useState<JSX.Element | null>(null); // Reintroduced state for quick response buttons
 
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -100,7 +100,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory]); // Only scroll when conversation history changes
+  }, [conversationHistory, currentQuickResponses]); // Also scroll when quick responses appear/disappear
 
   // Update parent component's state for LiveFormPreview
   useEffect(() => {
@@ -118,24 +118,30 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, entry]);
   };
 
-  const addPrompt = (content: string | JSX.Element) => { // Removed quickResponses parameter
+  // Modified addPrompt to accept quickResponses separately
+  const addPrompt = (content: string | JSX.Element, quickResponses: JSX.Element | null = null) => {
     addEntry({ type: 'prompt', content });
-    setIsLoading(false); // Ensure loading is off after a prompt
+    setCurrentQuickResponses(quickResponses); // Set quick responses here
+    setIsLoading(false);
   };
 
+  // Modified addUserResponse, addError, addSuccess to clear quick responses
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
-    setIsLoading(false); // Ensure loading is off after user response
+    setCurrentQuickResponses(null); // Clear quick responses
+    setIsLoading(false);
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
-    setIsLoading(false); // Ensure loading is off after an error
+    setCurrentQuickResponses(null); // Clear quick responses
+    setIsLoading(false);
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
-    setIsLoading(false); // Ensure loading is off after success
+    setCurrentQuickResponses(null); // Clear quick responses
+    setIsLoading(false);
   };
 
   // Helper to parse user input for various intents
@@ -179,7 +185,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         let matchedPurpose: string | undefined;
         for (const purposeOption of formPurposes) {
             const lowerPurposeOption = purposeOption.toLowerCase();
-            if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerInput)) {
+            if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerPurposeOption)) {
                 matchedPurpose = purposeOption;
                 break;
             }
@@ -232,9 +238,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (!userInput.trim() || isLoading) return;
 
     const input = userInput.trim();
-    addUserResponse(input); // Add user's response to history
+    addUserResponse(input); // This is now the only place user input is added to history
     setUserInput('');
     setError(null);
+    setIsLoading(true); // Set loading here, will be cleared by addPrompt/addError/addSuccess
 
     const parsedInput = parseUserInput(input);
 
@@ -338,27 +345,21 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
   };
 
+  // Refactored handleQuickResponseClick
   const handleQuickResponseClick = async (response: string) => {
     if (isLoading) return;
-
-    // Add the selected quick response to history as if user typed it
-    addUserResponse(response);
-    setUserInput(''); // Clear input field immediately
+    setUserInput(response); // Set the input field value
     setError(null);
-
-    // Directly call handleUserInput with the quick response
-    // This allows the full parsing and step logic to apply
+    // Trigger handleUserInput by simulating a form submission
     await handleUserInput({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const processUrlInput = async (url: string) => {
-    setIsLoading(true); // Set loading
     setCurrentStep('PROCESSING_URL'); // Update step for dynamic button text
     try {
       new URL(url); // Basic URL validation
     } catch {
       addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -377,7 +378,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!extractResult.success) {
       addError(extractResult.error || 'Failed to analyze website. Please check the URL.');
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -387,29 +387,24 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setExtractedVoiceAnalysis(voiceAnalysis);
     setFormData((prev) => ({ ...prev, url }));
 
-
     addPrompt(
-      <>
-        Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads", "Customer feedback", or even "Tool rental form")
-        <div className="quick-reply-container">
-          {formPurposes.slice(0, 3).map((purpose) => (
-            <button key={purpose} className="quick-reply-btn" onClick={() => handleQuickResponseClick(purpose)}>
-              {purpose}
-            </button>
-          ))}
-        </div>
-      </>
+      "Website analyzed! Now, what is the main purpose of this form? (e.g., 'Collect leads', 'Customer feedback', or even 'Tool rental form')",
+      <div className="quick-reply-container">
+        {formPurposes.slice(0, 3).map((purpose) => (
+          <button key={purpose} className="quick-reply-btn" onClick={() => handleQuickResponseClick(purpose)}>
+            {purpose}
+          </button>
+        ))}
+      </div>
     );
     setCurrentStep('ASK_PURPOSE');
   };
 
   const processPurposeInput = async (purpose: string) => {
-    setIsLoading(true); // Set loading
     setCurrentStep('PROCESSING_PURPOSE'); // Update step for dynamic button text
     if (!extractedRecordId) {
       addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
       setCurrentStep('ASK_URL');
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -439,7 +434,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (generateResult.upgradeRequired) {
         addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
       }
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -447,21 +441,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
 
-
-    // Set the step FIRST
     setCurrentStep('ASK_DESTINATION_TYPE'); 
-
-    // Then add the prompt with quick response buttons
     addPrompt(
-      <>
-        Your AI-generated form is ready! Next, where should I send the form submissions?
-        <div className="quick-reply-container">
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Email')}>Email</button>
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
-        </div>
-      </>
+      "Your AI-generated form is ready! Next, where should I send the form submissions?",
+      <div className="quick-reply-container">
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Email')}>Email</button>
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
+      </div>
     );
   };
 
@@ -478,10 +466,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
 
     if (configInput) {
-      // If config was provided with type, process it immediately
       await processDestinationConfigInput(configInput, normalizedType);
     } else {
-      // Prompt for config based on type
       let configPrompt = '';
       switch (normalizedType) {
         case 'email':
@@ -503,14 +489,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processDestinationConfigInput = async (configInput: string, typeOverride?: string) => {
-    setIsLoading(true); // Set loading
     setCurrentStep('PROCESSING_DESTINATION'); // Update step for dynamic button text
     const currentDestinationType = typeOverride || selectedDestinationType;
 
     if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
       setCurrentStep('ASK_URL');
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -549,7 +533,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (validationError) {
       addError(`${validationError} ${expectedInputPrompt}`);
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -580,21 +563,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!configureResult.success) {
       addError(configureResult.error || 'Failed to save destination configuration.');
-      setIsLoading(false); // Turn off loading on error
       return;
     }
 
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
-      <>
-        You can find your form in the "My Forms" dashboard.
-        <br />
-        Would you like to create another form?
-        <div className="quick-reply-container">
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('yes')}>Yes</button>
-          <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('no')}>No</button>
-        </div>
-      </>
+      "You can find your form in the 'My Forms' dashboard. Would you like to create another form?",
+      <div className="quick-reply-container">
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('yes')}>Yes</button>
+        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('no')}>No</button>
+      </div>
     );
     setCurrentStep('DONE'); // Transition to a final state where user can restart
     onFormGenerated(createdForm); // Notify parent that a form was created
@@ -617,10 +595,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
+      setCurrentQuickResponses(null); // Clear quick responses on restart
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
-      // Maybe redirect to dashboard or something
+      setCurrentQuickResponses(null); // Clear quick responses
     }
   };
 
@@ -640,6 +619,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setDestinationConfig({});
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
+    setCurrentQuickResponses(null); // Clear quick responses on restart
   };
 
 
@@ -660,7 +640,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       )}
 
-      {/* Fixed height container for chat history and quick responses */}
+      {/* Fixed height container for chat history */}
       <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', marginBottom: '12px' }}>
         <div
           ref={chatHistoryRef}
@@ -710,7 +690,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </div>
 
-      <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
+      {/* Quick responses rendered separately below the chat history */}
+      {currentQuickResponses && (
+        <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start', flexShrink: 0 }}>
+          {currentQuickResponses}
+        </div>
+      )}
+
+      <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0, marginTop: '12px' }}>
         <input
           type="text"
           value={userInput}
