@@ -1106,6 +1106,34 @@ app.get('/embed.js', (req, res) => {
   res.send(embedScript);
 });
 
+// Get form data for legacy iframe embed (public endpoint)
+app.get('/api/forms/embed/:embedCode', async (req, res) => {
+  try {
+    const { embedCode } = req.params;
+    if (!embedCode) {
+      return res.status(400).json({ success: false, message: 'Embed code is required' });
+    }
+
+    const formData = await saasService.getFormByEmbedCode(embedCode);
+
+    if (!formData) {
+      return res.status(404).json({ success: false, message: 'Form not found or not active' });
+    }
+
+    res.json({
+      success: true,
+      data: formData
+    });
+  } catch (error) {
+    console.error('Legacy embed form data fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch form data for embed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Submit form (public endpoint)
 app.post('/api/forms/submit/:embedCode', async (req, res) => {
   try {
