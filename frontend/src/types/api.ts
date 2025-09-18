@@ -100,6 +100,14 @@ export interface SaaSForm {
   generated_form: GeneratedForm;
 }
 
+// Interface for the conversational form builder's internal state
+export interface FormData {
+  url: string;
+  purpose: string;
+  destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook';
+  destinationConfig?: any;
+}
+
 export interface Connector {
   id: number;
   name: string;

@@ -1,18 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { EmbeddableForm } from './EmbeddableForm';
+import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
 
 interface ConversationalFormBuilderProps {
-  onFormGenerated: (form: any) => void;
+  onFormGenerated: (form: SaaSForm) => void;
   user?: any;
   guestToken?: string;
-}
-
-interface FormData {
-  url: string;
-  purpose: string;
-  destinationType: 'email' | 'google_sheets' | 'slack' | 'webhook';
-  destinationConfig: any;
+  onStateChange: (state: { formData: Partial<FormData>; generatedForm: GeneratedForm | null; createdForm: SaaSForm | null }) => void;
 }
 
 interface StepProps {
@@ -379,343 +373,30 @@ const Step3DestinationInput: React.FC<StepProps> = ({ formData, onNext, onBack }
   );
 };
 
-// Step 4: Preview and embed
-const Step4Preview: React.FC<{ 
-  formData: FormData; 
-  generatedForm: any; 
-  createdForm: any;
-  user?: any; 
-  onFormGenerated: (form: any) => void;
-  onBack: () => void;
-}> = ({ formData, generatedForm, createdForm, user, onFormGenerated, onBack }) => {
-  const [showEmbedCode, setShowEmbedCode] = useState(false);
-  const [allowedDomains, setAllowedDomains] = useState<string[]>(['']);
-  const [embedToken, setEmbedToken] = useState<string>('');
-  const [loadingToken, setLoadingToken] = useState(false);
-
-  const handlePreviewSubmit = (data: any) => {
-    console.log('Preview form submission:', data);
-    alert('This is a preview - form data logged to console');
-  };
-
-  const addDomainField = () => {
-    setAllowedDomains([...allowedDomains, '']);
-  };
-
-  const removeDomainField = (index: number) => {
-    setAllowedDomains(allowedDomains.filter((_, i) => i !== index));
-  };
-
-  const updateDomain = (index: number, value: string) => {
-    const newDomains = [...allowedDomains];
-    newDomains[index] = value;
-    setAllowedDomains(newDomains);
-  };
-
-  const generateSecureEmbedCode = async () => {
-    if (!user || !createdForm) {
-      alert('Please sign in and create a form first');
-      return;
-    }
-    
-    setLoadingToken(true);
-    try {
-      // First, update allowed domains
-      const validDomains = allowedDomains.filter(domain => domain.trim() !== '');
-      if (validDomains.length > 0) {
-        const domainsResponse = await fetch(`/api/forms/${createdForm.id}/allowed-domains`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-          },
-          body: JSON.stringify({ allowedDomains: validDomains })
-        });
-        
-        if (!domainsResponse.ok) {
-          throw new Error('Failed to update allowed domains');
-        }
-      }
-      
-      // Generate secure token
-      const tokenResponse = await fetch(`/api/forms/${createdForm.id}/generate-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      
-      if (!tokenResponse.ok) {
-        throw new Error('Failed to generate embed token');
-      }
-      
-      const tokenData = await tokenResponse.json();
-      setEmbedToken(tokenData.token);
-      setShowEmbedCode(true);
-      onFormGenerated(createdForm);
-    } catch (error: any) {
-      console.error('Error generating secure embed:', error);
-      alert(error.message || 'Failed to generate secure embed code');
-    } finally {
-      setLoadingToken(false);
-    }
-  };
-
+// Step 4: Final Preview and Go to Dashboard
+const Step4FinalPreview: React.FC<{ 
+  generatedForm: GeneratedForm; 
+  createdForm: SaaSForm;
+  onGoToDashboard: () => void;
+}> = ({ generatedForm, createdForm, onGoToDashboard }) => {
   return (
     <div className="card">
       <div style={{ marginBottom: '24px', textAlign: 'center' }}>
         <h2>🎉 Your Form is Ready!</h2>
         <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          Here's how your form will look to visitors:
+          Your AI-generated form has been created. You can now manage it in your dashboard.
         </p>
       </div>
 
-      <div style={{ 
-        border: '2px dashed #e1e5e9',
-        borderRadius: '8px',
-        padding: '24px',
-        backgroundColor: '#f8f9fa',
-        marginBottom: '24px'
-      }}>
-        <EmbeddableForm 
-          form={generatedForm} 
-          embedCode="preview-mode"
-          showBranding={user?.subscription_tier !== 'paid'}
-          onSubmit={handlePreviewSubmit}
-        />
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+        <button 
+          onClick={onGoToDashboard}
+          className="btn btn-primary"
+          style={{ fontSize: '16px', padding: '12px 24px' }}
+        >
+          Go to Dashboard →
+        </button>
       </div>
-
-      <div style={{ 
-        marginBottom: '24px', 
-        padding: '16px', 
-        backgroundColor: '#e8f5e8', 
-        borderRadius: '6px',
-        border: '1px solid #c3e6cb'
-      }}>
-        <h4 style={{ margin: '0 0 12px 0', color: '#155724' }}>✅ Form Configuration</h4>
-        <div style={{ fontSize: '14px', color: '#155724' }}>
-          <p style={{ margin: '4px 0' }}><strong>Website:</strong> {formData.url}</p>
-          <p style={{ margin: '4px 0' }}><strong>Purpose:</strong> {formData.purpose}</p>
-          <p style={{ margin: '4px 0' }}>
-            <strong>Data Destination:</strong> {formData.destinationType.replace('_', ' ')}
-          </p>
-        </div>
-      </div>
-
-      {!user ? (
-        <div style={{
-          padding: '20px',
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffeaa7',
-          borderRadius: '8px',
-          marginBottom: '24px',
-          textAlign: 'center'
-        }}>
-          <h4 style={{ margin: '0 0 12px 0', color: '#856404' }}>🔒 Sign In Required</h4>
-          <p style={{ margin: '0 0 16px 0', color: '#856404' }}>
-            To get your embed code and start collecting form submissions, you'll need to create an account.
-          </p>
-          <button className="btn btn-primary" style={{ fontSize: '16px', padding: '12px 24px' }}>
-            Sign Up / Sign In
-          </button>
-        </div>
-      ) : showEmbedCode ? (
-        <div>
-          {/* Security Notice */}
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#d1ecf1',
-            border: '1px solid #bee5eb',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <h5 style={{ margin: '0 0 8px 0', color: '#0c5460' }}>🔒 Secure Embed System</h5>
-            <p style={{ margin: '0', fontSize: '14px', color: '#0c5460' }}>
-              This form uses our secure embed system with domain validation and rate limiting. 
-              The embed token expires in 1 hour for security.
-            </p>
-          </div>
-
-          {/* Secure Embed Code */}
-          <div style={{
-            padding: '20px',
-            backgroundColor: '#d4edda',
-            border: '1px solid #c3e6cb',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <h4 style={{ margin: '0 0 12px 0', color: '#155724' }}>📋 Secure Embed Code</h4>
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#155724' }}>
-              Copy this code and paste it into your website where you want the form to appear:
-            </p>
-            <div style={{
-              padding: '12px',
-              backgroundColor: '#fff',
-              border: '1px solid #ced4da',
-              borderRadius: '4px',
-              fontFamily: 'monospace',
-              fontSize: '12px',
-              color: '#333',
-              overflowX: 'auto'
-            }}>
-              {`<script src="${window.location.protocol}//${window.location.host}/embed.js?id=${createdForm?.id}&key=${embedToken}"></script>`}
-            </div>
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-              <button 
-                onClick={() => navigator.clipboard.writeText(`<script src="${window.location.protocol}//${window.location.host}/embed.js?id=${createdForm?.id}&key=${embedToken}"></script>`)}
-                className="btn btn-secondary"
-                style={{ fontSize: '14px' }}
-              >
-                📋 Copy Code
-              </button>
-              <button 
-                onClick={generateSecureEmbedCode}
-                className="btn btn-outline-primary"
-                style={{ fontSize: '14px' }}
-                disabled={loadingToken}
-              >
-                🔄 Generate New Token
-              </button>
-            </div>
-          </div>
-
-          {/* Domain Configuration */}
-          <div style={{
-            padding: '20px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffeaa7',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <h5 style={{ margin: '0 0 12px 0', color: '#856404' }}>🌐 Allowed Domains</h5>
-            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#856404' }}>
-              Configure which domains can embed this form. Leave empty to allow all domains (not recommended).
-            </p>
-            {allowedDomains.map((domain, index) => (
-              <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  type="text"
-                  value={domain}
-                  onChange={(e) => updateDomain(index, e.target.value)}
-                  placeholder="example.com"
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                {allowedDomains.length > 1 && (
-                  <button
-                    onClick={() => removeDomainField(index)}
-                    className="btn btn-outline-danger"
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={addDomainField}
-              className="btn btn-outline-primary"
-              style={{ fontSize: '14px', marginTop: '8px' }}
-            >
-              + Add Domain
-            </button>
-          </div>
-
-          {/* Rate Limiting Info */}
-          <div style={{
-            padding: '16px',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            marginBottom: '16px'
-          }}>
-            <h6 style={{ margin: '0 0 8px 0', color: '#495057' }}>⚡ Rate Limits</h6>
-            <p style={{ margin: '0', fontSize: '14px', color: '#6c757d' }}>
-              <strong>Your plan ({user?.subscription_tier || 'free'}):</strong> {' '}
-              {user?.subscription_tier === 'paid' ? '100 submissions/hour' : '10 submissions/hour'} per IP address
-            </p>
-          </div>
-        </div>
-      ) : (
-        <div>
-          {/* Domain Configuration Form */}
-          <div style={{
-            padding: '20px',
-            backgroundColor: '#f8f9fa',
-            border: '1px solid #dee2e6',
-            borderRadius: '8px',
-            marginBottom: '20px'
-          }}>
-            <h4 style={{ margin: '0 0 16px 0', color: '#495057' }}>🔒 Security Configuration</h4>
-            <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#6c757d' }}>
-              Configure security settings for your form before generating the embed code.
-            </p>
-            
-            <h5 style={{ margin: '0 0 12px 0', color: '#495057' }}>Allowed Domains</h5>
-            <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#6c757d' }}>
-              Specify which domains can embed this form. This prevents unauthorized use of your form.
-            </p>
-            
-            {allowedDomains.map((domain, index) => (
-              <div key={index} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                <input
-                  type="text"
-                  value={domain}
-                  onChange={(e) => updateDomain(index, e.target.value)}
-                  placeholder="example.com (leave empty to allow all domains)"
-                  style={{
-                    flex: 1,
-                    padding: '8px',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    fontSize: '14px'
-                  }}
-                />
-                {allowedDomains.length > 1 && (
-                  <button
-                    onClick={() => removeDomainField(index)}
-                    className="btn btn-outline-danger"
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={addDomainField}
-              className="btn btn-outline-primary"
-              style={{ fontSize: '14px', marginTop: '8px' }}
-            >
-              + Add Another Domain
-            </button>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-            <button 
-              onClick={onBack}
-              className="btn btn-secondary"
-              style={{ fontSize: '16px', padding: '12px 24px' }}
-            >
-              ← Back
-            </button>
-            <button 
-              onClick={generateSecureEmbedCode}
-              className="btn btn-primary"
-              style={{ fontSize: '16px', padding: '12px 24px' }}
-              disabled={loadingToken}
-            >
-              {loadingToken ? 'Generating...' : '🔒 Generate Secure Embed Code →'}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -723,13 +404,18 @@ const Step4Preview: React.FC<{
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({ 
   onFormGenerated, 
   user,
-  guestToken 
+  guestToken,
+  onStateChange
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<Partial<FormData>>({});
-  const [generatedForm, setGeneratedForm] = useState(null);
-  const [createdForm, setCreatedForm] = useState(null); // Store the full form object
+  const [generatedForm, setGeneratedForm] = useState<GeneratedForm | null>(null);
+  const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null); // Store the full form object
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    onStateChange({ formData, generatedForm, createdForm });
+  }, [formData, generatedForm, createdForm, onStateChange]);
 
   const handleNext = async (stepData: Partial<FormData>) => {
     const newFormData = { ...formData, ...stepData };
@@ -746,6 +432,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         const payload = {
           url: newFormData.url,
           formPurpose: newFormData.purpose,
+          formName: newFormData.formName, // Assuming formName can be passed from a previous step if added
+          formDescription: newFormData.formDescription, // Assuming formDescription can be passed
           destinationType: newFormData.destinationType,
           destinationConfig: newFormData.destinationConfig,
           ...(guestToken && !user && { guestToken })
@@ -771,6 +459,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           setGeneratedForm(result.generatedForm);
           setCreatedForm(result.form); // Store the full form object with embed code
           setCurrentStep(4);
+          onFormGenerated(result.form); // Notify parent that a form was generated
         } else {
           alert(result.error || 'Failed to generate form');
         }
@@ -786,6 +475,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      if (currentStep === 4) { // If going back from final preview, clear generated form
+        setGeneratedForm(null);
+        setCreatedForm(null);
+      }
+    }
+  };
+
+  const handleGoToDashboard = () => {
+    if (createdForm) {
+      onFormGenerated(createdForm); // This will trigger App.tsx to update forms and switch view
     }
   };
 
@@ -889,14 +588,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         <Step3DestinationInput formData={formData} onNext={handleNext} onBack={handleBack} />
       )}
       
-      {currentStep === 4 && generatedForm && (
-        <Step4Preview 
-          formData={formData as FormData}
+      {currentStep === 4 && generatedForm && createdForm && (
+        <Step4FinalPreview 
           generatedForm={generatedForm}
           createdForm={createdForm}
-          user={user}
-          onFormGenerated={onFormGenerated}
-          onBack={handleBack}
+          onGoToDashboard={handleGoToDashboard}
         />
       )}
     </div>

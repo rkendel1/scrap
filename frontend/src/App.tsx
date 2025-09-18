@@ -5,8 +5,9 @@ import { RecordsTable } from './components/RecordsTable';
 import { ConversationalFormBuilder } from './components/ConversationalFormBuilder';
 import { LoginForm, RegisterForm } from './components/AuthForms';
 import { ConnectorManager } from './components/ConnectorManager';
+import { LiveFormPreview } from './components/LiveFormPreview'; // New import
 import { apiService } from './services/api';
-import { FormRecord, User, SaaSForm } from './types/api';
+import { FormRecord, User, SaaSForm, FormData, GeneratedForm } from './types/api'; // Updated import
 
 function App() {
   const [records, setRecords] = useState<FormRecord[]>([]);
@@ -21,6 +22,17 @@ function App() {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage'>('builder');
   const [selectedFormId, setSelectedFormId] = useState<number | null>(null);
+
+  // State for the conversational builder's internal data, passed to LiveFormPreview
+  const [builderState, setBuilderState] = useState<{ 
+    formData: Partial<FormData>; 
+    generatedForm: GeneratedForm | null; 
+    createdForm: SaaSForm | null 
+  }>({
+    formData: {},
+    generatedForm: null,
+    createdForm: null,
+  });
 
   // Initialize authentication on app load
   useEffect(() => {
@@ -135,7 +147,7 @@ function App() {
   const handleFormGenerated = (form: SaaSForm) => {
     setForms(prev => [form, ...prev]);
     if (user) {
-      setCurrentView('dashboard');
+      setCurrentView('dashboard'); // Switch to dashboard after form generation
     }
   };
 
@@ -342,15 +354,26 @@ function App() {
         )}
 
         {/* Main Content */}
-        {currentView === 'builder' && (
-          <ConversationalFormBuilder 
-            onFormGenerated={handleFormGenerated}
-            user={user}
-            guestToken={guestToken || undefined}
-          />
-        )}
-
-        {currentView === 'dashboard' && user && (
+        {currentView === 'builder' ? (
+          <div style={{ display: 'flex', gap: '24px', minHeight: 'calc(100vh - 200px)' }}>
+            <div style={{ flex: 1 }}> {/* Left column for builder */}
+              <ConversationalFormBuilder 
+                onFormGenerated={handleFormGenerated}
+                user={user}
+                guestToken={guestToken || undefined}
+                onStateChange={setBuilderState} // Pass state update callback
+              />
+            </div>
+            <div style={{ flex: 1 }}> {/* Right column for live preview */}
+              <LiveFormPreview
+                formData={builderState.formData}
+                generatedForm={builderState.generatedForm}
+                createdForm={builderState.createdForm}
+                user={user}
+              />
+            </div>
+          </div>
+        ) : currentView === 'dashboard' && user ? (
           <div>
             <div className="card">
               <h2>📊 Your Forms Dashboard</h2>
@@ -414,9 +437,7 @@ function App() {
               )}
             </div>
           </div>
-        )}
-
-        {currentView === 'form-manage' && user && selectedFormId && (
+        ) : currentView === 'form-manage' && user && selectedFormId ? (
           <div>
             <div className="card">
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px' }}>
@@ -444,9 +465,7 @@ function App() {
               />
             </div>
           </div>
-        )}
-
-        {currentView === 'legacy' && (
+        ) : currentView === 'legacy' ? (
           <>
             {/* URL Input Form */}
             <UrlForm onExtractSuccess={fetchRecords} />
@@ -500,7 +519,7 @@ function App() {
               />
             )}
           </>
-        )}
+        ) : null}
       </main>
 
       <footer style={{ textAlign: 'center', padding: '40px 20px', color: '#6c757d' }}>
