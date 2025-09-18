@@ -298,23 +298,20 @@ function App() {
         </div>
       </header>
 
-      <main className="container">
-        {/* Error Message */}
-        {error && (
-          <div className="card">
-            <div className="error-message" style={{ fontSize: '16px', textAlign: 'center' }}>
-              {error}
-              <button 
-                onClick={() => setError(null)}
-                style={{ marginLeft: '12px' }}
-                className="btn btn-secondary"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Error Message - now fixed at the top */}
+      {error && (
+        <div className="fixed-error-alert">
+          <span>{error}</span>
+          <button 
+            onClick={() => setError(null)}
+            className="dismiss-btn"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
+      <main className="container">
         {/* Main Content */}
         {currentView === 'builder' ? (
           <>

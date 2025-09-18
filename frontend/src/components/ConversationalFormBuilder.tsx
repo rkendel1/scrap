@@ -683,26 +683,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
               </div>
             </div>
           ))}
-          {/* Quick responses rendered *inside* the chat history div, at the end */}
-          {currentQuickResponses && (
-            <div style={{ width: '100%' }}> {/* Wrapper for quick responses */}
-              {currentStep === 'ASK_DESTINATION_TYPE' && (
-                <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-                  Use the buttons above to select your destination
-                </div>
-              )}
-              <div className="quick-reply-container">
-                {currentQuickResponses.map((response, idx) => (
-                  <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
-                    {destinationIcons[response.toLowerCase().replace(/\s/g, '')]}
-                    {getDestinationLabel(response.toLowerCase().replace(/\s/g, ''))}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      {/* Quick responses now outside chat-history-scroll but inside conversational-builder-card */}
+      {currentQuickResponses && (
+        <div style={{ width: '100%', marginTop: '12px' }}> {/* Wrapper for quick responses */}
+          {currentStep === 'ASK_DESTINATION_TYPE' && (
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+              Use the buttons above to select your destination
+            </div>
+          )}
+          <div className="quick-reply-container">
+            {currentQuickResponses.map((response, idx) => (
+              <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
+                {destinationIcons[response.toLowerCase().replace(/\s/g, '')]}
+                {getDestinationLabel(response.toLowerCase().replace(/\s/g, ''))}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleUserInput} className="form-input-container">
         <input
