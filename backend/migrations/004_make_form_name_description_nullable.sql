@@ -1,0 +1,2 @@
+ALTER TABLE forms ALTER COLUMN form_name DROP NOT NULL;
+ALTER TABLE forms ALTER COLUMN form_description DROP NOT NULL;
