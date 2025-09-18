@@ -74,9 +74,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
     // Default styling, potentially overridden by extracted tokens
     const defaultStyling = {
-      primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#007bff',
-      backgroundColor: extractedDesignTokens?.colorPalette?.find(color => isLightColor(color)) || '#f8f9fa', // Try to find a light color, else use app's light gray
-      fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif',
+      primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#4f46e5', /* Indigo */
+      backgroundColor: extractedDesignTokens?.colorPalette?.find(color => isLightColor(color)) || '#f8faff', /* Very light blue-gray */
+      fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'Inter, system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
       // Removed maxWidth from here, let the parent container manage it
@@ -147,31 +147,32 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   );
 
   return (
-    <div className="card" style={{ position: 'sticky', top: '20px', maxWidth: '500px' }}>
-      <h3 style={{ marginBottom: '16px', textAlign: 'center' }}>Live Preview</h3>
+    <div className="card live-preview-card">
+      <h3>Live Preview</h3>
       <div
         ref={previewContainerRef}
         style={{
-          border: '1px solid #e1e5e9',
-          borderRadius: '8px',
-          backgroundColor: '#f8f9fa',
-          height: '60vh', // Fixed height for the preview window
-          overflow: 'hidden', // Hide overflow, as we are scaling
+          border: '1px solid #e9edf5',
+          borderRadius: '12px',
+          backgroundColor: '#f0f4f8', /* Slightly darker background for preview area */
+          height: 'calc(100% - 60px)', /* Adjusted height to account for title/badge */
+          overflow: 'hidden',
           position: 'relative',
           display: 'flex',
-          alignItems: 'center', // Center vertically if content is smaller
-          justifyContent: 'center', // Center horizontally
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: '100%',
+          boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.06)'
         }}
       >
         {/* This div is to measure the natural size of the form before scaling */}
         <div
           ref={formNaturalSizeRef}
           style={{
-            position: 'absolute', // Position absolutely to not affect parent layout
-            visibility: 'hidden', // Hide it
-            pointerEvents: 'none', // Disable pointer events
-            width: '100%', // Allow it to take full width for measurement
-            // No transform here, this is for measuring natural size
+            position: 'absolute',
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            width: '100%',
           }}
         >
           {formContent}
@@ -182,8 +183,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           style={{
             transform: `scale(${scale})`,
             transformOrigin: 'top center',
-            width: '100%', // Allow it to take full width for scaling context
-            height: currentFormHeight, // Adjust height based on scaling
+            width: '100%',
+            height: currentFormHeight,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -193,10 +194,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {url || purpose || generatedForm ? (
             formContent
           ) : (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✨</div>
+            <div style={{ textAlign: 'center', padding: '20px', color: '#6b7280' }}>
+              <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
-              <p style={{ fontSize: '14px', margin: '0' }}>
+              <p className="placeholder-text">
                 Start by entering a website URL in the chat to the left to generate your form!
               </p>
             </div>
@@ -204,16 +205,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         </div>
       </div>
       {generatedForm && (
-        <div style={{
-          marginTop: '16px',
-          padding: '12px',
-          backgroundColor: '#e8f5e8',
-          borderRadius: '6px',
-          border: '1px solid #c3e6cb',
-          textAlign: 'center',
-          fontSize: '14px',
-          color: '#155724'
-        }}>
+        <div className="ai-generated-badge">
           ✅ AI-generated form preview.
         </div>
       )}

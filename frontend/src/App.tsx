@@ -263,10 +263,11 @@ function App() {
                       <span style={{ 
                         marginLeft: '8px', 
                         padding: '2px 8px', 
-                        backgroundColor: '#28a745', 
+                        backgroundColor: '#10b981', /* Green for PRO */
                         color: 'white', 
                         borderRadius: '12px',
-                        fontSize: '12px'
+                        fontSize: '12px',
+                        fontWeight: '600'
                       }}>
                         PRO
                       </span>
@@ -287,9 +288,6 @@ function App() {
       </header>
 
       <main className="container">
-        {/* Navigation - Removed the entire navigation div */}
-        {/* The 'My Forms' button will now be part of the main content if user is logged in */}
-
         {/* Auth Modal */}
         {showAuth && (
           <div style={{
@@ -304,10 +302,7 @@ function App() {
             alignItems: 'center',
             zIndex: 1000
           }}>
-            <div style={{
-              backgroundColor: 'white',
-              borderRadius: '8px',
-              padding: '24px',
+            <div className="card" style={{
               maxWidth: '400px',
               width: '90%',
               maxHeight: '90vh',
@@ -364,7 +359,7 @@ function App() {
 
         {/* Main Content */}
         {currentView === 'builder' ? (
-          <div style={{ display: 'flex', gap: '24px', minHeight: 'calc(100vh - 200px)' }}>
+          <>
             <div style={{ flex: 1 }}> {/* Left column for builder */}
               <ConversationalFormBuilder 
                 onFormGenerated={handleFormGenerated}
@@ -383,7 +378,7 @@ function App() {
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
               />
             </div>
-          </div>
+          </>
         ) : currentView === 'dashboard' && user ? (
           <div>
             <div className="card">
@@ -404,15 +399,16 @@ function App() {
                 <div>
                   {forms.map((form) => (
                     <div key={form.id} style={{
-                      border: '1px solid #e1e5e9',
-                      borderRadius: '8px',
-                      padding: '16px',
-                      marginBottom: '16px'
+                      border: '1px solid #e9edf5',
+                      borderRadius: '12px',
+                      padding: '18px',
+                      marginBottom: '16px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
                         <div>
-                          <h4 style={{ margin: '0 0 8px 0' }}>{form.form_name}</h4>
-                          <p style={{ margin: '0 0 8px 0', color: '#666', fontSize: '14px' }}>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1a202c' }}>{form.form_name}</h4>
+                          <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
                             {form.form_description}
                           </p>
                           <div style={{ fontSize: '12px', color: '#888' }}>
@@ -426,7 +422,7 @@ function App() {
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           <button 
                             onClick={() => handleManageForm(form)} // Pass full form object
-                            className="btn btn-primary" 
+                            className="btn btn-secondary" 
                             style={{ fontSize: '12px' }}
                           >
                             🔌 Connectors
@@ -473,7 +469,7 @@ function App() {
                 </button>
                 <div>
                   <h2>🔌 Connector Management</h2>
-                  <p style={{ margin: 0, color: '#666' }}>
+                  <p style={{ margin: 0, color: '#6b7280' }}>
                     Configure where form submissions should be sent
                   </p>
                 </div>
@@ -557,7 +553,7 @@ function App() {
         ) : null}
       </main>
 
-      <footer style={{ textAlign: 'center', padding: '40px 20px', color: '#6c757d' }}>
+      <footer>
         <div className="container">
           <p>FormCraft AI - Create AI-powered forms that perfectly match any website's design and tone</p>
         </div>

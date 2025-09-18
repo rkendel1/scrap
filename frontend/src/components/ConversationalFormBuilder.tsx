@@ -618,64 +618,23 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px', maxWidth: '500px' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
       {currentContextSummary && (
-        <div style={{
-          padding: '8px 12px', // Reduced padding
-          backgroundColor: '#e3f2fd',
-          border: '1px solid #bbdefb',
-          borderRadius: '8px',
-          marginBottom: '10px', // Reduced margin
-          fontSize: '13px', // Reduced font size
-          color: '#1565c0',
-          fontWeight: '500'
-        }}>
+        <div className="context-summary">
           Current Form: {currentContextSummary}
         </div>
       )}
 
       {/* Fixed height container for chat history */}
-      <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', marginBottom: '12px' }}>
+      <div className="chat-history-container">
         <div
           ref={chatHistoryRef}
-          style={{
-            flex: 1, // This makes it take up all available vertical space
-            overflowY: 'auto', // Enable vertical scrolling
-            border: '1px solid #e1e5e9',
-            borderRadius: '12px',
-            padding: '15px', // Reduced padding
-            backgroundColor: '#f0f2f5',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px', // Reduced gap
-            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
-          }}
+          className="chat-history-scroll"
         >
           {conversationHistory.map((entry, index) => (
             <div key={index} style={{ display: 'flex', flexDirection: entry.type === 'user' ? 'row-reverse' : 'row' }}>
               <div
-                style={{
-                  maxWidth: '75%',
-                  padding: '8px 14px', // Reduced padding
-                  borderRadius: '16px', // Slightly smaller radius
-                  fontSize: '13px', // Reduced font size
-                  lineHeight: '1.3', // Reduced line height
-                  backgroundColor:
-                    entry.type === 'user'
-                      ? '#007bff'
-                      : entry.type === 'error'
-                      ? '#f8d7da'
-                      : '#e3f2fd', // Unified AI response color (light blue)
-                  color:
-                    entry.type === 'user'
-                      ? 'white'
-                      : entry.type === 'error'
-                      ? '#721c24'
-                      : '#1565c0', // Unified AI response text color (dark blue)
-                  alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
-                  borderBottomRightRadius: entry.type === 'user' ? '4px' : '16px',
-                  borderBottomLeftRadius: entry.type === 'user' ? '16px' : '4px',
-                }}
+                className={`chat-bubble ${entry.type}`}
               >
                 {entry.content}
               </div>
@@ -683,7 +642,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           ))}
           {/* Quick responses rendered *inside* the chat history div, at the end */}
           {currentQuickResponses && (
-            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start', flexShrink: 0 }}>
+            <div className="quick-reply-container">
               {currentQuickResponses.map((response, idx) => (
                 <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
                   {response}
@@ -694,21 +653,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </div>
 
-      <form onSubmit={handleUserInput} className="form-input-container" style={{ flexShrink: 0, marginTop: '12px' }}>
+      <form onSubmit={handleUserInput} className="form-input-container">
         <input
           type="text"
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
           placeholder={isLoading ? 'Please wait...' : 'Type your response here... (e.g., "help" or "start over")'}
           className="form-input"
-          style={{ flexGrow: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e1e5e9' }}
           disabled={isLoading}
         />
         <button
           type="submit"
           className="btn btn-primary"
           disabled={isLoading || !userInput.trim()}
-          style={{ padding: '12px 20px', borderRadius: '8px' }}
         >
           {isLoading ? (
             currentStep === 'PROCESSING_URL' ? 'Analyzing...' :
