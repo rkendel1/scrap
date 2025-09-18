@@ -37,8 +37,95 @@ export interface FormRecord {
   extracted_at: string;
 }
 
+// New SaaS-related interfaces
+export interface User {
+  id: number;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  subscription_tier: 'free' | 'paid';
+  subscription_status: 'active' | 'inactive' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+  last_login?: string;
+}
+
+export interface FormField {
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'select' | 'checkbox' | 'radio';
+  name: string;
+  label: string;
+  placeholder?: string;
+  required: boolean;
+  options?: string[]; // For select, radio, checkbox
+  validation?: {
+    pattern?: string;
+    min?: number;
+    max?: number;
+  };
+}
+
+export interface GeneratedForm {
+  title: string;
+  description: string;
+  fields: FormField[];
+  ctaText: string;
+  thankYouMessage: string;
+  styling: {
+    primaryColor: string;
+    backgroundColor: string;
+    fontFamily: string;
+    borderRadius: string;
+    buttonStyle: string;
+  };
+}
+
+export interface SaaSForm {
+  id: number;
+  user_id?: number;
+  guest_token_id?: number;
+  url: string;
+  form_name: string;
+  form_description?: string;
+  is_live: boolean;
+  embed_code?: string;
+  submissions_count: number;
+  last_submission_at?: string;
+  created_at: string;
+  updated_at: string;
+  // Original design token fields
+  title: string;
+  description: string;
+  favicon: string;
+  // Form-specific fields
+  generated_form: GeneratedForm;
+}
+
+export interface Connector {
+  id: number;
+  name: string;
+  type: string;
+  is_premium: boolean;
+  config_schema: any;
+}
+
 export interface ExtractRequest {
   url: string;
+}
+
+export interface FormGenerationRequest {
+  url: string;
+  formPurpose: string;
+  formName?: string;
+  formDescription?: string;
+  guestToken?: string;
+}
+
+export interface AuthRequest {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  guestToken?: string;
 }
 
 export interface ApiResponse<T> {
@@ -47,4 +134,5 @@ export interface ApiResponse<T> {
   error?: string;
   message?: string;
   count?: number;
+  upgradeRequired?: boolean;
 }
