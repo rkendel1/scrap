@@ -287,30 +287,8 @@ function App() {
       </header>
 
       <main className="container">
-        {/* Navigation */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '12px', 
-          marginBottom: '24px',
-          borderBottom: '1px solid #e1e5e9',
-          paddingBottom: '16px'
-        }}>
-          <button
-            onClick={() => setCurrentView('builder')}
-            className={`btn ${currentView === 'builder' ? 'btn-primary' : 'btn-secondary'}`}
-          >
-            🚀 Form Builder
-          </button>
-          {user && (
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className={`btn ${currentView === 'dashboard' ? 'btn-primary' : 'btn-secondary'}`}
-            >
-              📊 My Forms ({forms.length})
-            </button>
-          )}
-          {/* Removed 'Design Extractor' button */}
-        </div>
+        {/* Navigation - Removed the entire navigation div */}
+        {/* The 'My Forms' button will now be part of the main content if user is logged in */}
 
         {/* Auth Modal */}
         {showAuth && (
