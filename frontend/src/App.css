@@ -32,7 +32,7 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 6px 0; /* Reduced padding from 8px */
+  padding: 4px 0; /* Decreased padding */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
@@ -42,7 +42,7 @@ html, body, #root, .App {
 .header .logo {
   display: flex;
   align-items: center;
-  font-size: 24px;
+  font-size: 20px; /* Decreased font size */
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.5px;
@@ -51,13 +51,13 @@ html, body, #root, .App {
 .header .logo-icon {
   background-color: #007bff;
   color: white;
-  width: 32px;
-  height: 32px;
+  width: 28px; /* Decreased size */
+  height: 28px; /* Decreased size */
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 16px; /* Decreased font size */
   margin-right: 8px;
 }
 
@@ -69,12 +69,10 @@ main {
   align-items: flex-start;
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
-  /* Set a fixed height for the main content area */
-  /* Adjusted height calculation: 100vh - (header height + footer height + main-padding-top + main-padding-bottom) */
-  /* Header height: 6px top + 6px bottom padding + 1px border = 13px. Logo height is 32px. So, actual header height is around 32px + 12px padding = 44px. */
-  /* Footer height: 6px top + 6px bottom padding + 1px border = 13px. Text height is around 16px. So, actual footer height is around 16px + 12px padding = 28px. */
-  /* Total fixed vertical space: 44px (header) + 28px (footer) + 24px (main top padding) + 24px (main bottom padding) = 120px */
-  height: calc(100vh - 120px); 
+  /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom) */
+  /* New header height: 28px (logo height) + 8px (4px top + 4px bottom padding) = 36px */
+  /* Total fixed vertical space: 36px (header) + 24px (main top padding) + 24px (main bottom padding) = 84px */
+  height: calc(100vh - 84px); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -325,21 +323,10 @@ main {
   }
 }
 
-/* Footer */
-footer {
-  background-color: #f8f9fa;
-  padding: 6px 0; /* Reduced padding from 8px */
-  border-top: 1px solid #e1e5e9;
-  color: #6c757d;
-  font-size: 13px;
-  margin-top: auto;
-  text-align: center;
-}
-
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 120px); /* Set static height for main content area */
+  height: calc(100vh - 84px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -696,13 +683,13 @@ footer {
   }
 
   .header .logo {
-    font-size: 22px;
+    font-size: 18px; /* Further decreased font size */
   }
 
   .header .logo-icon {
-    width: 28px;
-    height: 28px;
-    font-size: 16px;
+    width: 24px; /* Further decreased size */
+    height: 24px; /* Further decreased size */
+    font-size: 14px; /* Further decreased font size */
   }
 
   .card {
@@ -751,10 +738,15 @@ footer {
 
 @media (max-width: 768px) {
   .header {
-    padding: 12px 0;
+    padding: 8px 0; /* Adjusted padding */
   }
   .header .logo {
-    font-size: 20px;
+    font-size: 16px; /* Further decreased font size */
+  }
+  .header .logo-icon {
+    width: 20px; /* Further decreased size */
+    height: 20px; /* Further decreased size */
+    font-size: 12px; /* Further decreased font size */
   }
   .card {
     padding: 16px;
