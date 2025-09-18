@@ -1,4 +1,27 @@
--- Create the forms table
+-- Create the users table first, as other tables depend on it
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255),
+    last_name VARCHAR(255),
+    subscription_tier VARCHAR(50) DEFAULT 'free' NOT NULL, -- 'free', 'paid'
+    subscription_status VARCHAR(50) DEFAULT 'active' NOT NULL, -- 'active', 'inactive', 'cancelled'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    last_login TIMESTAMP WITH TIME ZONE
+);
+
+-- Create guest_tokens table, which references users
+CREATE TABLE IF NOT EXISTS guest_tokens (
+    id SERIAL PRIMARY KEY,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    associated_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Now create the forms table, which references users and guest_tokens
 CREATE TABLE IF NOT EXISTS forms (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -50,25 +73,7 @@ CREATE TABLE IF NOT EXISTS forms (
     connectors JSONB DEFAULT '[]' -- New column for storing connector configurations
 );
 
--- Create a function to update the updated_at column
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Drop the trigger if it already exists before creating it
-DROP TRIGGER IF EXISTS update_forms_updated_at ON forms;
-
--- Create a trigger to automatically update the updated_at column on each row update
-CREATE TRIGGER update_forms_updated_at
-BEFORE UPDATE ON forms
-FOR EACH ROW
-EXECUTE FUNCTION update_updated_at_column();
-
--- Create embed_codes table
+-- Create embed_codes table, which references forms
 CREATE TABLE IF NOT EXISTS embed_codes (
     id SERIAL PRIMARY KEY,
     form_id INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
@@ -81,7 +86,7 @@ CREATE TABLE IF NOT EXISTS embed_codes (
     last_accessed TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create form_submissions table
+-- Create form_submissions table, which references forms and embed_codes
 CREATE TABLE IF NOT EXISTS form_submissions (
     id SERIAL PRIMARY KEY,
     form_id INTEGER NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
@@ -91,29 +96,6 @@ CREATE TABLE IF NOT EXISTS form_submissions (
     ip_address INET,
     user_agent TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Create users table
-CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    first_name VARCHAR(255),
-    last_name VARCHAR(255),
-    subscription_tier VARCHAR(50) DEFAULT 'free' NOT NULL, -- 'free', 'paid'
-    subscription_status VARCHAR(50) DEFAULT 'active' NOT NULL, -- 'active', 'inactive', 'cancelled'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP WITH TIME ZONE
-);
-
--- Create guest_tokens table
-CREATE TABLE IF NOT EXISTS guest_tokens (
-    id SERIAL PRIMARY KEY,
-    token VARCHAR(255) UNIQUE NOT NULL,
-    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    associated_at TIMESTAMP WITH TIME ZONE
 );
 
 -- Create connectors table (for defining available connector types)
@@ -202,6 +184,23 @@ CREATE TABLE IF NOT EXISTS form_connectors (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (form_id, connector_id) -- A form can only have one configuration per connector type
 );
+
+-- Create a function to update the updated_at column (if not already created by another migration)
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Drop and recreate triggers to ensure they are correctly applied after table reordering
+-- Trigger for forms updated_at
+DROP TRIGGER IF EXISTS update_forms_updated_at ON forms;
+CREATE TRIGGER update_forms_updated_at
+BEFORE UPDATE ON forms
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
 
 -- Trigger for form_connectors updated_at
 DROP TRIGGER IF EXISTS update_form_connectors_updated_at ON form_connectors;
