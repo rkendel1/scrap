@@ -9,7 +9,7 @@ import { LiveFormPreview } from './components/LiveFormPreview';
 import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
 import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { apiService } from './services/api';
-import { FormRecord, User, SaaSForm, FormData, GeneratedForm } from './types/api';
+import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
 function App() {
   const [records, setRecords] = useState<FormRecord[]>([]);
@@ -174,6 +174,7 @@ function App() {
     setSelectedForm(null);
     setCurrentView('dashboard');
     setError(null); // Clear any previous errors when navigating back
+    fetchUserForms(); // Refresh forms list after returning to dashboard
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -245,6 +246,38 @@ function App() {
       setShowAuth(true); // Open auth modal
       setAuthMode('login'); // Default to login
       setError('Please sign in or register to get your embed code.');
+    }
+  };
+
+  const handleToggleFormLive = async (formId: number) => {
+    if (!authToken) {
+      setError('You must be logged in to change form status.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${formId}/toggle-live`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result: ApiResponse<any> = await response.json();
+
+      if (result.success) {
+        setForms(prevForms => 
+          prevForms.map(form => 
+            form.id === formId ? { ...form, is_live: result.isLive } : form
+          )
+        );
+        setError(null); // Clear any previous errors
+      } else {
+        setError(result.message || 'Failed to toggle form status.');
+      }
+    } catch (err: any) {
+      console.error('Toggle form live error:', err);
+      setError(err.message || 'Failed to toggle form status. Please try again.');
     }
   };
 
@@ -377,6 +410,13 @@ function App() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button 
+                            onClick={() => handleToggleFormLive(form.id)}
+                            className={`btn ${form.is_live ? 'btn-danger' : 'btn-primary'}`}
+                            style={{ fontSize: '12px' }}
+                          >
+                            {form.is_live ? '🔴 Deactivate' : '🟢 Activate'}
+                          </button>
                           <button 
                             onClick={() => handleManageForm(form)} // Pass full form object
                             className="btn btn-secondary" 
