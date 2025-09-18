@@ -133,6 +133,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
   };
 
+  const handleQuickResponseClick = async (response: string) => {
+    if (isLoading) return;
+
+    // Add the selected quick response to history as if user typed it
+    addUserResponse(response);
+    setUserInput(''); // Clear input field immediately
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      // Directly call the processing function for the current step
+      // This assumes we are always in 'ASK_DESTINATION_TYPE' when these buttons are shown
+      await processDestinationTypeInput(response);
+    } catch (err: any) {
+      console.error('Quick response processing error:', err);
+      addError(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const processUrlInput = async (url: string) => {
     addLoading('Analyzing website...');
     try {
@@ -216,18 +237,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
 
-    addSuccess(
+    addPrompt(
       <>
         Great! Your AI-generated form is ready. You can see a live preview on the right.
         <br />
-        Next, where should I send the form submissions? You can choose from:
-        <ul>
-          <li>Email</li>
-          <li>Google Sheets</li>
-          <li>Slack</li>
-          <li>Webhook</li>
-        </ul>
-        Just type your choice (e.g., "Email").
+        Next, where should I send the form submissions?
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Email')}>Email</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
+        </div>
       </>
     );
     setCurrentStep('ASK_DESTINATION_TYPE');
