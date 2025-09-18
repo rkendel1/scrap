@@ -23,12 +23,12 @@ type ConversationEntry = {
 
 type ConversationStep =
   | 'ASK_URL'
-  | 'PROCESSING_URL'
+  | 'PROCESSING_URL' // New step for URL analysis
   | 'ASK_PURPOSE'
-  | 'PROCESSING_PURPOSE'
+  | 'PROCESSING_PURPOSE' // New step for form generation
   | 'ASK_DESTINATION_TYPE'
   | 'ASK_DESTINATION_CONFIG'
-  | 'PROCESSING_DESTINATION'
+  | 'PROCESSING_DESTINATION' // New step for destination saving
   | 'DONE';
 
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
@@ -43,7 +43,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [currentLoadingMessage, setCurrentLoadingMessage] = useState<string | null>(null); // New state for temporary loading message
+  // Removed currentLoadingMessage state
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
   const [currentQuickResponses, setCurrentQuickResponses] = useState<JSX.Element | null>(null); // New state for quick response buttons
@@ -102,7 +102,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory]);
+  }, [conversationHistory, currentQuickResponses]); // Also scroll when quick responses appear/disappear
 
   // Update parent component's state for LiveFormPreview
   useEffect(() => {
@@ -124,35 +124,30 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addEntry({ type: 'prompt', content });
     setCurrentQuickResponses(quickResponses); // Set quick responses
     setIsLoading(false); // Ensure loading is off after a prompt
-    setCurrentLoadingMessage(null); // Clear loading message
+    // Removed setCurrentLoadingMessage
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
     setCurrentQuickResponses(null); // Clear quick responses after user input
     setIsLoading(false); // Ensure loading is off after user response
-    setCurrentLoadingMessage(null); // Clear loading message
+    // Removed setCurrentLoadingMessage
   };
 
-  const addLoading = (content: string) => {
-    setIsLoading(true);
-    setCurrentLoadingMessage(content);
-    setCurrentQuickResponses(null); // Clear quick responses during loading
-    // Do NOT add to conversationHistory
-  };
+  // Removed addLoading function
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
     setCurrentQuickResponses(null); // Clear quick responses after an error
     setIsLoading(false); // Ensure loading is off after an error
-    setCurrentLoadingMessage(null); // Clear loading message
+    // Removed setCurrentLoadingMessage
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
     setCurrentQuickResponses(null); // Clear quick responses after success
     setIsLoading(false); // Ensure loading is off after success
-    setCurrentLoadingMessage(null); // Clear loading message
+    // Removed setCurrentLoadingMessage
   };
 
   // Helper to parse user input for various intents
@@ -379,12 +374,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processUrlInput = async (url: string) => {
-    addLoading('Analyzing website...');
+    setIsLoading(true); // Set loading
+    setCurrentStep('PROCESSING_URL'); // Update step for dynamic button text
     try {
       new URL(url); // Basic URL validation
     } catch {
       addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -403,7 +399,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!extractResult.success) {
       addError(extractResult.error || 'Failed to analyze website. Please check the URL.');
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -420,11 +416,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processPurposeInput = async (purpose: string) => {
-    addLoading('Generating form with AI...');
+    setIsLoading(true); // Set loading
+    setCurrentStep('PROCESSING_PURPOSE'); // Update step for dynamic button text
     if (!extractedRecordId) {
       addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
       setCurrentStep('ASK_URL');
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -454,7 +451,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (generateResult.upgradeRequired) {
         addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
       }
-      // setIsLoading(false); // Handled by addError or addPrompt
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -480,6 +477,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
+    // No loading message here, as it's handled by the next step if configInput is present
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook']; // Match backend connector types
 
@@ -519,13 +517,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processDestinationConfigInput = async (configInput: string, typeOverride?: string) => {
-    addLoading('Saving destination configuration...');
+    setIsLoading(true); // Set loading
+    setCurrentStep('PROCESSING_DESTINATION'); // Update step for dynamic button text
     const currentDestinationType = typeOverride || selectedDestinationType;
 
     if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
       setCurrentStep('ASK_URL');
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -564,7 +563,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (validationError) {
       addError(`${validationError} ${expectedInputPrompt}`);
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -595,7 +594,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!configureResult.success) {
       addError(configureResult.error || 'Failed to save destination configuration.');
-      // setIsLoading(false); // Handled by addError
+      setIsLoading(false); // Turn off loading on error
       return;
     }
 
@@ -677,75 +676,64 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       )}
 
-      <div
-        ref={chatHistoryRef}
-        style={{
-          flex: 1, // This makes it take up all available vertical space
-          overflowY: 'auto', // Enable vertical scrolling
-          maxHeight: '60vh', // Set maximum height for the chat window
-          border: '1px solid #e1e5e9',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '12px', /* Reduced margin for tighter layout */
-          backgroundColor: '#f0f2f5',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
-        }}
-      >
-        {conversationHistory.map((entry, index) => (
-          <div key={index} style={{ display: 'flex', flexDirection: entry.type === 'user' ? 'row-reverse' : 'row' }}>
-            <div
-              style={{
-                maxWidth: '75%',
-                padding: '12px 18px',
-                borderRadius: '20px',
-                fontSize: '15px',
-                lineHeight: '1.4',
-                backgroundColor:
-                  entry.type === 'user'
-                    ? '#007bff'
-                    : entry.type === 'error'
-                    ? '#f8d7da'
-                    : '#e3f2fd', // Unified AI response color (light blue)
-                color:
-                  entry.type === 'user'
-                    ? 'white'
-                    : entry.type === 'error'
-                    ? '#721c24'
-                    : '#1565c0', // Unified AI response text color (dark blue)
-                alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
-                borderBottomRightRadius: entry.type === 'user' ? '4px' : '20px',
-                borderBottomLeftRadius: entry.type === 'user' ? '20px' : '4px',
-              }}
-            >
-              {entry.content}
+      {/* Fixed height container for chat history and quick responses */}
+      <div style={{ height: '60vh', display: 'flex', flexDirection: 'column', marginBottom: '12px' }}>
+        <div
+          ref={chatHistoryRef}
+          style={{
+            flex: 1, // This makes it take up all available vertical space
+            overflowY: 'auto', // Enable vertical scrolling
+            border: '1px solid #e1e5e9',
+            borderRadius: '12px',
+            padding: '20px',
+            backgroundColor: '#f0f2f5',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.05)'
+          }}
+        >
+          {conversationHistory.map((entry, index) => (
+            <div key={index} style={{ display: 'flex', flexDirection: entry.type === 'user' ? 'row-reverse' : 'row' }}>
+              <div
+                style={{
+                  maxWidth: '75%',
+                  padding: '12px 18px',
+                  borderRadius: '20px',
+                  fontSize: '15px',
+                  lineHeight: '1.4',
+                  backgroundColor:
+                    entry.type === 'user'
+                      ? '#007bff'
+                      : entry.type === 'error'
+                      ? '#f8d7da'
+                      : '#e3f2fd', // Unified AI response color (light blue)
+                  color:
+                    entry.type === 'user'
+                      ? 'white'
+                      : entry.type === 'error'
+                      ? '#721c24'
+                      : '#1565c0', // Unified AI response text color (dark blue)
+                  alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
+                  borderBottomRightRadius: entry.type === 'user' ? '4px' : '20px',
+                  borderBottomLeftRadius: entry.type === 'user' ? '20px' : '4px',
+                }}
+              >
+                {entry.content}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+
+          {/* Quick responses rendered inside the chat history */}
+          {currentQuickResponses && (
+            <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-start', flexShrink: 0 }}>
+              {currentQuickResponses}
+            </div>
+          )}
+        </div>
       </div>
 
-      {currentLoadingMessage && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: '#e3f2fd', // Unified AI loading message background
-          border: '1px solid #bbdefb',
-          borderRadius: '8px',
-          marginBottom: '12px',
-          fontSize: '14px',
-          color: '#1565c0', // Unified AI loading message text
-          textAlign: 'center'
-        }}>
-          <span className="loading-dots">{currentLoadingMessage}</span>
-        </div>
-      )}
-
-      {currentQuickResponses && (
-        <div style={{ marginBottom: '12px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
-          {currentQuickResponses}
-        </div>
-      )}
+      {/* Removed currentLoadingMessage */}
 
       <form onSubmit={handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
         <input
@@ -763,7 +751,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           disabled={isLoading || !userInput.trim()}
           style={{ padding: '12px 20px', borderRadius: '8px' }}
         >
-          {isLoading ? 'Sending...' : 'Send'}
+          {isLoading ? (
+            currentStep === 'PROCESSING_URL' ? 'Analyzing...' :
+            currentStep === 'PROCESSING_PURPOSE' ? 'Generating...' :
+            currentStep === 'PROCESSING_DESTINATION' ? 'Saving...' :
+            'Sending...'
+          ) : 'Send'}
         </button>
       </form>
 
