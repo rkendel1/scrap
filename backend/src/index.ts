@@ -11,6 +11,7 @@ import { AuthService, AuthRequest } from './auth-service';
 import { LLMService } from './llm-service';
 import { SaaSService } from './saas-service';
 import pool from './database';
+import { VoiceAnalysis } from './extractor'; // Import VoiceAnalysis
 
 // Load environment variables
 dotenv.config();
@@ -414,7 +415,7 @@ app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (re
           fontFamilies: savedRecord.font_families,
           messaging: savedRecord.messaging,
         },
-        voiceAnalysis: savedRecord.voice_tone,
+        voiceAnalysis: savedRecord.voice_tone, // This is still the flattened tone, but LLMService will reconstruct
       }
     });
   } catch (error) {
@@ -461,12 +462,19 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
 
     console.log(`Generating form for record ID: ${extractedRecordId}`);
 
+    // Reconstruct VoiceAnalysis from FormRecord for LLMService
+    const voiceAnalysisForLLM: VoiceAnalysis = {
+      tone: extractedDataRecord.voice_tone,
+      personalityTraits: extractedDataRecord.personality_traits,
+      audienceAnalysis: extractedDataRecord.audience_analysis,
+    };
+
     // Generate form with LLM
     const generatedForm = await llmService.generateFormFromWebsite({
       url: extractedDataRecord.url,
       title: extractedDataRecord.title,
       description: extractedDataRecord.description,
-      voiceAnalysis: extractedDataRecord.voice_tone,
+      voiceAnalysis: voiceAnalysisForLLM, // Use the reconstructed object
       designTokens: {
         colorPalette: extractedDataRecord.color_palette,
         primaryColors: extractedDataRecord.primary_colors,
@@ -544,7 +552,7 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
           messaging: extractedDataRecord.messaging,
           previewHTML: extractedDataRecord.preview_html,
         },
-        voiceAnalysis: extractedDataRecord.voice_tone,
+        voiceAnalysis: voiceAnalysisForLLM, // Use the reconstructed object
         extractedAt: extractedDataRecord.extracted_at.toISOString()
       }
     );
@@ -1183,35 +1191,6 @@ app.get('/api/connectors', authService.authenticateToken, async (req: AuthReques
     console.error('Get connectors error:', error);
     res.status(500).json({ 
       error: 'Failed to fetch connectors',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Connect form to service
-app.post('/api/forms/:id/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const formId = parseInt(req.params.id);
-    const { connectorId, config } = req.body;
-
-    if (isNaN(formId) || !connectorId || !config) {
-      return res.status(400).json({ error: 'Form ID, connector ID, and config are required' });
-    }
-
-    const success = await saasService.connectFormToService(formId, connectorId, config, req.user!.id);
-    
-    if (!success) {
-      return res.status(400).json({ error: 'Failed to connect form to service' });
-    }
-
-    res.json({
-      success: true,
-      message: 'Connector added successfully'
-    });
-  } catch (error) {
-    console.error('Connect form error:', error);
-    res.status(500).json({ 
-      error: 'Failed to connect form',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
