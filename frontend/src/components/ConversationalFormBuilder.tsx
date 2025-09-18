@@ -45,7 +45,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  const [currentQuickResponses, setCurrentQuickResponses] = useState<JSX.Element | null>(null); // Reintroduced state for quick response buttons
+  const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null); // Changed type to string[] | null
 
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -118,10 +118,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, entry]);
   };
 
-  // Modified addPrompt to accept quickResponses separately
-  const addPrompt = (content: string | JSX.Element, quickResponses: JSX.Element | null = null) => {
+  // Modified addPrompt to accept string[] for quickResponses
+  const addPrompt = (content: string | JSX.Element, quickResponses: string[] | null = null) => {
     addEntry({ type: 'prompt', content });
-    setCurrentQuickResponses(quickResponses); // Set quick responses here
+    setCurrentQuickResponses(quickResponses); // Now stores string[]
     setIsLoading(false);
   };
 
@@ -286,8 +286,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
             // If it's not a destination type, it's an invalid input for this step.
-            // We should explicitly tell the user what's expected.
-            addError('I\'m expecting a destination type (e.g., "Email", "Google Sheets", "Slack", "Webhook"). Please try again.');
+            // Provide a clear error message and re-prompt for destination type.
+            addError('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
+            addPrompt(
+              "Where should I send the form submissions?",
+              ['Email', 'Google Sheets', 'Slack', 'Webhook']
+            );
           }
           break;
 
@@ -386,13 +390,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     addPrompt(
       "Website analyzed! Now, what is the main purpose of this form? (e.g., 'Collect leads', 'Customer feedback', or even 'Tool rental form')",
-      <div className="quick-reply-container">
-        {formPurposes.slice(0, 3).map((purpose) => (
-          <button key={purpose} className="quick-reply-btn" onClick={() => handleQuickResponseClick(purpose)}>
-            {purpose}
-          </button>
-        ))}
-      </div>
+      formPurposes.slice(0, 3) // Pass string array
     );
     setCurrentStep('ASK_PURPOSE');
   };
@@ -441,12 +439,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentStep('ASK_DESTINATION_TYPE'); 
     addPrompt(
       "Your AI-generated form is ready! Next, where should I send the form submissions?",
-      <div className="quick-reply-container">
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Email')}>Email</button>
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Google Sheets')}>Google Sheets</button>
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Slack')}>Slack</button>
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('Webhook')}>Webhook</button>
-      </div>
+      ['Email', 'Google Sheets', 'Slack', 'Webhook'] // Pass string array
     );
   };
 
@@ -456,6 +449,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!availableTypes.includes(normalizedType)) {
       addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, or Webhook.');
+      // Re-prompt with quick responses
+      addPrompt(
+        "Where should I send the form submissions?",
+        ['Email', 'Google Sheets', 'Slack', 'Webhook']
+      );
       return;
     }
 
@@ -568,10 +566,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
       "You can find your form in the 'My Forms' dashboard. Would you like to create another form?",
-      <div className="quick-reply-container">
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('yes')}>Yes</button>
-        <button className="quick-reply-btn" onClick={() => handleQuickResponseClick('no')}>No</button>
-      </div>
+      ['Yes', 'No'] // Pass string array
     );
     setCurrentStep('DONE'); // Transition to a final state where user can restart
     onFormGenerated(createdForm); // Notify parent that a form was created
@@ -689,7 +684,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           {/* Quick responses rendered *inside* the chat history div, at the end */}
           {currentQuickResponses && (
             <div style={{ marginTop: '12px', display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'flex-start', flexShrink: 0 }}>
-              {currentQuickResponses}
+              {currentQuickResponses.map((response, idx) => (
+                <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
+                  {response}
+                </button>
+              ))}
             </div>
           )}
         </div>
