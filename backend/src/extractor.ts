@@ -47,6 +47,42 @@ export interface ExtractedData {
 }
 
 export class WebsiteExtractor {
+  private readonly MAX_RETRIES = 3;
+  private readonly INITIAL_RETRY_DELAY_MS = 1000; // 1 second
+
+  /**
+   * Helper function to make an Axios request with retries and exponential backoff.
+   * It will not retry on 403 Forbidden or 401 Unauthorized errors.
+   */
+  private async makeRequestWithRetries<T>(
+    requestFn: () => Promise<T>,
+    url: string,
+    retriesLeft: number = this.MAX_RETRIES,
+    delay: number = this.INITIAL_RETRY_DELAY_MS
+  ): Promise<T> {
+    try {
+      return await requestFn();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        
+        // Do NOT retry on 403 Forbidden or 401 Unauthorized
+        if (status === 403 || status === 401) {
+          throw new Error(`Failed to extract website data: The website (${url}) blocked the request (${status} Forbidden/Unauthorized). Please try a different URL.`);
+        }
+        
+        // Retry on network errors (status undefined), 429 Too Many Requests, or 5xx server errors
+        if (retriesLeft > 0 && (status === undefined || status === 429 || (status >= 500 && status < 600))) {
+          console.warn(`Request to ${url} failed with status ${status || 'network error'}. Retrying in ${delay / 1000}s... (${retriesLeft} retries left)`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.makeRequestWithRetries(requestFn, url, retriesLeft - 1, delay * 2); // Exponential backoff
+        }
+      }
+      // If not an Axios error, or not a retriable status, or no retries left, re-throw
+      throw error;
+    }
+  }
+
   /**
    * Extracts design tokens, voice analysis, and other metadata from a given URL.
    * Note: Some websites employ anti-bot measures (e.g., Cloudflare) that may block scraping requests,
@@ -54,13 +90,16 @@ export class WebsiteExtractor {
    */
   async extractWebsiteData(url: string): Promise<ExtractedData> {
     try {
-      // Fetch the HTML content
-      const response = await axios.get(url, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        },
-        timeout: 10000
-      });
+      // Fetch the HTML content with retries
+      const response = await this.makeRequestWithRetries(
+        () => axios.get(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+          },
+          timeout: 10000
+        }),
+        url
+      );
 
       const $ = cheerio.load(response.data);
 
@@ -93,8 +132,9 @@ export class WebsiteExtractor {
       };
 
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 403) {
-        throw new Error(`Failed to extract website data: The website (${url}) blocked the request (403 Forbidden). Please try a different URL.`);
+      // Re-throw specific 403/401 errors from makeRequestWithRetries
+      if (error instanceof Error && error.message.includes('blocked the request')) {
+        throw error;
       }
       console.error('Website extraction error:', error);
       throw new Error(`Failed to extract website data: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -134,10 +174,14 @@ export class WebsiteExtractor {
 
   private async fetchStylesheet(url: string): Promise<string> {
     try {
-      const response = await axios.get(url, { timeout: 5000 });
+      // Fetch stylesheet with retries
+      const response = await this.makeRequestWithRetries(
+        () => axios.get(url, { timeout: 5000 }),
+        url
+      );
       return response.data;
     } catch (error) {
-      console.warn(`Failed to fetch stylesheet: ${url}`);
+      console.warn(`Failed to fetch stylesheet: ${url}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return '';
     }
   }
