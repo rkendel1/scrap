@@ -43,7 +43,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
-    { type: 'prompt', content: "Hi! I'm FormCraft AI. I'll help you create a native-looking form in 3 steps. First, where will this live? Please paste a URL.", timestamp: new Date() }
+    { type: 'prompt', content: "Hi! I'm FormCraft AI. Let's create a native-looking form. First, where will this live? Please paste a URL.", timestamp: new Date() }
   ]);
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -52,7 +52,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null); // Changed type to string[] | null
 
   // Data collected throughout the conversation
-  const [formData, setFormData] = Partial<FormData>>({});
+  const [formData, setFormData] = useState<Partial<FormData>>({});
   const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
   const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
   const [extractedRecordId, setExtractedRecordId] = useState<number | null>(null);
@@ -397,7 +397,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
     addPrompt(
-      `Perfect! I've analyzed ${url} and extracted the design tokens. I can see they use a modern blue color scheme with clean typography. The preview is updating live with their styles. Now, what do you want to capture with this form?`,
+      `Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles. Now, what do you want to capture with this form?`,
       formPurposes.slice(0, 3) // Pass string array
     );
     setCurrentStep('ASK_PURPOSE');
@@ -447,7 +447,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentStep('ASK_DESTINATION_TYPE'); 
     addPrompt(
       <>
-        Excellent! I've instantly generated a form for "{purpose}" using the extracted design tokens. You can see it live on the right. Where should this data go when submitted?
+        Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right. Where should this data go when submitted?
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>Choose a destination:</div>
       </>,
       ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier'] // Added Zapier
@@ -656,7 +656,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
+    <div className="card conversational-builder-card"> {/* Added class for styling */}
       {currentContextSummary && (
         <div className="context-summary">
           Current Form: {currentContextSummary}

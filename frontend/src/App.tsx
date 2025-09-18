@@ -371,7 +371,7 @@ function App() {
         {/* Main Content */}
         {currentView === 'builder' ? (
           <>
-            <div style={{ flex: 1 }}> {/* Left column for builder */}
+            <div style={{ flex: 1, height: '100%' }}> {/* Left column for builder */}
               <ConversationalFormBuilder 
                 onFormGenerated={handleFormGenerated}
                 user={user}
@@ -380,7 +380,7 @@ function App() {
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
               />
             </div>
-            <div style={{ flex: 1 }}> {/* Right column for live preview */}
+            <div style={{ flex: 1, height: '100%' }}> {/* Right column for live preview */}
               <LiveFormPreview
                 formData={builderState.formData}
                 generatedForm={builderState.generatedForm}

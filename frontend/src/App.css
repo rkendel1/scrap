@@ -35,6 +35,8 @@ html, body, #root, .App {
   padding: 16px 0;
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  position: relative; /* Needed for z-index to work */
+  z-index: 10; /* Ensure header is always on top */
 }
 
 .header .logo {
@@ -67,6 +69,7 @@ main {
   align-items: flex-start;
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 /* Card Component */
@@ -335,6 +338,7 @@ footer {
 
 .App > main > div {
   flex: 1;
+  height: 100%; /* Ensure flex children take full height of main */
   max-width: 50%;
 }
 
@@ -350,12 +354,21 @@ footer {
   font-weight: 500;
 }
 
+/* Conversational Builder Card */
+.conversational-builder-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Ensure it fills its parent div */
+  padding-bottom: 16px; /* Keep internal padding */
+}
+
 /* Chat History Container */
 .chat-history-container {
-  height: calc(100% - 120px); /* Adjust height to fit input and summary */
+  flex-grow: 1; /* Allow it to grow and take available space */
   display: flex;
   flex-direction: column;
   margin-bottom: 12px;
+  min-height: 0; /* Allow flex item to shrink */
 }
 
 .chat-history-scroll {
@@ -498,8 +511,7 @@ footer {
 .live-preview-card {
   position: sticky;
   top: 24px; /* Adjusted to match main padding */
-  /* height: calc(100vh - 140px); */ /* REMOVED */
-  max-height: calc(100vh - 140px); /* ADDED: Set a max-height instead */
+  max-height: calc(100vh - 140px); /* Set a max-height instead */
   display: flex;
   flex-direction: column;
   align-items: center;
