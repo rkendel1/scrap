@@ -276,6 +276,16 @@ app.get('/api/docs', (req, res) => {
 // Error handler
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Server error:', error);
+  
+  // Specific error handling for authorization failures
+  if (error.message === 'Unauthorized to configure this form') {
+    return res.status(403).json({ 
+      error: 'Forbidden', 
+      message: 'You are not authorized to perform this action on this form.' 
+    });
+  }
+
+  // Generic error handling
   res.status(500).json({ 
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'

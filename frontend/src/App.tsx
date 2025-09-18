@@ -94,11 +94,20 @@ function App() {
       });
       const result = await response.json();
       
-      if (result.success) {
+      if (response.ok) { // Check response.ok for 2xx status codes
         setForms(result.data);
+      } else {
+        // If fetching forms fails, it might be due to an expired token.
+        // Log out the user in this case.
+        if (response.status === 403 || response.status === 401) {
+          console.warn('Auth token expired or invalid, logging out.');
+          handleLogout();
+        }
+        setError(result.error || 'Failed to fetch forms');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch forms:', error);
+      setError('Failed to fetch forms. Please try again.');
     }
   };
 
