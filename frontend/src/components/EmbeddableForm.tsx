@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { GeneratedForm, FormField } from '../types/api';
+import { LinkInterceptorModal } from './LinkInterceptorModal'; // New import
+import { autoLinkText } from '../utils/autoLinkText'; // New import
 
 interface EmbeddableFormProps {
   form: GeneratedForm;
@@ -18,6 +20,10 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // State for link interception modal
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [modalLinkHref, setModalLinkHref] = useState('');
 
   const handleInputChange = (name: string, value: any) => {
     setFormData(prev => ({
@@ -171,6 +177,15 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
     }
   };
 
+  const handleLinkClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'A' && target.classList.contains('preview-link')) {
+      e.preventDefault(); // Prevent actual navigation
+      setModalLinkHref(target.getAttribute('href') || '');
+      setShowLinkModal(true);
+    }
+  };
+
   if (submitted) {
     return (
       <div style={{
@@ -189,9 +204,11 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         }}>
           ✓ Thank You!
         </div>
-        <p style={{ margin: 0, color: '#666' }}>
-          {form.thankYouMessage}
-        </p>
+        <p 
+          style={{ margin: 0, color: '#666' }}
+          dangerouslySetInnerHTML={{ __html: autoLinkText(form.thankYouMessage) }}
+          onClick={handleLinkClick}
+        />
       </div>
     );
   }
@@ -214,13 +231,15 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           {form.title}
         </h3>
         {form.description && (
-          <p style={{ 
-            margin: 0,
-            color: '#666',
-            fontSize: '14px'
-          }}>
-            {form.description}
-          </p>
+          <p 
+            style={{ 
+              margin: 0,
+              color: '#666',
+              fontSize: '14px'
+            }}
+            dangerouslySetInnerHTML={{ __html: autoLinkText(form.description) }}
+            onClick={handleLinkClick}
+          />
         )}
       </div>
 
@@ -301,6 +320,12 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           </a>
         </div>
       )}
+
+      <LinkInterceptorModal
+        show={showLinkModal}
+        onClose={() => setShowLinkModal(false)}
+        linkHref={modalLinkHref}
+      />
     </div>
   );
 };
