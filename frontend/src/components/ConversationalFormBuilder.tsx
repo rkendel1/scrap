@@ -677,19 +677,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                 backgroundColor:
                   entry.type === 'user'
                     ? '#007bff'
-                    : entry.type === 'prompt'
-                    ? '#e0e0e0' // Slightly lighter for prompts
                     : entry.type === 'error'
                     ? '#f8d7da'
-                    : '#d4edda', // success
+                    : '#e3f2fd', // Unified AI response color (light blue)
                 color:
                   entry.type === 'user'
                     ? 'white'
                     : entry.type === 'error'
                     ? '#721c24'
-                    : entry.type === 'success'
-                    ? '#155724'
-                    : '#444', // Darker text for prompts
+                    : '#1565c0', // Unified AI response text color (dark blue)
                 alignSelf: entry.type === 'user' ? 'flex-end' : 'flex-start',
                 borderBottomRightRadius: entry.type === 'user' ? '4px' : '20px',
                 borderBottomLeftRadius: entry.type === 'user' ? '20px' : '4px',
@@ -704,12 +700,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       {currentLoadingMessage && (
         <div style={{
           padding: '12px',
-          backgroundColor: '#e3f2fd',
+          backgroundColor: '#e3f2fd', // Unified AI loading message background
           border: '1px solid #bbdefb',
           borderRadius: '8px',
           marginBottom: '12px',
           fontSize: '14px',
-          color: '#1565c0',
+          color: '#1565c0', // Unified AI loading message text
           textAlign: 'center'
         }}>
           <span className="loading-dots">{currentLoadingMessage}</span>
