@@ -1,6 +1,8 @@
 import pool from './database';
 import { GeneratedForm } from './llm-service';
 import { EmbedSecurityService, EmbedTokenPayload } from './embed-security-service';
+import { dispatchToConnectors } from './connectors/dispatcher';
+import { ConnectorConfig } from './connectors/types';
 
 // In-memory storage for testing when database is not available
 const mockForms = new Map();
@@ -543,31 +545,35 @@ export class SaaSService {
     
     const result = await pool.query(query, [formId]);
     
-    for (const connector of result.rows) {
-      try {
-        await this.executeConnector(connector.type, connector.config, submissionData);
-      } catch (error) {
-        console.error(`Connector ${connector.name} failed:`, error);
-      }
+    if (result.rows.length === 0) {
+      console.log(`No active connectors found for form ${formId}`);
+      return;
     }
-  }
 
-  private async executeConnector(type: string, config: any, data: any): Promise<void> {
-    // Basic connector implementations
-    switch (type) {
-      case 'email':
-        // TODO: Implement email sending
-        console.log('Email connector triggered:', { config, data });
-        break;
-      case 'google_sheets':
-        // TODO: Implement Google Sheets integration
-        console.log('Google Sheets connector triggered:', { config, data });
-        break;
-      case 'slack':
-        // TODO: Implement Slack webhook
-        console.log('Slack connector triggered:', { config, data });
-        break;
-      // Add more connectors as needed
+    // Convert database rows to ConnectorConfig format
+    const connectorConfigs: ConnectorConfig[] = result.rows.map(row => ({
+      type: row.type,
+      ...JSON.parse(row.config || '{}')
+    }));
+
+    try {
+      // Use the new modular dispatcher
+      const results = await dispatchToConnectors(submissionData, connectorConfigs);
+      
+      // Log results
+      results.forEach((result, index) => {
+        const connectorName = result.success 
+          ? `${connectorConfigs[index].type} connector`
+          : `${connectorConfigs[index].type} connector`;
+        
+        if (result.success) {
+          console.log(`✅ ${connectorName}: ${result.message}`);
+        } else {
+          console.error(`❌ ${connectorName}: ${result.message}`, result.error);
+        }
+      });
+    } catch (error) {
+      console.error('Failed to dispatch to connectors:', error);
     }
   }
 
