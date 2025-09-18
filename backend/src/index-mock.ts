@@ -235,6 +235,115 @@ app.get('/api/docs', (req, res) => {
   });
 });
 
+// ====== MOCK SAAS ENDPOINTS FOR TESTING ======
+
+// Mock form generation endpoint
+app.post('/api/forms/generate', async (req, res) => {
+  try {
+    const { 
+      url, 
+      formPurpose, 
+      formName, 
+      formDescription, 
+      destinationType,
+      destinationConfig,
+      guestToken 
+    } = req.body;
+
+    if (!url || !formPurpose) {
+      return res.status(400).json({ error: 'URL and form purpose are required' });
+    }
+
+    console.log(`Mock: Generating form for: ${url}`);
+    console.log(`Mock: Purpose: ${formPurpose}`);
+    console.log(`Mock: Destination: ${destinationType}`, destinationConfig);
+
+    // Mock generated form response
+    const mockGeneratedForm = {
+      id: 'form_' + Date.now(),
+      title: formName || 'Contact Form',
+      description: formDescription || 'Generated from: ' + formPurpose,
+      fields: [
+        {
+          type: 'text',
+          name: 'name',
+          label: 'Full Name',
+          placeholder: 'Enter your name',
+          required: true
+        },
+        {
+          type: 'email',
+          name: 'email',
+          label: 'Email Address',
+          placeholder: 'your@email.com',
+          required: true
+        },
+        {
+          type: 'text',
+          name: 'company',
+          label: 'Company',
+          placeholder: 'Your company name',
+          required: false
+        },
+        {
+          type: 'textarea',
+          name: 'message',
+          label: 'Message',
+          placeholder: 'How can we help you?',
+          required: true
+        }
+      ],
+      ctaText: 'Send Message',
+      thankYouMessage: 'Thank you for your message! We\'ll get back to you soon.',
+      styling: {
+        primaryColor: '#007bff',
+        backgroundColor: '#ffffff',
+        fontFamily: 'system-ui',
+        borderRadius: '8px'
+      }
+    };
+
+    const mockForm = {
+      id: Date.now(),
+      form_name: formName || 'Contact Form',
+      form_description: formDescription || 'Generated form',
+      url: url,
+      is_live: true,
+      submissions_count: 0,
+      created_at: new Date().toISOString()
+    };
+
+    res.json({
+      success: true,
+      message: 'Form generated successfully',
+      form: mockForm,
+      generatedForm: mockGeneratedForm
+    });
+
+  } catch (error) {
+    console.error('Mock form generation error:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate form',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Mock auth endpoints
+app.post('/api/auth/guest', async (req, res) => {
+  res.json({
+    success: true,
+    guestToken: 'mock_guest_' + Date.now()
+  });
+});
+
+app.get('/api/forms', async (req, res) => {
+  res.json({
+    success: true,
+    data: []
+  });
+});
+
 // Error handler
 app.use((error: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
   console.error('Server error:', error);

@@ -322,7 +322,7 @@ app.post('/api/auth/guest', async (req, res) => {
 // Create AI-generated form from website
 app.post('/api/forms/generate', authService.optionalAuth, async (req, res) => {
     try {
-        const { url, formPurpose, formName, formDescription, guestToken } = req.body;
+        const { url, formPurpose, formName, formDescription, destinationType, destinationConfig, guestToken } = req.body;
         if (!url || !formPurpose) {
             return res.status(400).json({ error: 'URL and form purpose are required' });
         }
@@ -357,6 +357,10 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req, res) => {
         }
         // Save form to database
         const form = await saasService.createForm(req.user?.id || null, guestTokenId, url, formName || generatedForm.title, formDescription || generatedForm.description, generatedForm, extractedData);
+        // Handle destination configuration if provided
+        if (destinationType && destinationConfig) {
+            await saasService.configureFormDestination(form.id, destinationType, destinationConfig);
+        }
         res.json({
             success: true,
             message: 'Form generated successfully',

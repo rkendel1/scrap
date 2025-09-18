@@ -428,4 +428,39 @@ export class SaaSService {
   private generateEmbedCode(): string {
     return 'embed_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
+
+  async configureFormDestination(
+    formId: number, 
+    destinationType: string, 
+    destinationConfig: any
+  ): Promise<void> {
+    try {
+      // First, find the connector by type
+      const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
+      const connectorResult = await pool.query(connectorQuery, [destinationType]);
+      
+      if (connectorResult.rows.length === 0) {
+        throw new Error(`Connector type ${destinationType} not found`);
+      }
+      
+      const connectorId = connectorResult.rows[0].id;
+      
+      // Insert or update the form connector configuration
+      const upsertQuery = `
+        INSERT INTO form_connectors (form_id, connector_id, config, is_active)
+        VALUES ($1, $2, $3, true)
+        ON CONFLICT (form_id, connector_id) 
+        DO UPDATE SET 
+          config = EXCLUDED.config,
+          is_active = EXCLUDED.is_active
+      `;
+      
+      await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
+      
+      console.log(`Configured ${destinationType} destination for form ${formId}`);
+    } catch (error) {
+      console.error('Error configuring form destination:', error);
+      throw error;
+    }
+  }
 }

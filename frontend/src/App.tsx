@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import { UrlForm } from './components/UrlForm';
 import { RecordsTable } from './components/RecordsTable';
-import { FormBuilder } from './components/FormBuilder';
+import { ConversationalFormBuilder } from './components/ConversationalFormBuilder';
 import { LoginForm, RegisterForm } from './components/AuthForms';
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm } from './types/api';
@@ -331,7 +331,7 @@ function App() {
 
         {/* Main Content */}
         {currentView === 'builder' && (
-          <FormBuilder 
+          <ConversationalFormBuilder 
             onFormGenerated={handleFormGenerated}
             user={user}
             guestToken={guestToken || undefined}
