@@ -509,12 +509,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       <div
         ref={chatHistoryRef}
         style={{
-          maxHeight: '60vh', // Set a max height relative to viewport height
+          flex: 1, // This makes it take up all available vertical space
           overflowY: 'auto', // Enable vertical scrolling
           border: '1px solid #e1e5e9',
           borderRadius: '12px',
           padding: '20px',
-          marginBottom: '20px',
+          marginBottom: '12px', /* Reduced margin for tighter layout */
           backgroundColor: '#f0f2f5',
           display: 'flex',
           flexDirection: 'column',
@@ -560,7 +560,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         ))}
       </div>
 
-      <form onSubmit={currentStep === 'DONE' ? handleRestart : handleUserInput} style={{ display: 'flex', gap: '10px' }}>
+      <form onSubmit={currentStep === 'DONE' ? handleRestart : handleUserInput} style={{ display: 'flex', gap: '10px', flexShrink: 0 }}>
         <input
           type="text"
           value={userInput}
