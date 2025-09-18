@@ -231,7 +231,7 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <h1>FormCraft AI</h1>
-              <p>Create AI-powered forms that match any website's design and tone</p>
+              {/* Removed the descriptive tagline */}
             </div>
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {user ? (
