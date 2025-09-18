@@ -315,6 +315,15 @@ function App() {
                   >
                     📊 My Forms
                   </button>
+                  <a 
+                    href="/test-embed.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn btn-secondary"
+                    style={{ fontSize: '14px' }}
+                  >
+                    🧪 Test Embed Page
+                  </a>
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     Welcome, {user.first_name || user.email}
                     {user.subscription_tier === 'paid' && (
@@ -336,9 +345,20 @@ function App() {
                   </button>
                 </>
               ) : (
-                <button onClick={() => setShowAuth(true)} className="btn btn-secondary">
-                  Sign In / Register
-                </button>
+                <>
+                  <a 
+                    href="/test-embed.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn btn-secondary"
+                    style={{ fontSize: '14px' }}
+                  >
+                    🧪 Test Embed Page
+                  </a>
+                  <button onClick={() => setShowAuth(true)} className="btn btn-secondary">
+                    Sign In / Register
+                  </button>
+                </>
               )}
             </div>
           </div>
