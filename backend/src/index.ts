@@ -822,105 +822,10 @@ app.get('/embed.html', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow framing
   res.removeHeader('X-Frame-Options'); // Remove default frame blocking
-  res.sendFile(path.join(__dirname, '../../frontend/public/embed.html'));
+  res.sendFile('/app/frontend/public/embed.html'); // Use absolute path
 });
 
 // Serve embed.js script
-app.get('/embed.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for embed script
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.sendFile(path.join(__dirname, '../../frontend/public/embed.js'));
-});
-
-// Get form data by embed code (public endpoint)
-app.get('/api/forms/embed/:embedCode', async (req, res) => {
-  try {
-    const { embedCode } = req.params;
-    
-    const formData = await saasService.getFormByEmbedCode(embedCode);
-    
-    if (!formData) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Form not found or not active' 
-      });
-    }
-
-    res.json({
-      success: true,
-      data: formData
-    });
-  } catch (error) {
-    console.error('Get form by embed code error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to fetch form data'
-    });
-  }
-});
-
-// Generate secure embed token (requires authentication)
-app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const formId = parseInt(req.params.id);
-    const userId = req.user!.id;
-    
-    const token = await saasService.generateSecureEmbedToken(formId, userId);
-    
-    res.json({
-      success: true,
-      token,
-      expiresIn: '1h'
-    });
-  } catch (error: any) {
-    console.error('Generate token error:', error);
-    res.status(400).json({ // Use 400 for client-side errors like form not live/subscription inactive
-      success: false,
-      message: error.message || 'Failed to generate embed token'
-    });
-  }
-});
-
-// Update form allowed domains (requires authentication)
-app.put('/api/forms/:id/allowed-domains', authService.authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const formId = parseInt(req.params.id);
-    const userId = req.user!.id;
-    const { allowedDomains } = req.body;
-    
-    if (!Array.isArray(allowedDomains)) {
-      return res.status(400).json({
-        success: false,
-        message: 'allowedDomains must be an array'
-      });
-    }
-    
-    const success = await saasService.updateFormAllowedDomains(formId, userId, allowedDomains);
-    
-    if (!success) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form not found or not accessible'
-      });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Allowed domains updated successfully'
-    });
-  } catch (error) {
-    console.error('Update allowed domains error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update allowed domains'
-    });
-  }
-});
-
-// Secure embed.js endpoint (requires token in query params)
 app.get('/embed.js', (req, res) => {
   const { id: formIdParam, key: token } = req.query;
   
@@ -935,7 +840,7 @@ app.get('/embed.js', (req, res) => {
   
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Don't cache secure tokens
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for embed script
   res.setHeader('Access-Control-Allow-Methods', 'GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   
