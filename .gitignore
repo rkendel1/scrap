@@ -102,4 +102,17 @@ logs
 
 # Test files
 test.js
-/tmp/test.html
+./tmp/test.html
+
+# Build outputs
+backend/dist/
+frontend/dist/
+frontend/build/
+
+# Environment files
+backend/.env
+frontend/.env
+
+# TypeScript compiled files
+*.js.map
+*.d.ts.map
