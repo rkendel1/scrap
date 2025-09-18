@@ -185,6 +185,17 @@ CREATE TABLE IF NOT EXISTS form_connectors (
     UNIQUE (form_id, connector_id) -- A form can only have one configuration per connector type
 );
 
+-- Create form_submission_rate_limits table for security features
+CREATE TABLE IF NOT EXISTS form_submission_rate_limits (
+    id SERIAL PRIMARY KEY,
+    form_id INTEGER REFERENCES forms(id) ON DELETE CASCADE,
+    ip_address INET NOT NULL,
+    domain VARCHAR(255),
+    submission_count INTEGER DEFAULT 1,
+    window_start TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(form_id, ip_address, domain)
+);
+
 -- Create a function to update the updated_at column (if not already created by another migration)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
