@@ -25,6 +25,8 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
     const fetchEmbedData = async () => {
       setLoading(true);
       setError(null);
+      setSuccessMessage(null); // Clear success message on load
+      console.log('EmbedCodeDisplay: Initializing fetchEmbedData for form', form.id);
       try {
         // Fetch form again to get latest allowed_domains and is_live status
         const formResponse = await fetch(`${API_BASE}/api/forms/${form.id}`, {
@@ -40,21 +42,25 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
             setError('This form is not live. Please activate it in the dashboard to generate a secure embed code.');
             setEmbedToken(null);
             setExpiresIn(null);
+            console.log('EmbedCodeDisplay: Form is not live.');
             return;
           }
           if (user.subscription_status !== 'active') {
             setError('Your subscription is not active. Please reactivate it to generate a secure embed code.');
             setEmbedToken(null);
             setExpiresIn(null);
+            console.log('EmbedCodeDisplay: User subscription is not active.');
             return;
           }
 
           // Generate a new token on load if conditions are met
+          console.log('EmbedCodeDisplay: Conditions met, generating new token on load.');
           await generateNewToken(fetchedForm.id, user.id);
         } else {
           throw new Error(formResult.message || 'Failed to fetch form details');
         }
       } catch (err: any) {
+        console.error('EmbedCodeDisplay: Error in fetchEmbedData:', err);
         setError(err.message || 'Failed to load embed data.');
       } finally {
         setLoading(false);
@@ -68,6 +74,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
     setTokenLoading(true);
     setError(null);
     setSuccessMessage(null);
+    console.log('EmbedCodeDisplay: Attempting to generate new token for form', formId);
     try {
       const response = await fetch(`${API_BASE}/api/forms/${formId}/generate-token`, {
         method: 'POST',
@@ -76,15 +83,21 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
       });
+      
+      console.log('EmbedCodeDisplay: Raw response from generate-token:', response);
       const result = await response.json();
+      console.log('EmbedCodeDisplay: Parsed result from generate-token:', result);
+
       if (result.success) {
         setEmbedToken(result.token);
         setExpiresIn(result.expiresIn);
         setSuccessMessage('New embed token generated successfully!');
+        console.log('EmbedCodeDisplay: Token generated successfully.');
       } else {
         throw new Error(result.message || 'Failed to generate token');
       }
     } catch (err: any) {
+      console.error('EmbedCodeDisplay: Error generating new token:', err);
       setError(err.message || 'Failed to generate new token. Ensure the form is live and your subscription is active.');
       setEmbedToken(null); // Clear token on error
       setExpiresIn(null);
@@ -115,6 +128,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
     setDomainSaving(true);
     setError(null);
     setSuccessMessage(null);
+    console.log('EmbedCodeDisplay: Updating allowed domains for form', form.id, 'to:', domains);
     try {
       const response = await fetch(`${API_BASE}/api/forms/${form.id}/allowed-domains`, {
         method: 'PUT',
@@ -128,10 +142,12 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
       if (result.success) {
         setAllowedDomains(domains);
         setSuccessMessage('Allowed domains updated successfully!');
+        console.log('EmbedCodeDisplay: Allowed domains updated successfully.');
       } else {
         throw new Error(result.message || 'Failed to update domains');
       }
     } catch (err: any) {
+      console.error('EmbedCodeDisplay: Error updating allowed domains:', err);
       setError(err.message || 'Failed to update allowed domains.');
     } finally {
       setDomainSaving(false);
@@ -145,6 +161,8 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
   const iframeEmbedCode = `<iframe src="${API_BASE}/embed.html?code=${form.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`;
 
   const canGenerateToken = form.is_live && user.subscription_status === 'active';
+  console.log('EmbedCodeDisplay: canGenerateToken status:', canGenerateToken, ' (form.is_live:', form.is_live, ', user.subscription_status:', user.subscription_status, ')');
+
 
   if (loading) {
     return (
