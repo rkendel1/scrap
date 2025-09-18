@@ -69,6 +69,8 @@ main {
   align-items: flex-start;
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
+  /* Set a fixed height for the main content area */
+  height: calc(100vh - 82px); /* 100vh - (header 17px + footer 17px + main-padding-top 24px + main-padding-bottom 24px) */
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -333,7 +335,7 @@ footer {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  min-height: calc(100vh - 98px); /* Adjusted based on new header/footer height (8px*2 + 1px border = 17px for header, 8px*2 + 1px border = 17px for footer. Total 34px. Old was 110px, new is 34px. 110-34 = 76px less. 110-76 = 34px. Wait, header was 10px*2 + 1px = 21px. Footer was 10px*2 + 1px = 21px. Total 42px. New is 8px*2 + 1px = 17px. Footer 8px*2 + 1px = 17px. Total 34px. Difference 42-34 = 8px. So 110 - 8 = 102px. Let's try 98px. */
+  height: calc(100vh - 82px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -539,15 +541,14 @@ footer {
 
 /* Live Preview Specifics */
 .live-preview-card {
-  position: sticky;
-  top: 24px; /* Adjusted to match main padding */
-  max-height: calc(100vh - 98px); /* Adjusted based on new header/footer height */
+  /* Removed position: sticky, top, and max-height for static height */
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start; /* Align to top */
   text-align: center;
   padding: 24px;
+  height: 100%; /* Ensure it fills its parent div */
 }
 
 .live-preview-card .preview-header {
@@ -720,6 +721,7 @@ footer {
   main {
     flex-direction: column;
     gap: 16px;
+    height: auto; /* Allow height to be flexible on smaller screens */
   }
 
   .App > main > div {
@@ -728,10 +730,8 @@ footer {
   }
 
   .live-preview-card {
-    position: static;
-    height: auto;
-    min-height: 300px;
-    max-height: none; /* Remove max-height on smaller screens if it causes issues */
+    height: auto; /* Allow height to be flexible on smaller screens */
+    min-height: 300px; /* Ensure a minimum height for the preview area */
     padding: 20px;
   }
 
