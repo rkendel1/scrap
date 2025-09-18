@@ -621,6 +621,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         style={{
           flex: 1, // This makes it take up all available vertical space
           overflowY: 'auto', // Enable vertical scrolling
+          maxHeight: '60vh', // Set maximum height for the chat window
           border: '1px solid #e1e5e9',
           borderRadius: '12px',
           padding: '20px',
