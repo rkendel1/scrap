@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormCraft AI - Embed Code Test Page</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 30px;
+            border: 1px solid #e1e5e9;
+            margin-bottom: 30px;
+        }
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-top: 0;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        p {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .instructions {
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 30px;
+            font-size: 15px;
+            color: #1565c0;
+        }
+        .instructions code {
+            background-color: #d0e9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            color: #0d47a1;
+        }
+        .form-embed-area {
+            border: 2px dashed #ced4da;
+            border-radius: 8px;
+            padding: 30px;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #888;
+            text-align: center;
+            background-color: #f8f9fa;
+        }
+        .form-embed-area:empty:before {
+            content: "Your form will appear here after you paste the embed code below.";
+        }
+        .code-input-area {
+            margin-top: 30px;
+            width: 100%;
+        }
+        .code-input-area label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 15px;
+            color: #333;
+        }
+        .code-input-area textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            resize: vertical;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        .code-input-area button {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            width: auto;
+        }
+        .code-input-area button:hover {
+            background-color: #0056b3;
+        }
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        footer {
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 13px;
+            color: #6c757d;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Your FormCraft AI Embed Code</h1>
+        <p>Paste your secure JavaScript embed code below to test how your form appears on a live website.</p>
+
+        <div class="instructions">
+            <strong>How to use:</strong>
+            <ol>
+                <li>Go to your FormCraft AI dashboard, activate your form, and get the "Secure JavaScript Embed" code.</li>
+                <li>Paste the entire <code>&lt;script&gt;...&lt;/script&gt;</code> tag into the text area below.</li>
+                <li>Click "Embed Form" to see your form rendered on this page.</li>
+                <li>You can also test the legacy iframe code if needed.</li>
+            </ol>
+        </div>
+
+        <div id="form-embed-area" class="form-embed-area">
+            <!-- Your form will be embedded here -->
+        </div>
+
+        <div class="code-input-area">
+            <label for="embedCodeInput">Paste your embed code here:</label>
+            <textarea id="embedCodeInput" placeholder="e.g., <script src=&quot;http://localhost:3001/embed.js?id=...&key=...&quot;></script>"></textarea>
+            <button onclick="embedForm()">Embed Form</button>
+            <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <footer>
+        Powered by FormCraft AI
+    </footer>
+
+    <script>
+        function embedForm() {
+            const embedCodeInput = document.getElementById('embedCodeInput');
+            const formEmbedArea = document.getElementById('form-embed-area');
+            const errorMessageDiv = document.getElementById('errorMessage');
+            const embedCode = embedCodeInput.value.trim();
+
+            errorMessageDiv.style.display = 'none';
+            formEmbedArea.innerHTML = ''; // Clear previous form
+
+            if (!embedCode) {
+                errorMessageDiv.textContent = 'Please paste your embed code into the text area.';
+                errorMessageDiv.style.display = 'block';
+                return;
+            }
+
+            // Basic validation for script or iframe tags
+            if (!embedCode.startsWith('<script') && !embedCode.startsWith('<iframe')) {
+                errorMessageDiv.textContent = 'Invalid embed code. Please paste a valid <script> or <iframe> tag.';
+                errorMessageDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                // Create a temporary div to parse the HTML string
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = embedCode;
+
+                // Append all children of the temporary div to the formEmbedArea
+                while (tempDiv.firstChild) {
+                    formEmbedArea.appendChild(tempDiv.firstChild);
+                }
+
+                // If it's a script tag, it needs to be re-executed by the browser
+                // Simply appending innerHTML won't execute scripts.
+                // We need to create a new script element and copy its attributes/content.
+                const scripts = formEmbedArea.getElementsByTagName('script');
+                for (let i = 0; i < scripts.length; i++) {
+                    const oldScript = scripts[i];
+                    const newScript = document.createElement('script');
+
+                    // Copy attributes
+                    for (let j = 0; j < oldScript.attributes.length; j++) {
+                        const attribute = oldScript.attributes[j];
+                        newScript.setAttribute(attribute.name, attribute.value);
+                    }
+
+                    // Copy content
+                    if (oldScript.textContent) {
+                        newScript.textContent = oldScript.textContent;
+                    }
+
+                    // Replace the old script with the new one to force re-execution
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                }
+
+            } catch (e) {
+                errorMessageDiv.textContent = 'Error embedding code: ' + e.message;
+                errorMessageDiv.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>
