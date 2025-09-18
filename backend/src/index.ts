@@ -688,6 +688,127 @@ app.patch('/api/forms/:id/toggle-live', authService.authenticateToken, async (re
   }
 });
 
+// NEW: Generate secure embed token for a form
+app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    if (isNaN(formId)) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID' });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const token = await saasService.generateSecureEmbedToken(formId, req.user.id);
+    
+    res.json({
+      success: true,
+      token: token,
+      expiresIn: '1h' // Hardcoded for now, should come from service
+    });
+  } catch (error) {
+    console.error('Generate secure embed token error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to generate secure embed token'
+    });
+  }
+});
+
+// NEW: Update allowed domains for a form
+app.put('/api/forms/:id/allowed-domains', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { allowedDomains } = req.body;
+
+    if (isNaN(formId) || !Array.isArray(allowedDomains)) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID or allowed domains format' });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const success = await saasService.updateFormAllowedDomains(formId, req.user.id, allowedDomains);
+
+    if (success) {
+      res.json({ success: true, message: 'Allowed domains updated successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Form not found or not owned by user' });
+    }
+  } catch (error) {
+    console.error('Update allowed domains error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update allowed domains'
+    });
+  }
+});
+
+// NEW: Get form data by secure embed token (for embed.js)
+app.post('/api/forms/embed-secure', async (req, res) => {
+  try {
+    const { token, hostname } = req.body;
+
+    if (!token || !hostname) {
+      return res.status(400).json({ success: false, message: 'Token and hostname are required' });
+    }
+
+    const formData = await saasService.getFormByEmbedToken(token, hostname);
+
+    if (!formData) {
+      return res.status(403).json({ success: false, message: 'Unauthorized or invalid embed request' });
+    }
+
+    res.json({
+      success: true,
+      data: formData
+    });
+  } catch (error) {
+    console.error('Secure embed form data fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to fetch form data securely'
+    });
+  }
+});
+
+// NEW: Submit form securely with token validation (for embed.js)
+app.post('/api/forms/submit-secure', async (req, res) => {
+  try {
+    const { token, data: submissionData, hostname } = req.body;
+
+    if (!token || !submissionData || !hostname) {
+      return res.status(400).json({ success: false, message: 'Token, submission data, and hostname are required' });
+    }
+
+    const metadata = {
+      submittedFromUrl: req.headers.referer,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      hostname: hostname
+    };
+
+    const result = await saasService.submitFormSecure(token, submissionData, metadata);
+
+    if (!result.success && result.message?.includes('Rate limit exceeded')) {
+      return res.status(429).json(result);
+    }
+    if (!result.success && result.message?.includes('Unauthorized') || result.message?.includes('invalid') || result.message?.includes('active')) {
+      return res.status(403).json(result);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Secure form submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to submit form securely'
+    });
+  }
+});
+
 // Development: Create test form (remove in production)
 app.post('/api/dev/create-test-form', async (req, res) => {
   try {
