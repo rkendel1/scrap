@@ -39,7 +39,18 @@ const isLightColor = (color: string): boolean => {
     } else {
       return false;
     }
-  } else {
+  }
+  // Handle hsl/hsla colors
+  else if (color.startsWith('hsl')) {
+    // For simplicity, treat HSL as dark if lightness is low
+    const lightnessMatch = color.match(/hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*(\d+)%\s*(?:,\s*\d*\.?\d+)?\)/);
+    if (lightnessMatch && lightnessMatch[1]) {
+      const lightness = parseInt(lightnessMatch[1]);
+      return lightness > 70; // Arbitrary threshold for light HSL
+    }
+    return false;
+  }
+  else {
     return false; // Not a recognized color format
   }
 
@@ -72,6 +83,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',
+      maxWidth: '500px', // Default maxWidth for preview
     };
 
     // Mock fields based on purpose

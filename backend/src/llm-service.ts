@@ -27,6 +27,7 @@ export interface GeneratedForm {
     fontFamily: string;
     borderRadius: string;
     buttonStyle: string;
+    maxWidth?: string; // Added maxWidth
   };
 }
 
@@ -187,7 +188,7 @@ ${websiteData.messaging.slice(0, 5).join('\n')}
 Requirements:
 1. Create a form with 3-7 fields appropriate for "${formPurpose}"
 2. Match the website's tone and personality in all copy
-3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', and 'fontFamily' to '${fontFamily}' in the 'styling' object.**
+3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', 'fontFamily' to '${fontFamily}', and consider adding a 'maxWidth' (e.g., '500px', '600px', '75%') in the 'styling' object.**
 4. Include validation rules where appropriate
 5. Create compelling CTA text that matches the brand voice
 6. Generate a personalized thank you message
@@ -218,7 +219,8 @@ Return a JSON object with this structure:
     "backgroundColor": "hex color", 
     "fontFamily": "font family name",
     "borderRadius": "border radius value",
-    "buttonStyle": "button styling description"
+    "buttonStyle": "button styling description",
+    "maxWidth": "e.g., 500px, 75%" // Added maxWidth to expected output
   }
 }
 `;
@@ -249,7 +251,8 @@ Return a JSON object with this structure:
           backgroundColor: parsed.styling?.backgroundColor || designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
           fontFamily: parsed.styling?.fontFamily || designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: parsed.styling?.borderRadius || '8px',
-          buttonStyle: parsed.styling?.buttonStyle || 'solid'
+          buttonStyle: parsed.styling?.buttonStyle || 'solid',
+          maxWidth: parsed.styling?.maxWidth || '500px' // Default maxWidth
         }
       };
     } catch (error) {
@@ -271,7 +274,8 @@ Return a JSON object with this structure:
           backgroundColor: designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
           fontFamily: designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: '8px',
-          buttonStyle: 'solid'
+          buttonStyle: 'solid',
+          maxWidth: '500px' // Default maxWidth
         }
       };
     }
@@ -399,7 +403,8 @@ Return an array of ${count} JSON objects with the same structure as the original
         backgroundColor: backgroundColor,
         fontFamily: fontFamily,
         borderRadius: '8px',
-        buttonStyle: 'solid'
+        buttonStyle: 'solid',
+        maxWidth: '500px' // Default maxWidth
       }
     };
   }
@@ -432,7 +437,18 @@ Return an array of ${count} JSON objects with the same structure as the original
       } else {
         return false;
       }
-    } else {
+    }
+    // Handle hsl/hsla colors
+    else if (color.startsWith('hsl')) {
+      // For simplicity, treat HSL as dark if lightness is low
+      const lightnessMatch = color.match(/hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*(\d+)%\s*(?:,\s*\d*\.?\d+)?\)/);
+      if (lightnessMatch && lightnessMatch[1]) {
+        const lightness = parseInt(lightnessMatch[1]);
+        return lightness > 70; // Arbitrary threshold for light HSL
+      }
+      return false;
+    }
+    else {
       return false; // Not a recognized color format
     }
 

@@ -76,6 +76,7 @@ export interface GeneratedForm {
     fontFamily: string;
     borderRadius: string;
     buttonStyle: string;
+    maxWidth?: string; // Added maxWidth
   };
 }
 
