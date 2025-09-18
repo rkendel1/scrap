@@ -44,6 +44,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
+
 
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -188,6 +190,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setExtractedDesignTokens(designTokens);
     setExtractedVoiceAnalysis(voiceAnalysis);
     setFormData((prev) => ({ ...prev, url }));
+    setCurrentContextSummary(`Current Form: ${url}`);
+
 
     addSuccess('Website analyzed! Now, tell me: What is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
     setCurrentStep('ASK_PURPOSE');
@@ -236,6 +240,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(generateResult.generatedForm);
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
+    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${purpose}`);
+
 
     addPrompt(
       <>
@@ -266,6 +272,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     setSelectedDestinationType(normalizedType);
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
+    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${formData.purpose} | Destination: ${typeInput}`);
+
 
     // Prompt for config based on type
     let configPrompt = '';
@@ -299,27 +307,31 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     let newConfig: any = {};
     let validationError = null;
+    let expectedInputPrompt = '';
 
     switch (selectedDestinationType) {
       case 'email':
+        expectedInputPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
         if (!/\S+@\S+\.\S+/.test(configInput)) {
-          validationError = 'Please enter a valid email address.';
+          validationError = 'That doesn\'t look like a valid email address.';
         } else {
           newConfig = { to: configInput, subject: `New submission for ${createdForm.form_name}` };
         }
         break;
       case 'googlesheets':
+        expectedInputPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
         // Basic validation for spreadsheet ID (can be more robust)
         if (!configInput.match(/^[a-zA-Z0-9_-]+$/)) {
-          validationError = 'Please enter a valid Google Sheets Spreadsheet ID.';
+          validationError = 'That doesn\'t look like a valid Google Sheets Spreadsheet ID.';
         } else {
           newConfig = { spreadsheetId: configInput, sheetName: 'Sheet1' };
         }
         break;
       case 'slack':
       case 'webhook':
+        expectedInputPrompt = 'Please provide a valid URL for the webhook (e.g., "https://hooks.slack.com/services/...").';
         if (!/^https?:\/\/\S+/.test(configInput)) {
-          validationError = 'Please enter a valid URL for the webhook.';
+          validationError = 'That doesn\'t look like a valid URL.';
         } else {
           newConfig = { webhookUrl: configInput };
         }
@@ -327,7 +339,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
 
     if (validationError) {
-      addError(validationError);
+      addError(`${validationError} ${expectedInputPrompt}`);
       setIsLoading(false);
       return;
     }
@@ -388,6 +400,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setSelectedDestinationType(null);
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
+      setCurrentContextSummary('');
     } else if (userInput.toLowerCase() === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -403,11 +416,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Form Chatbot</h2>
+      
+      {currentContextSummary && (
+        <div style={{
+          padding: '12px',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #bbdefb',
+          borderRadius: '8px',
+          marginBottom: '15px',
+          fontSize: '14px',
+          color: '#1565c0',
+          fontWeight: '500'
+        }}>
+          Current Conversation Context: {currentContextSummary}
+        </div>
+      )}
+
       <div
         ref={chatHistoryRef}
         style={{
-          flexGrow: 0, // Changed from 1 to 0
-          height: '400px', // Fixed height
+          flexGrow: 0, 
+          height: '400px', 
           border: '1px solid #e1e5e9',
           borderRadius: '8px',
           padding: '20px',
