@@ -564,11 +564,7 @@ function App() {
         ) : null}
       </main>
 
-      <footer>
-        <div className="container">
-          <p>FormCraft AI - Create AI-powered forms that perfectly match any website's design and tone</p>
-        </div>
-      </footer>
+      {/* Removed the footer from here */}
 
       {/* Auth Modal - Moved outside of <main> */}
       {showAuth && (

@@ -302,27 +302,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         </button>
       </form>
 
-      {showBranding && (
-        <div style={{
-          marginTop: '16px',
-          paddingTop: '16px',
-          borderTop: '1px solid #e1e5e9',
-          textAlign: 'center' as const
-        }}>
-          <a
-            href="https://your-saas-domain.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: '12px',
-              color: '#666',
-              textDecoration: 'none'
-            }}
-          >
-            Powered by FormCraft AI
-          </a>
-        </div>
-      )}
+      
 
       <LinkInterceptorModal
         show={showLinkModal}
