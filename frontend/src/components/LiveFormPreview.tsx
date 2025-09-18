@@ -109,7 +109,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       ctaText: purpose?.toLowerCase().includes('subscribe') ? 'Subscribe' : 'Submit',
       thankYouMessage: 'Thank you for your submission!',
       styling: defaultStyling,
-      formLayout: 'inline', // Default to inline as other layouts are removed
+      // formLayout: 'inline', // Default to inline as other layouts are removed
     };
   };
 
@@ -138,19 +138,21 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   return (
-    <div className="card" style={{ position: 'sticky', top: '20px' }}> {/* Sticky for better UX */}
+    <div className="card" style={{ position: 'sticky', top: '20px', maxWidth: '500px' }}> {/* Added maxWidth */}
       <h3 style={{ marginBottom: '16px', textAlign: 'center' }}>Live Preview</h3>
       <div style={{
         border: '1px solid #e1e5e9',
         borderRadius: '8px',
-        padding: '16px',
+        // Removed padding: '16px',
         backgroundColor: '#f8f9fa',
         minHeight: '300px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative', // Needed for absolute/fixed positioning of modal/banner
-        overflow: 'hidden', // Hide overflow for banner/modal simulation
+        maxHeight: 'calc(100vh - 250px)', // Set max height for scrolling
+        overflowY: 'auto', // Enable vertical scrolling
+        overflowX: 'hidden', // Prevent horizontal scrolling
+        // Removed alignItems: 'center',
+        // Removed justifyContent: 'center',
+        position: 'relative',
+        // Changed overflow: 'hidden' to overflowX: 'hidden'
       }}>
         {renderFormContent()}
       </div>
