@@ -15,6 +15,7 @@ interface ConversationalFormBuilderProps {
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
   }) => void;
+  onGetEmbedCodeClick: (form: SaaSForm) => void; // New prop
 }
 
 type ConversationEntry = {
@@ -38,6 +39,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   user,
   guestToken,
   onStateChange,
+  onGetEmbedCodeClick, // Destructure new prop
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
@@ -50,7 +52,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null); // Changed type to string[] | null
 
   // Data collected throughout the conversation
-  const [formData, setFormData] = useState<Partial<FormData>>({});
+  const [formData, setFormData] = Partial<FormData>>({});
   const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
   const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
   const [extractedRecordId, setExtractedRecordId] = useState<number | null>(null);
@@ -504,6 +506,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentStep('PROCESSING_DESTINATION'); // Update step for dynamic button text
     const currentDestinationType = typeOverride || selectedDestinationType;
 
+    console.log('Frontend: Processing destination config input:', { configInput, currentDestinationType }); // DEBUG LOG
+
     if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
       setCurrentStep('ASK_URL');
@@ -545,6 +549,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
 
     if (validationError) {
+      console.log('Frontend: Validation error:', validationError); // DEBUG LOG
       addError(`${validationError} ${expectedInputPrompt}`);
       return;
     }
@@ -566,6 +571,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       configurePayload.guestToken = guestToken;
     }
 
+    console.log('Frontend: Sending configure destination payload:', configurePayload); // DEBUG LOG
+
     const configureResponse = await fetch(`/api/forms/${createdForm.id}/configure-destination`, {
       method: 'POST',
       headers: authHeaders,
@@ -575,6 +582,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const configureResult = await configureResponse.json();
 
     if (!configureResult.success) {
+      console.error('Frontend: Backend configure destination failed:', configureResult); // DEBUG LOG
       addError(configureResult.error || 'Failed to save destination configuration.');
       return;
     }

@@ -58,6 +58,7 @@ interface LiveFormPreviewProps {
   user?: any;
   extractedDesignTokens: any | null;
   extractedVoiceAnalysis: any | null;
+  onGetEmbedCodeClick: (form: SaaSForm) => void; // New prop
 }
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
@@ -67,6 +68,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   user,
   extractedDesignTokens, // Use new prop
   extractedVoiceAnalysis, // Use new prop
+  onGetEmbedCodeClick, // Destructure new prop
 }) => {
   const { url, purpose, destinationType } = formData;
 
@@ -195,11 +197,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             to add it to your website.
           </p>
           <button 
-            onClick={() => { /* TODO: Implement navigation to embed code or auth modal */ }}
+            onClick={() => onGetEmbedCodeClick(createdForm)} // Use the new handler
             className="btn-embed-code"
           >
             <Lock size={18} />
-            Sign in to get embed code
+            {user ? 'Get Embed Code' : 'Sign in to get embed code'}
           </button>
         </div>
       )}

@@ -237,6 +237,17 @@ function App() {
     }
   }, [searchQuery, currentView]);
 
+  // New handler for the "Sign in to get embed code" button in LiveFormPreview
+  const handleGetEmbedCodeClick = (form: SaaSForm) => {
+    if (user) {
+      handleShowEmbedCode(form);
+    } else {
+      setShowAuth(true); // Open auth modal
+      setAuthMode('login'); // Default to login
+      setError('Please sign in or register to get your embed code.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="App">
@@ -366,6 +377,7 @@ function App() {
                 user={user}
                 guestToken={guestToken || undefined}
                 onStateChange={setBuilderState} // Pass state update callback
+                onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
               />
             </div>
             <div style={{ flex: 1 }}> {/* Right column for live preview */}
@@ -376,6 +388,7 @@ function App() {
                 user={user}
                 extractedDesignTokens={builderState.extractedDesignTokens} // Pass new state
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
+                onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
               />
             </div>
           </>

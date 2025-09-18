@@ -635,11 +635,13 @@ export class SaaSService {
     userId: number | null, // Added userId
     guestToken: string | null // Added guestToken
   ): Promise<boolean> {
+    console.log('Backend: configureFormDestination called with:', { formId, destinationType, destinationConfig, userId, guestToken }); // DEBUG LOG
     try {
       // Verify form ownership
       const formQuery = `SELECT user_id, guest_token_id FROM forms WHERE id = $1`;
       const formResult = await pool.query(formQuery, [formId]);
       if (formResult.rows.length === 0) {
+        console.log('Backend: Form not found for ID:', formId); // DEBUG LOG
         throw new Error('Form not found');
       }
       const formOwner = formResult.rows[0];
@@ -657,6 +659,7 @@ export class SaaSService {
       }
 
       if (!isAuthorized) {
+        console.log('Backend: Unauthorized to configure form:', { formOwner, userId, guestToken }); // DEBUG LOG
         throw new Error('Unauthorized to configure this form');
       }
 
@@ -665,6 +668,7 @@ export class SaaSService {
       const connectorResult = await pool.query(connectorQuery, [destinationType]);
       
       if (connectorResult.rows.length === 0) {
+        console.log('Backend: Connector type not found:', destinationType); // DEBUG LOG
         throw new Error(`Connector type ${destinationType} not found`);
       }
       
@@ -682,10 +686,10 @@ export class SaaSService {
       
       await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
       
-      console.log(`Configured ${destinationType} destination for form ${formId}`);
+      console.log(`Backend: Configured ${destinationType} destination for form ${formId} successfully.`); // DEBUG LOG
       return true;
     } catch (error) {
-      console.error('Error configuring form destination:', error);
+      console.error('Backend: Error configuring form destination:', error); // DEBUG LOG
       throw error;
     }
   }
@@ -887,7 +891,7 @@ export class SaaSService {
           `, [form.embed_code_id]);
         }
 
-        await client.query(`
+        await pool.query(`
           UPDATE forms 
           SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
           WHERE id = $1
@@ -975,6 +979,7 @@ export class SaaSService {
    * Test a connector with mock data
    */
   async testConnector(formId: number, connectorType: string, settings: any, userId: number): Promise<any | null> {
+    console.log('Backend: testConnector called with:', { formId, connectorType, settings, userId }); // DEBUG LOG
     try {
       // Verify user owns the form
       const formQuery = `
@@ -983,6 +988,7 @@ export class SaaSService {
       const formResult = await pool.query(formQuery, [formId, userId]);
       
       if (formResult.rows.length === 0) {
+        console.log('Backend: Form not found or not owned by user for testConnector:', { formId, userId }); // DEBUG LOG
         return null; // Form not found or not owned by user
       }
 
@@ -991,6 +997,7 @@ export class SaaSService {
       const validation = validateConnectorConfig(connectorType, settings);
       
       if (!validation.valid) {
+        console.log('Backend: Connector configuration invalid for testConnector:', validation.errors); // DEBUG LOG
         return {
           success: false,
           message: 'Invalid connector configuration',
@@ -1017,9 +1024,10 @@ export class SaaSService {
       const connectorModule = await import(`./connectors/${connectorType}.js`);
       const result = await connectorModule.send(mockSubmission, connectorConfig);
 
+      console.log('Backend: testConnector result:', result); // DEBUG LOG
       return result;
     } catch (error) {
-      console.error('Error testing connector:', error);
+      console.error('Backend: Error testing connector:', error); // DEBUG LOG
       return {
         success: false,
         message: 'Failed to test connector',

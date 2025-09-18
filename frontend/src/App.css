@@ -498,7 +498,8 @@ footer {
 .live-preview-card {
   position: sticky;
   top: 24px; /* Adjusted to match main padding */
-  height: calc(100vh - 140px); /* Fill remaining vertical space */
+  /* height: calc(100vh - 140px); */ /* REMOVED */
+  max-height: calc(100vh - 140px); /* ADDED: Set a max-height instead */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -531,7 +532,7 @@ footer {
   border-radius: 12px;
   background-color: #f8f9fa;
   flex-grow: 1; /* Allow it to grow */
-  overflow: auto; /* Allow scrolling if content is too tall */
+  overflow-y: auto; /* Allow scrolling if content is too tall */
   position: relative;
   display: flex;
   align-items: center;
@@ -688,6 +689,7 @@ footer {
     position: static;
     height: auto;
     min-height: 300px;
+    max-height: none; /* Remove max-height on smaller screens if it causes issues */
     padding: 20px;
   }
 
