@@ -12,7 +12,10 @@
     "migrate": "node dist/migrate.js"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "axios": "^1.6.2",
+    "bcryptjs": "^3.0.2",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
     "css-tree": "^2.3.1",
@@ -20,7 +23,9 @@
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "openai": "^5.21.0",
     "pg": "^8.11.3"
   },
   "devDependencies": {
