@@ -191,28 +191,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       parsed.url = urlMatch[0];
     }
 
-    // Check for purpose (flexible matching)
-    let matchedPurpose: string | undefined;
-    for (const purposeOption of formPurposes) {
-      const lowerPurposeOption = purposeOption.toLowerCase();
-      // Check if user input contains the full purpose option, or vice-versa
-      if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerInput)) {
-        matchedPurpose = purposeOption;
-        break;
-      }
-      // More lenient check: if a significant word from the purpose is in the input
-      const wordsInPurpose = lowerPurposeOption.split(/\s*[\/\-]\s*|\s+/).filter(w => w.length > 2); // Split by space, slash, hyphen
-      if (wordsInPurpose.some(word => lowerInput.includes(word))) {
-        matchedPurpose = purposeOption;
-        break;
-      }
-    }
-
-    if (matchedPurpose) {
-      parsed.purpose = matchedPurpose;
-    } else if (currentStep === 'ASK_PURPOSE') {
-      // If no predefined purpose is matched at the ASK_PURPOSE step, treat the user's input as a custom purpose
-      parsed.purpose = input;
+    // Refined purpose parsing: only if currentStep is ASK_PURPOSE
+    if (currentStep === 'ASK_PURPOSE') {
+        let matchedPurpose: string | undefined;
+        for (const purposeOption of formPurposes) {
+            const lowerPurposeOption = purposeOption.toLowerCase();
+            if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerInput)) {
+                matchedPurpose = purposeOption;
+                break;
+            }
+            const wordsInPurpose = lowerPurposeOption.split(/\s*[\/\-]\s*|\s+/).filter(w => w.length > 2);
+            if (wordsInPurpose.some(word => lowerInput.includes(word))) {
+                matchedPurpose = purposeOption;
+                break;
+            }
+        }
+        if (matchedPurpose) {
+            parsed.purpose = matchedPurpose;
+        } else {
+            // If no predefined purpose is matched, treat the user's input as a custom purpose
+            parsed.purpose = input;
+        }
     }
 
 
@@ -301,12 +300,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_DESTINATION_TYPE':
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
-          } else if (parsedInput.url) { // User provided URL again
+          } else if (parsedInput.url) {
             addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
             await processUrlInput(parsedInput.url);
+          } else if (parsedInput.purpose) { // NEW: User entered a purpose when expecting destination
+            addError(`"${parsedInput.purpose}" sounds like a form purpose. I'm currently asking for where to send submissions. Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".`);
           } else {
             addError('Please choose a destination type like "Email", "Google Sheets", "Slack", or "Webhook".');
-            // setIsLoading(false); // Handled by addError
           }
           break;
 
@@ -338,10 +338,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
                 // User provided a *different* destination type, switch to it
                 await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
             }
+          } else if (parsedInput.purpose) { // NEW: User entered a purpose when expecting config
+            addError(`"${parsedInput.purpose}" sounds like a form purpose. I'm currently asking for configuration details for ${selectedDestinationType}.`);
           } else {
-            // No config or destination type provided, invalid input for this step
             addError('Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").');
-            // setIsLoading(false); // Handled by addError
           }
           break;
 
