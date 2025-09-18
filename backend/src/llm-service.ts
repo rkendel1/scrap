@@ -67,6 +67,9 @@ export class LLMService {
     const prompt = this.buildFormGenerationPrompt(websiteData, formPurpose);
 
     try {
+      if (!this.openai) {
+        throw new Error('OpenAI client is not initialized');
+      }
       const completion = await this.openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         messages: [
@@ -125,6 +128,9 @@ Return the adapted form as JSON with the same structure.
 `;
 
     try {
+      if (!this.openai) {
+        throw new Error('OpenAI client is not initialized');
+      }
       const completion = await this.openai.chat.completions.create({
         model: "gpt-4-turbo-preview",
         messages: [
