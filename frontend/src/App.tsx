@@ -301,6 +301,20 @@ function App() {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
               {user ? (
                 <>
+                  <button 
+                    onClick={() => setCurrentView('builder')} 
+                    className="btn btn-secondary"
+                    style={{ fontSize: '14px' }}
+                  >
+                    ✨ New Form
+                  </button>
+                  <button 
+                    onClick={() => setCurrentView('dashboard')} 
+                    className="btn btn-secondary"
+                    style={{ fontSize: '14px' }}
+                  >
+                    📊 My Forms
+                  </button>
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     Welcome, {user.first_name || user.email}
                     {user.subscription_tier === 'paid' && (
