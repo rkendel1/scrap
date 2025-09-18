@@ -221,7 +221,7 @@ Return a JSON object with this structure:
         throw new Error('No JSON found in response');
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch![0]); // Added non-null assertion here
       
       // Validate and set defaults
       return {
