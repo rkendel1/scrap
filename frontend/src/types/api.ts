@@ -78,7 +78,7 @@ export interface GeneratedForm {
     buttonStyle: string;
     maxWidth?: string;
   };
-  // Removed formLayout from GeneratedForm
+  // Removed formLayout
 }
 
 export interface SaaSForm {
@@ -100,6 +100,7 @@ export interface SaaSForm {
   favicon: string;
   // Form-specific fields
   generated_form: GeneratedForm;
+  allowed_domains?: string[]; // Added allowed_domains
 }
 
 // Interface for the conversational form builder's internal state

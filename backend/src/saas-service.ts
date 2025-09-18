@@ -58,6 +58,7 @@ export interface SaaSForm {
   favicon: string;
   // Form-specific fields
   generated_form: GeneratedForm;
+  allowed_domains?: string[]; // Added allowed_domains
 }
 
 export interface EmbedCode {
@@ -701,23 +702,28 @@ export class SaaSService {
     try {
       // Get form data and user subscription
       const formQuery = `
-        SELECT f.id, f.user_id, f.allowed_domains, u.subscription_tier, u.subscription_status
+        SELECT f.id, f.user_id, f.allowed_domains, f.is_live, u.subscription_tier, u.subscription_status
         FROM forms f
         JOIN users u ON f.user_id = u.id
-        WHERE f.id = $1 AND f.user_id = $2 AND f.is_live = true
+        WHERE f.id = $1 AND f.user_id = $2
       `;
       
       const result = await pool.query(formQuery, [formId, userId]);
       
       if (result.rows.length === 0) {
-        return null; // Form not found or not owned by user
+        throw new Error('Form not found or not owned by user.');
       }
       
-      const { allowed_domains, subscription_tier, subscription_status } = result.rows[0];
+      const { allowed_domains, subscription_tier, subscription_status, is_live } = result.rows[0];
       
+      // Check if form is live
+      if (!is_live) {
+        throw new Error('Form must be live to generate a secure embed token.');
+      }
+
       // Check if user's subscription is active
       if (subscription_status !== 'active') {
-        return null; // Inactive subscription
+        throw new Error('Your subscription is not active. Please reactivate it to generate a secure embed token.');
       }
       
       const allowedDomains = allowed_domains || [];
@@ -725,7 +731,7 @@ export class SaaSService {
       return this.embedSecurity.generateEmbedToken(formId, userId, subscription_tier, allowedDomains);
     } catch (error) {
       console.error('Error generating secure embed token:', error);
-      return null;
+      throw error; // Re-throw to be caught by API endpoint
     }
   }
 

@@ -26,19 +26,34 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
       setLoading(true);
       setError(null);
       try {
-        // Fetch form again to get latest allowed_domains
-        const formResponse = await fetch(`/api/forms/${form.id}`, {
+        // Fetch form again to get latest allowed_domains and is_live status
+        const formResponse = await fetch(`${API_BASE}/api/forms/${form.id}`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
         });
         const formResult = await formResponse.json();
         if (formResult.success) {
-          setAllowedDomains(formResult.data.allowed_domains || []);
+          const fetchedForm = formResult.data;
+          setAllowedDomains(fetchedForm.allowed_domains || []);
+
+          // Check if form is live and user subscription is active before attempting to generate token
+          if (!fetchedForm.is_live) {
+            setError('This form is not live. Please activate it in the dashboard to generate a secure embed code.');
+            setEmbedToken(null);
+            setExpiresIn(null);
+            return;
+          }
+          if (user.subscription_status !== 'active') {
+            setError('Your subscription is not active. Please reactivate it to generate a secure embed code.');
+            setEmbedToken(null);
+            setExpiresIn(null);
+            return;
+          }
+
+          // Generate a new token on load if conditions are met
+          await generateNewToken(fetchedForm.id, user.id);
         } else {
           throw new Error(formResult.message || 'Failed to fetch form details');
         }
-
-        // Generate a new token on load
-        await generateNewToken();
       } catch (err: any) {
         setError(err.message || 'Failed to load embed data.');
       } finally {
@@ -47,14 +62,14 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
     };
 
     fetchEmbedData();
-  }, [form.id, user.id]);
+  }, [form.id, user.id, user.subscription_status]);
 
-  const generateNewToken = async () => {
+  const generateNewToken = async (formId: number, userId: number) => {
     setTokenLoading(true);
     setError(null);
     setSuccessMessage(null);
     try {
-      const response = await fetch(`${API_BASE}/api/forms/${form.id}/generate-token`, {
+      const response = await fetch(`${API_BASE}/api/forms/${formId}/generate-token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +85,9 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         throw new Error(result.message || 'Failed to generate token');
       }
     } catch (err: any) {
-      setError(err.message || 'Failed to generate new token.');
+      setError(err.message || 'Failed to generate new token. Ensure the form is live and your subscription is active.');
+      setEmbedToken(null); // Clear token on error
+      setExpiresIn(null);
     } finally {
       setTokenLoading(false);
     }
@@ -123,9 +140,11 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
 
   const scriptEmbedCode = embedToken
     ? `<script src="${API_BASE}/embed.js?id=${form.id}&key=${embedToken}"></script>`
-    : 'Generate a token to see the embed code.';
+    : '<!-- Generate a token to see the secure embed code. -->';
 
   const iframeEmbedCode = `<iframe src="${API_BASE}/embed.html?code=${form.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`;
+
+  const canGenerateToken = form.is_live && user.subscription_status === 'active';
 
   if (loading) {
     return (
@@ -172,17 +191,23 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
           onClick={() => navigator.clipboard.writeText(scriptEmbedCode)}
           className="btn btn-secondary"
           style={{ marginRight: '8px' }}
+          disabled={!embedToken}
         >
           Copy Code
         </button>
         <button
-          onClick={generateNewToken}
-          disabled={tokenLoading}
+          onClick={() => generateNewToken(form.id, user.id)}
+          disabled={tokenLoading || !canGenerateToken}
           className="btn btn-primary"
         >
           {tokenLoading ? 'Generating...' : 'Regenerate Token'}
         </button>
         {expiresIn && <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>Token expires in {expiresIn}</p>}
+        {!canGenerateToken && !error && (
+          <p className="error-message" style={{ marginTop: '8px' }}>
+            Form must be live and your subscription active to generate a secure embed token.
+          </p>
+        )}
       </div>
 
       <div style={{ marginBottom: '32px' }}>
@@ -204,8 +229,9 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                 handleAddDomain();
               }
             }}
+            disabled={domainSaving || !canGenerateToken}
           />
-          <button onClick={handleAddDomain} disabled={domainSaving} className="btn btn-primary">
+          <button onClick={handleAddDomain} disabled={domainSaving || !canGenerateToken} className="btn btn-primary">
             {domainSaving ? 'Adding...' : 'Add Domain'}
           </button>
         </div>
@@ -239,6 +265,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                     lineHeight: '1',
                     padding: 0
                   }}
+                  disabled={domainSaving || !canGenerateToken}
                 >
                   ×
                 </button>
@@ -248,21 +275,25 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         </div>
       </div>
 
-      <div>
-        <h3 style={{ marginBottom: '16px' }}>Legacy Iframe Embed (Not Recommended)</h3>
-        <p style={{ color: '#666', marginBottom: '12px' }}>
-          This method is less secure as it does not support domain restrictions or token expiration. Use with caution.
-        </p>
-        <div className="code-block" style={{ marginBottom: '16px' }}>
-          {iframeEmbedCode}
+      <details style={{ marginBottom: '24px', border: '1px solid #e1e5e9', borderRadius: '8px', padding: '16px', backgroundColor: '#f8f9fa' }}>
+        <summary style={{ fontWeight: 'bold', cursor: 'pointer', color: '#dc3545' }}>
+          Legacy Iframe Embed (Not Recommended)
+        </summary>
+        <div style={{ marginTop: '16px' }}>
+          <p style={{ color: '#666', marginBottom: '12px' }}>
+            This method is less secure as it does not support domain restrictions or token expiration. Use with caution.
+          </p>
+          <div className="code-block" style={{ marginBottom: '16px' }}>
+            {iframeEmbedCode}
+          </div>
+          <button
+            onClick={() => navigator.clipboard.writeText(iframeEmbedCode)}
+            className="btn btn-secondary"
+          >
+            Copy Code
+          </button>
         </div>
-        <button
-          onClick={() => navigator.clipboard.writeText(iframeEmbedCode)}
-          className="btn btn-secondary"
-        >
-          Copy Code
-        </button>
-      </div>
+      </details>
     </div>
   );
 };

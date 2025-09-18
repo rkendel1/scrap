@@ -870,23 +870,16 @@ app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (
     
     const token = await saasService.generateSecureEmbedToken(formId, userId);
     
-    if (!token) {
-      return res.status(404).json({
-        success: false,
-        message: 'Form not found or not accessible'
-      });
-    }
-    
     res.json({
       success: true,
       token,
       expiresIn: '1h'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Generate token error:', error);
-    res.status(500).json({
+    res.status(400).json({ // Use 400 for client-side errors like form not live/subscription inactive
       success: false,
-      message: 'Failed to generate embed token'
+      message: error.message || 'Failed to generate embed token'
     });
   }
 });
