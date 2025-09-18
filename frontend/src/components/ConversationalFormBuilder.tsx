@@ -68,6 +68,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     webhook: '🔗',
   };
 
+  // List of predefined form purposes for matching
+  const formPurposes = [
+    'Lead Generation',
+    'Contact Form',
+    'Newsletter Signup',
+    'Survey/Feedback',
+    'Event Registration',
+    'Support Request',
+    'Quote Request',
+    'Demo Request',
+    'Consultation Booking',
+  ];
+
   // Helper to build the context summary string
   const buildContextSummary = () => {
     let summaryParts: string[] = [];
@@ -178,18 +191,29 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       parsed.url = urlMatch[0];
     }
 
-    // Check for purpose (keywords)
-    const purposeKeywords = ['lead generation', 'contact form', 'newsletter signup', 'survey', 'feedback', 'event registration', 'support request', 'quote request', 'demo request', 'consultation booking'];
-    for (const keyword of purposeKeywords) {
-      if (lowerInput.includes(keyword)) {
-        parsed.purpose = keyword;
+    // Check for purpose (flexible matching)
+    let matchedPurpose: string | undefined;
+    for (const purposeOption of formPurposes) {
+      const lowerPurposeOption = purposeOption.toLowerCase();
+      // Check if user input contains the full purpose option, or vice-versa
+      if (lowerInput.includes(lowerPurposeOption) || lowerPurposeOption.includes(lowerInput)) {
+        matchedPurpose = purposeOption;
+        break;
+      }
+      // More lenient check: if a significant word from the purpose is in the input
+      const wordsInPurpose = lowerPurposeOption.split(/\s*[\/\-]\s*|\s+/).filter(w => w.length > 2); // Split by space, slash, hyphen
+      if (wordsInPurpose.some(word => lowerInput.includes(word))) {
+        matchedPurpose = purposeOption;
         break;
       }
     }
-    if (!parsed.purpose && lowerInput.includes('contact')) parsed.purpose = 'contact form';
-    if (!parsed.purpose && lowerInput.includes('newsletter')) parsed.purpose = 'newsletter signup';
-    if (!parsed.purpose && lowerInput.includes('leads')) parsed.purpose = 'lead generation';
-    if (!parsed.purpose && lowerInput.includes('survey')) parsed.purpose = 'survey/feedback';
+
+    if (matchedPurpose) {
+      parsed.purpose = matchedPurpose;
+    } else if (currentStep === 'ASK_PURPOSE') {
+      // If no predefined purpose is matched at the ASK_PURPOSE step, treat the user's input as a custom purpose
+      parsed.purpose = input;
+    }
 
 
     // Check for destination type
@@ -269,7 +293,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
             await processUrlInput(parsedInput.url);
           } else {
-            addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form").');
+            addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form", or even "tool rental form").');
             // setIsLoading(false); // Handled by addError
           }
           break;
@@ -390,7 +414,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
 
-    addSuccess('Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads for sales", "Get customer feedback")');
+    addSuccess('Website analyzed! Now, what is the main purpose of this form? (e.g., "Collect leads", "Customer feedback", or even "Tool rental form")');
     setCurrentStep('ASK_PURPOSE');
     // setIsLoading(false); // Handled by addSuccess
   };
