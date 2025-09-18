@@ -11,6 +11,44 @@ interface LiveFormPreviewProps {
   extractedVoiceAnalysis: any | null; // New prop
 }
 
+// Helper to determine if a color is light (simplified for demo)
+const isLightColor = (color: string): boolean => {
+  if (!color) return false;
+  let r, g, b;
+
+  // Handle hex colors
+  if (color.startsWith('#')) {
+    const hex = color.slice(1);
+    if (hex.length === 3) { // #rgb
+      r = parseInt(hex[0] + hex[0], 16);
+      g = parseInt(hex[1] + hex[1], 16);
+      b = parseInt(hex[2] + hex[2], 16);
+    } else if (hex.length === 6) { // #rrggbb
+      r = parseInt(hex.substring(0, 2), 16);
+      g = parseInt(hex.substring(2, 4), 16);
+      b = parseInt(hex.substring(4, 6), 16);
+    } else {
+      return false;
+    }
+  } 
+  // Handle rgb/rgba colors
+  else if (color.startsWith('rgb')) {
+    const parts = color.match(/\d+/g)?.map(Number);
+    if (parts && parts.length >= 3) {
+      [r, g, b] = parts;
+    } else {
+      return false;
+    }
+  } else {
+    return false; // Not a recognized color format
+  }
+
+  // Calculate luminance (simplified)
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.7; // Threshold for "light"
+};
+
+
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   formData,
   generatedForm,
@@ -30,7 +68,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     // Default styling, potentially overridden by extracted tokens
     const defaultStyling = {
       primaryColor: extractedDesignTokens?.primaryColors?.[0] || '#007bff',
-      backgroundColor: '#ffffff',
+      backgroundColor: extractedDesignTokens?.colorPalette?.find(color => isLightColor(color)) || '#f8f9fa', // Try to find a light color, else use app's light gray
       fontFamily: extractedDesignTokens?.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif',
       borderRadius: '8px',
       buttonStyle: 'solid',

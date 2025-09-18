@@ -160,6 +160,10 @@ Return the adapted form as JSON with the same structure.
   }
 
   private buildFormGenerationPrompt(websiteData: any, formPurpose: string): string {
+    const primaryColor = websiteData.designTokens.primaryColors?.[0] || '#007bff';
+    const fontFamily = websiteData.designTokens.fontFamilies?.[0] || 'system-ui';
+    const backgroundColor = websiteData.designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+
     return `
 Generate a high-converting form for this website based on the following analysis:
 
@@ -175,6 +179,7 @@ ${JSON.stringify(websiteData.voiceAnalysis, null, 2)}
 Design Tokens:
 - Primary Colors: ${websiteData.designTokens.primaryColors?.slice(0, 3).join(', ')}
 - Font Families: ${websiteData.designTokens.fontFamilies?.slice(0, 3).join(', ')}
+- Extracted Background Color (lightest available): ${backgroundColor}
 
 Messaging Samples:
 ${websiteData.messaging.slice(0, 5).join('\n')}
@@ -182,7 +187,7 @@ ${websiteData.messaging.slice(0, 5).join('\n')}
 Requirements:
 1. Create a form with 3-7 fields appropriate for "${formPurpose}"
 2. Match the website's tone and personality in all copy
-3. Use design tokens that complement the website's aesthetic
+3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', and 'fontFamily' to '${fontFamily}' in the 'styling' object.**
 4. Include validation rules where appropriate
 5. Create compelling CTA text that matches the brand voice
 6. Generate a personalized thank you message
@@ -241,7 +246,7 @@ Return a JSON object with this structure:
         thankYouMessage: parsed.thankYouMessage || 'Thank you for your submission!',
         styling: {
           primaryColor: parsed.styling?.primaryColor || designTokens.primaryColors?.[0] || '#007bff',
-          backgroundColor: parsed.styling?.backgroundColor || '#ffffff',
+          backgroundColor: parsed.styling?.backgroundColor || designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
           fontFamily: parsed.styling?.fontFamily || designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: parsed.styling?.borderRadius || '8px',
           buttonStyle: parsed.styling?.buttonStyle || 'solid'
@@ -263,7 +268,7 @@ Return a JSON object with this structure:
         thankYouMessage: 'Thank you for your message! We\'ll get back to you soon.',
         styling: {
           primaryColor: designTokens.primaryColors?.[0] || '#007bff',
-          backgroundColor: '#ffffff',
+          backgroundColor: designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
           fontFamily: designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: '8px',
           buttonStyle: 'solid'
@@ -379,6 +384,10 @@ Return an array of ${count} JSON objects with the same structure as the original
 
     const fields = purposeFields[formPurpose as keyof typeof purposeFields] || purposeFields.contact;
 
+    const primaryColor = websiteData.designTokens.primaryColors?.[0] || '#007bff';
+    const fontFamily = websiteData.designTokens.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif';
+    const backgroundColor = websiteData.designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+
     return {
       title: `${formPurpose.charAt(0).toUpperCase() + formPurpose.slice(1)} Form`,
       description: `Get in touch with us through this ${formPurpose} form.`,
@@ -386,12 +395,49 @@ Return an array of ${count} JSON objects with the same structure as the original
       ctaText: formPurpose === 'newsletter' ? 'Subscribe' : 'Submit',
       thankYouMessage: `Thank you for your ${formPurpose} submission! We'll get back to you soon.`,
       styling: {
-        primaryColor: '#007bff',
-        backgroundColor: '#ffffff',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        primaryColor: primaryColor,
+        backgroundColor: backgroundColor,
+        fontFamily: fontFamily,
         borderRadius: '8px',
         buttonStyle: 'solid'
       }
     };
   }
+
+  // Helper to determine if a color is light (simplified for demo)
+  private isLightColor = (color: string): boolean => {
+    if (!color) return false;
+    let r, g, b;
+
+    // Handle hex colors
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 3) { // #rgb
+        r = parseInt(hex[0] + hex[0], 16);
+        g = parseInt(hex[1] + hex[1], 16);
+        b = parseInt(hex[2] + hex[2], 16);
+      } else if (hex.length === 6) { // #rrggbb
+        r = parseInt(hex.substring(0, 2), 16);
+        g = parseInt(hex.substring(2, 4), 16);
+        b = parseInt(hex.substring(4, 6), 16);
+      } else {
+        return false;
+      }
+    } 
+    // Handle rgb/rgba colors
+    else if (color.startsWith('rgb')) {
+      const parts = color.match(/\d+/g)?.map(Number);
+      if (parts && parts.length >= 3) {
+        [r, g, b] = parts;
+      } else {
+        return false;
+      }
+    } else {
+      return false; // Not a recognized color format
+    }
+
+    // Calculate luminance (simplified)
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.7; // Threshold for "light"
+  };
 }
