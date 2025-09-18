@@ -1,7 +1,11 @@
+version: "3.9"
+
 services:
   # PostgreSQL Database
   db:
     image: postgres:15-alpine
+    env_file:
+      - ./.env
     environment:
       POSTGRES_DB: ${DB_NAME:-scrap_db}
       POSTGRES_USER: ${DB_USER:-scrap_user}
@@ -22,26 +26,19 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./.env         # shared root env
+      - ./backend/.env # optional backend-specific overrides
     environment:
-      - DATABASE_URL=postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:5432/${DB_NAME:-scrap_db}
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=${DB_NAME:-scrap_db}
-      - DB_USER=${DB_USER:-scrap_user}
-      - DB_PASSWORD=${DB_PASSWORD:-scrap_password}
-      - PORT=3001
-      - NODE_ENV=development
-      - FRONTEND_URL=http://localhost:5173
-      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      # Connector environment variables
-      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
-      - EMAIL_HOST=${EMAIL_HOST}
-      - EMAIL_PORT=${EMAIL_PORT}
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_PASS=${EMAIL_PASS}
-      - GOOGLE_SHEETS_CREDENTIALS=${GOOGLE_SHEETS_CREDENTIALS}
+      DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:5432/${DB_NAME:-scrap_db}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-scrap_db}
+      DB_USER: ${DB_USER:-scrap_user}
+      DB_PASSWORD: ${DB_PASSWORD:-scrap_password}
+      PORT: 3001
+      NODE_ENV: development
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "3001:3001"
     volumes:
@@ -58,8 +55,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    env_file:
+      - ./.env          # shared root env
+      - ./frontend/.env # optional frontend-specific overrides
     environment:
-      - VITE_API_BASE_URL=http://localhost:3001
+      VITE_API_BASE_URL: http://localhost:3001
     ports:
       - "5173:5173"
     volumes:

@@ -83,7 +83,7 @@ export class LLMService {
         max_tokens: 2000,
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const response = completion.choices?.[0]?.message?.content ?? null;
       if (!response) {
         throw new Error('No response from OpenAI');
       }
@@ -141,7 +141,7 @@ Return the adapted form as JSON with the same structure.
         max_tokens: 1500,
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const response = completion.choices?.[0]?.message?.content ?? null;
       if (!response) {
         throw new Error('No response from OpenAI');
       }
@@ -320,7 +320,7 @@ Return an array of ${count} JSON objects with the same structure as the original
         max_tokens: 2500,
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const response = completion.choices?.[0]?.message?.content ?? null;
       if (!response) {
         return [originalForm];
       }

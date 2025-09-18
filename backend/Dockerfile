@@ -1,22 +1,12 @@
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files
 COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+EXPOSE 3000
 
-# Expose port
-EXPOSE 3001
-
-# Start in development mode
-CMD ["npm", "run", "dev"]
+CMD ["npx", "ts-node-dev", "--respawn", "--transpile-only", "src/index.ts"]
