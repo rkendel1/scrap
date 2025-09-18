@@ -217,11 +217,12 @@ Return a JSON object with this structure:
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       
-      // Explicitly check for null and ensure it's a string before parsing
-      if (!jsonMatch || jsonMatch.length === 0 || typeof jsonMatch[0] !== 'string') {
-        throw new Error('No valid JSON string found in response');
+      // Ensure jsonMatch is not null and has at least one element
+      if (!jsonMatch || jsonMatch.length === 0) {
+        throw new Error('No JSON found in response');
       }
 
+      // Now, jsonMatch[0] is guaranteed to exist and be a string
       const jsonString: string = jsonMatch[0]; 
       const parsed = JSON.parse(jsonString);
       
