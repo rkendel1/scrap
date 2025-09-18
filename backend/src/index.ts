@@ -19,11 +19,23 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialize services
-const extractor = new WebsiteExtractor();
-const dbService = new DatabaseService();
-const authService = new AuthService();
-const llmService = new LLMService();
-const saasService = new SaaSService();
+let extractor: WebsiteExtractor;
+let dbService: DatabaseService;
+let authService: AuthService;
+let llmService: LLMService;
+let saasService: SaaSService;
+
+try {
+  extractor = new WebsiteExtractor();
+  dbService = new DatabaseService();
+  authService = new AuthService();
+  llmService = new LLMService();
+  saasService = new SaaSService();
+  console.log('Backend: All services initialized successfully.');
+} catch (initError) {
+  console.error('Backend: Failed to initialize services:', initError);
+  process.exit(1); // Exit if services fail to initialize
+}
 
 // Middleware
 app.use('/embed.html', (req, res, next) => {
