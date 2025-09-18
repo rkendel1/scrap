@@ -946,6 +946,11 @@ app.get('/embed.html', (req, res) => {
   res.sendFile('/app/frontend/public/embed.html'); // Use absolute path
 });
 
+// NEW: Serve test-embed.html from backend
+app.get('/test-embed.html', (req, res) => {
+  res.sendFile('/app/frontend/public/test-embed.html'); // Use absolute path
+});
+
 // Serve embed.js script
 app.get('/embed.js', (req, res) => {
   const { id: formIdParam, key: token } = req.query;
