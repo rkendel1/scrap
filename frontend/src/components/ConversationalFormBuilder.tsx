@@ -23,60 +23,106 @@ interface StepProps {
   extractedVoiceAnalysis?: any;
   createdForm?: SaaSForm | null;
   generatedForm?: GeneratedForm | null;
+  user?: any;
+  guestToken?: string;
 }
 
-// Step 1: Where will this live?
-const Step1UrlInput: React.FC<StepProps> = ({ formData, onNext }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { url: formData.url || '' }
+// New Step 1: Website URL & Form Purpose
+const Step1UrlAndPurposeInput: React.FC<StepProps> = ({ formData, onNext, user, guestToken }) => {
+  const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    defaultValues: { 
+      url: formData.url || '',
+      purpose: formData.purpose || ''
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const onSubmit = async (data: { url: string }) => {
+  const formPurposeValue = watch('purpose');
+
+  const onSubmit = async (data: { url: string; purpose: string }) => {
     setIsLoading(true);
     try {
-      const headers: HeadersInit = {
+      const authHeaders: HeadersInit = {
         'Content-Type': 'application/json',
       };
       if (localStorage.getItem('authToken')) {
-        headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
-      } else if (localStorage.getItem('guestToken')) {
-        // Guest token is not directly used for this endpoint, but good to have auth context
+        authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
       }
 
-      const response = await fetch('/api/forms/extract-design-tokens', {
+      // Step 1.1: Extract design tokens
+      const extractResponse = await fetch('/api/forms/extract-design-tokens', {
         method: 'POST',
-        headers,
+        headers: authHeaders,
         body: JSON.stringify({ url: data.url }),
       });
 
-      const result = await response.json();
+      const extractResult = await extractResponse.json();
       
-      if (result.success) {
+      if (!extractResult.success) {
+        throw new Error(extractResult.error || 'Failed to analyze website. Please check the URL.');
+      }
+
+      const { id: extractedRecordId, designTokens, voiceAnalysis } = extractResult.data;
+
+      // Step 1.2: Generate form using extracted data
+      const generatePayload = {
+        extractedRecordId,
+        formPurpose: data.purpose,
+        formName: formData.formName,
+        formDescription: formData.formDescription,
+        ...(guestToken && !user && { guestToken })
+      };
+
+      const generateResponse = await fetch('/api/forms/generate', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(generatePayload),
+      });
+
+      const generateResult = await generateResponse.json();
+      
+      if (generateResult.success) {
         onNext({ 
           url: data.url, 
-          extractedRecordId: result.data.id,
-          extractedDesignTokens: result.data.designTokens,
-          extractedVoiceAnalysis: result.data.voiceAnalysis,
+          purpose: data.purpose,
+          extractedRecordId,
+          extractedDesignTokens: designTokens,
+          extractedVoiceAnalysis: voiceAnalysis,
+          generatedForm: generateResult.generatedForm,
+          createdForm: generateResult.form,
         });
       } else {
-        alert(result.error || 'Failed to analyze website. Please check the URL.');
+        alert(generateResult.error || 'Failed to generate form');
+        
+        if (generateResult.upgradeRequired) {
+          console.log('Upgrade required for more forms');
+        }
       }
     } catch (error: any) {
-      console.error('URL extraction error:', error);
-      alert(error.message || 'Failed to analyze website. Please try again.');
+      console.error('Form generation error:', error);
+      alert(error.message || 'Failed to generate form. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const commonPurposes = [
+    'Collect leads for our sales team',
+    'Get feedback on our product',
+    'Allow customers to contact support',
+    'Capture newsletter signups',
+    'Register people for events',
+    'Request quotes or consultations',
+    'Gather survey responses'
+  ];
+
   return (
     <div className="card">
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h2>🌐 Where will this live?</h2>
+        <h2>✨ Create Your AI-Powered Form</h2>
         <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          First, let's see the website where you want to embed this form. 
-          We'll analyze its design to make your form blend in perfectly.
+          Enter your website URL and tell us what you want to capture. 
+          Our AI will instantly design a form that matches your brand.
         </p>
       </div>
 
@@ -107,99 +153,6 @@ const Step1UrlInput: React.FC<StepProps> = ({ formData, onNext }) => {
           </small>
         </div>
 
-        <button 
-          type="submit" 
-          className="btn btn-primary"
-          disabled={isLoading}
-          style={{ width: '100%', fontSize: '16px', padding: '16px' }}
-        >
-          {isLoading ? (
-            <>🔍 Analyzing website...</>
-          ) : (
-            'Analyze Website →'
-          )}
-        </button>
-      </form>
-    </div>
-  );
-};
-
-// Step 2: What do you want to capture?
-const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack, extractedDesignTokens, extractedVoiceAnalysis }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm({
-    defaultValues: { purpose: formData.purpose || '' }
-  });
-  const [isLoading, setIsLoading] = useState(false);
-
-  const onSubmit = async (data: { purpose: string }) => {
-    setIsLoading(true);
-    try {
-      const payload = {
-        extractedRecordId: formData.extractedRecordId,
-        formPurpose: data.purpose,
-        formName: formData.formName,
-        formDescription: formData.formDescription,
-        ...(localStorage.getItem('guestToken') && !localStorage.getItem('authToken') && { guestToken: localStorage.getItem('guestToken') })
-      };
-
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json',
-      };
-
-      if (localStorage.getItem('authToken')) {
-        headers['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
-      }
-
-      const response = await fetch('/api/forms/generate', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        onNext({ 
-          purpose: data.purpose,
-          generatedForm: result.generatedForm,
-          createdForm: result.form,
-        });
-      } else {
-        alert(result.error || 'Failed to generate form');
-        
-        if (result.upgradeRequired) {
-          console.log('Upgrade required for more forms');
-        }
-      }
-    } catch (error: any) {
-      console.error('Form generation error:', error);
-      alert(error.message || 'Failed to generate form');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const commonPurposes = [
-    'Collect leads for our sales team',
-    'Get feedback on our product',
-    'Allow customers to contact support',
-    'Capture newsletter signups',
-    'Register people for events',
-    'Request quotes or consultations',
-    'Gather survey responses'
-  ];
-
-  return (
-    <div className="card">
-      <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <h2>📝 What do you want to capture?</h2>
-        <p style={{ fontSize: '18px', color: '#666', margin: '16px 0' }}>
-          Describe what you want this form to do in plain English. 
-          Our AI will figure out the best fields and wording.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit(onSubmit)}>
         <div className="form-group">
           <label htmlFor="purpose" className="form-label" style={{ fontSize: '16px', fontWeight: '500' }}>
             Form Purpose
@@ -241,19 +194,22 @@ const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack, extr
                   padding: '12px',
                   border: '1px solid #e1e5e9',
                   borderRadius: '6px',
-                  backgroundColor: '#f8f9fa',
+                  backgroundColor: formPurposeValue === example ? '#e3f2fd' : '#f8f9fa',
                   textAlign: 'left',
                   fontSize: '14px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s'
+                  transition: 'all 0.2s',
+                  borderColor: formPurposeValue === example ? '#007bff' : '#e1e5e9',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#e9ecef';
                   e.currentTarget.style.borderColor = '#007bff';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#f8f9fa';
-                  e.currentTarget.style.borderColor = '#e1e5e9';
+                  if (formPurposeValue !== example) {
+                    e.currentTarget.style.backgroundColor = '#f8f9fa';
+                    e.currentTarget.style.borderColor = '#e1e5e9';
+                  }
                 }}
               >
                 {example}
@@ -262,35 +218,80 @@ const Step2PurposeInput: React.FC<StepProps> = ({ formData, onNext, onBack, extr
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button 
-            type="button" 
-            onClick={onBack}
-            className="btn btn-secondary"
-            style={{ flex: '1', fontSize: '16px', padding: '16px' }}
-          >
-            ← Back
-          </button>
-          <button 
-            type="submit" 
-            className="btn btn-primary"
-            disabled={isLoading}
-            style={{ flex: '2', fontSize: '16px', padding: '16px' }}
-          >
-            {isLoading ? (
-              <>🤖 Generating form...</>
-            ) : (
-              'Generate Form Fields →'
-            )}
-          </button>
-        </div>
+        {!user && (
+          <div style={{
+            padding: '16px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffeaa7',
+            borderRadius: '4px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+              🎯 Creating as Guest
+            </div>
+            <div style={{ fontSize: '14px', color: '#856404' }}>
+              Sign up after creating your form to manage it, get analytics, and unlock premium features.
+            </div>
+          </div>
+        )}
+
+        {user?.subscription_tier === 'free' && (
+          <div style={{
+            padding: '16px',
+            backgroundColor: '#e3f2fd',
+            border: '1px solid #bbdefb',
+            borderRadius: '4px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ fontWeight: '500', marginBottom: '4px' }}>
+              📊 Free Tier - 1 Live Form
+            </div>
+            <div style={{ fontSize: '14px', color: '#1565c0' }}>
+              Upgrade to Pro for unlimited forms, premium connectors, and analytics.
+            </div>
+          </div>
+        )}
+
+        <button 
+          type="submit" 
+          className="btn btn-primary"
+          disabled={isLoading}
+          style={{ width: '100%', fontSize: '16px', padding: '16px' }}
+        >
+          {isLoading ? (
+            <>
+              <span>🤖 Analyzing & Generating Form...</span>
+            </>
+          ) : (
+            'Generate AI Form ✨'
+          )}
+        </button>
       </form>
+
+      <div style={{ 
+        marginTop: '24px', 
+        padding: '16px', 
+        backgroundColor: '#f8f9fa',
+        borderRadius: '4px',
+        fontSize: '14px'
+      }}>
+        <div style={{ fontWeight: '500', marginBottom: '8px' }}>
+          🎨 What our AI does:
+        </div>
+        <ul style={{ margin: 0, paddingLeft: '20px', color: '#666' }}>
+          <li>Analyzes the target website's design tokens and brand colors</li>
+          <li>Extracts voice, tone, and messaging patterns</li>
+          <li>Generates form fields optimized for your purpose</li>
+          <li>Creates copy that matches the website's personality</li>
+          <li>Applies consistent styling and branding</li>
+        </ul>
+      </div>
     </div>
   );
 };
 
-// Step 3: Configure Destination (now with preview)
-const Step3ConfigureDestination: React.FC<StepProps> = ({ formData, onNext, onBack, createdForm, generatedForm }) => {
+// Step 2: Configure Destination (now with preview)
+const Step2ConfigureDestination: React.FC<StepProps> = ({ formData, onNext, onBack, createdForm, generatedForm }) => {
   const [selectedType, setSelectedType] = useState<string>(formData.destinationType || '');
   const [config, setConfig] = useState(formData.destinationConfig || {});
   const [isSaving, setIsSaving] = useState(false);
@@ -485,8 +486,8 @@ const Step3ConfigureDestination: React.FC<StepProps> = ({ formData, onNext, onBa
   );
 };
 
-// Step 4: Confirmation
-const Step4Confirmation: React.FC<{ 
+// Step 3: Confirmation
+const Step3Confirmation: React.FC<{ 
   generatedForm: GeneratedForm; 
   createdForm: SaaSForm;
   onGoToDashboard: () => void;
@@ -558,7 +559,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const handleBack = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      if (currentStep === 4) { // If going back from final preview, clear generated form
+      if (currentStep === 3) { // If going back from final preview, clear generated form
         setGeneratedForm(null);
         setCreatedForm(null);
       }
@@ -588,12 +589,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           <div style={{
             height: '100%',
             backgroundColor: '#007bff',
-            width: `${((currentStep - 1) / 3) * 100}%`,
+            width: `${((currentStep - 1) / 2) * 100}%`, // Adjusted for 3 steps
             transition: 'width 0.3s ease'
           }}></div>
         </div>
 
-        {[1, 2, 3, 4].map((step) => (
+        {[1, 2, 3].map((step) => ( // Adjusted for 3 steps
           <div
             key={step}
             style={{
@@ -617,8 +618,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         ))}
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', fontSize: '12px', color: '#666' }}>
-        <span>Website</span>
-        <span>Purpose</span>
+        <span>Form Details</span>
         <span>Destination</span>
         <span>Confirmation</span>
       </div>
@@ -630,21 +630,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       <ProgressIndicator />
       
       {currentStep === 1 && (
-        <Step1UrlInput formData={formData} onNext={handleNext} />
-      )}
-      
-      {currentStep === 2 && (
-        <Step2PurposeInput 
+        <Step1UrlAndPurposeInput 
           formData={formData} 
           onNext={handleNext} 
-          onBack={handleBack} 
-          extractedDesignTokens={extractedDesignTokens}
-          extractedVoiceAnalysis={extractedVoiceAnalysis}
+          user={user} 
+          guestToken={guestToken} 
         />
       )}
       
-      {currentStep === 3 && (
-        <Step3ConfigureDestination 
+      {currentStep === 2 && (
+        <Step2ConfigureDestination 
           formData={formData} 
           onNext={handleNext} 
           onBack={handleBack} 
@@ -653,8 +648,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         />
       )}
       
-      {currentStep === 4 && generatedForm && createdForm && (
-        <Step4Confirmation 
+      {currentStep === 3 && generatedForm && createdForm && (
+        <Step3Confirmation 
           generatedForm={generatedForm}
           createdForm={createdForm}
           onGoToDashboard={handleGoToDashboard}
