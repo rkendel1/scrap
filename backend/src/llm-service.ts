@@ -27,8 +27,9 @@ export interface GeneratedForm {
     fontFamily: string;
     borderRadius: string;
     buttonStyle: string;
-    maxWidth?: string; // Added maxWidth
+    maxWidth?: string;
   };
+  formLayout?: 'inline' | 'modal' | 'banner' | 'standalone'; // Added formLayout
 }
 
 export class LLMService {
@@ -192,6 +193,7 @@ Requirements:
 4. Include validation rules where appropriate
 5. Create compelling CTA text that matches the brand voice
 6. Generate a personalized thank you message
+7. **Suggest a 'formLayout' from 'inline', 'modal', 'banner', or 'standalone' based on the form's purpose and typical website integration patterns.**
 
 Return a JSON object with this structure:
 {
@@ -220,8 +222,9 @@ Return a JSON object with this structure:
     "fontFamily": "font family name",
     "borderRadius": "border radius value",
     "buttonStyle": "button styling description",
-    "maxWidth": "e.g., 500px, 75%" // Added maxWidth to expected output
-  }
+    "maxWidth": "e.g., 500px, 75%"
+  },
+  "formLayout": "inline|modal|banner|standalone" // Added formLayout to expected output
 }
 `;
   }
@@ -252,8 +255,9 @@ Return a JSON object with this structure:
           fontFamily: parsed.styling?.fontFamily || designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: parsed.styling?.borderRadius || '8px',
           buttonStyle: parsed.styling?.buttonStyle || 'solid',
-          maxWidth: parsed.styling?.maxWidth || '500px' // Default maxWidth
-        }
+          maxWidth: parsed.styling?.maxWidth || '500px'
+        },
+        formLayout: parsed.formLayout || 'inline' // Default formLayout
       };
     } catch (error) {
       console.error('Error parsing form response:', error);
@@ -275,8 +279,9 @@ Return a JSON object with this structure:
           fontFamily: designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: '8px',
           buttonStyle: 'solid',
-          maxWidth: '500px' // Default maxWidth
-        }
+          maxWidth: '500px'
+        },
+        formLayout: 'inline' // Default formLayout for fallback
       };
     }
   }
@@ -344,10 +349,10 @@ Return an array of ${count} JSON objects with the same structure as the original
       }
 
       // Try to parse multiple variations
-      const variations: GeneratedForm[] = []; 
       const jsonMatches = response.match(/\{[\s\S]*?\}(?=\s*(?:\{|$))/g);
       
       if (jsonMatches) {
+        const variations: GeneratedForm[] = []; 
         for (const match of jsonMatches.slice(0, count)) {
           try {
             const parsed = JSON.parse(match);
@@ -356,9 +361,10 @@ Return an array of ${count} JSON objects with the same structure as the original
             console.warn('Failed to parse form variation:', error);
           }
         }
+        return variations.length > 0 ? variations : [originalForm];
       }
 
-      return variations.length > 0 ? variations : [originalForm];
+      return [originalForm];
     } catch (error) {
       console.error('LLM variation generation error:', error);
       return [originalForm];
@@ -404,8 +410,9 @@ Return an array of ${count} JSON objects with the same structure as the original
         fontFamily: fontFamily,
         borderRadius: '8px',
         buttonStyle: 'solid',
-        maxWidth: '500px' // Default maxWidth
-      }
+        maxWidth: '500px'
+      },
+      formLayout: 'inline' // Default formLayout for mock
     };
   }
 

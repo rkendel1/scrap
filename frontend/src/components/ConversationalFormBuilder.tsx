@@ -26,6 +26,8 @@ type ConversationStep =
   | 'PROCESSING_URL'
   | 'ASK_PURPOSE'
   | 'PROCESSING_PURPOSE'
+  | 'ASK_FORM_LAYOUT' // New step
+  | 'PROCESSING_FORM_LAYOUT' // New step
   | 'ASK_DESTINATION_TYPE'
   | 'ASK_DESTINATION_CONFIG'
   | 'PROCESSING_DESTINATION'
@@ -119,6 +121,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_PURPOSE':
           await processPurposeInput(input);
           break;
+        case 'ASK_FORM_LAYOUT': // New case
+          await processFormLayoutInput(input);
+          break;
         case 'ASK_DESTINATION_TYPE':
           await processDestinationTypeInput(input);
           break;
@@ -146,8 +151,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     try {
       // Directly call the processing function for the current step
-      // This assumes we are always in 'ASK_DESTINATION_TYPE' when these buttons are shown
-      await processDestinationTypeInput(response);
+      switch (currentStep) {
+        case 'ASK_FORM_LAYOUT':
+          await processFormLayoutInput(response);
+          break;
+        case 'ASK_DESTINATION_TYPE':
+          await processDestinationTypeInput(response);
+          break;
+        default:
+          // Fallback or error if quick response is not expected for current step
+          addError('Unexpected quick response. Please follow the current prompt.');
+          setIsLoading(false);
+          break;
+      }
     } catch (err: any) {
       console.error('Quick response processing error:', err);
       addError(err.message || 'An unexpected error occurred. Please try again.');
@@ -245,7 +261,37 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     addPrompt(
       <>
-        Great! Your AI-generated form is ready. You can see a live preview on the right.
+        Your AI-generated form is ready! Now, how would you like this form to be displayed?
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Inline')}>Inline</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Modal')}>Modal</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Banner')}>Banner</button>
+          <button className="btn btn-secondary" onClick={() => handleQuickResponseClick('Standalone')}>Standalone Page</button>
+        </div>
+      </>
+    );
+    setCurrentStep('ASK_FORM_LAYOUT'); // Transition to new step
+    setIsLoading(false);
+  };
+
+  const processFormLayoutInput = async (layoutInput: string) => {
+    const normalizedLayout = layoutInput.toLowerCase().replace(/\s/g, '');
+    const availableLayouts = ['inline', 'modal', 'banner', 'standalone'];
+
+    if (!availableLayouts.includes(normalizedLayout)) {
+      addError('I don\'t recognize that layout type. Please choose from Inline, Modal, Banner, or Standalone Page.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Update the generated form's layout in state
+    setGeneratedForm(prev => prev ? { ...prev, formLayout: normalizedLayout as any } : null);
+    setFormData(prev => ({ ...prev, formLayout: normalizedLayout as any }));
+    setCurrentContextSummary(`Current Form: ${formData.url} | Purpose: ${formData.purpose} | Layout: ${layoutInput}`);
+
+    addPrompt(
+      <>
+        Great! The form preview on the right has been updated to reflect the "{layoutInput}" layout.
         <br />
         Next, where should I send the form submissions?
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>

@@ -76,8 +76,9 @@ export interface GeneratedForm {
     fontFamily: string;
     borderRadius: string;
     buttonStyle: string;
-    maxWidth?: string; // Added maxWidth
+    maxWidth?: string;
   };
+  formLayout?: 'inline' | 'modal' | 'banner' | 'standalone'; // Added formLayout
 }
 
 export interface SaaSForm {
@@ -105,6 +106,7 @@ export interface SaaSForm {
 export interface FormData {
   url: string;
   purpose: string;
+  formLayout?: 'inline' | 'modal' | 'banner' | 'standalone'; // Added formLayout
   destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook';
   destinationConfig?: any;
 }
