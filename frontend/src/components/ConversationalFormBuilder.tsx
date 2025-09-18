@@ -632,7 +632,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
 
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: '16px' }}>
       {currentContextSummary && (
         <div style={{
           padding: '12px',
