@@ -476,6 +476,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setSelectedDestinationType(null);
       setDestinationConfig({});
       setCurrentStep('ASK_URL');
+      setCurrentContextSummary('');
     } else if (userInput.toLowerCase() === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -490,8 +491,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   return (
     <div className="card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {/* Removed: <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>AI Form Chatbot</h2> */}
-      
       {currentContextSummary && (
         <div style={{
           padding: '12px',
@@ -510,12 +509,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       <div
         ref={chatHistoryRef}
         style={{
-          flexGrow: 1, 
-          height: '400px', 
+          maxHeight: '60vh', // Set a max height relative to viewport height
+          overflowY: 'auto', // Enable vertical scrolling
           border: '1px solid #e1e5e9',
           borderRadius: '12px',
           padding: '20px',
-          overflowY: 'auto',
           marginBottom: '20px',
           backgroundColor: '#f0f2f5',
           display: 'flex',
