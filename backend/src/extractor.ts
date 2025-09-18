@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import * as cheerio from 'cheerio';
 import * as csstree from 'css-tree';
 
@@ -47,6 +47,11 @@ export interface ExtractedData {
 }
 
 export class WebsiteExtractor {
+  /**
+   * Extracts design tokens, voice analysis, and other metadata from a given URL.
+   * Note: Some websites employ anti-bot measures (e.g., Cloudflare) that may block scraping requests,
+   * resulting in a 403 Forbidden error. In such cases, try a different URL.
+   */
   async extractWebsiteData(url: string): Promise<ExtractedData> {
     try {
       // Fetch the HTML content
@@ -88,8 +93,11 @@ export class WebsiteExtractor {
       };
 
     } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        throw new Error(`Failed to extract website data: The website (${url}) blocked the request (403 Forbidden). Please try a different URL.`);
+      }
       console.error('Website extraction error:', error);
-      throw new Error(`Failed to extract website data: ${error}`);
+      throw new Error(`Failed to extract website data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
