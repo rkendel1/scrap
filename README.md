@@ -211,6 +211,311 @@ The API includes built-in security and rate limiting:
 4. Add tests if applicable
 5. Submit a pull request
 
+---
+
+# 🐳 Docker Development Setup
+
+## Quick Start with Docker Compose
+
+The project includes a complete Docker Compose setup for local development with PostgreSQL, backend API, and React frontend.
+
+### Prerequisites
+- Docker & Docker Compose installed
+- Git
+
+### 🚀 Launch Development Environment
+
+1. **Clone and navigate to project:**
+```bash
+git clone <repository-url>
+cd scrap
+```
+
+2. **Start all services:**
+```bash
+docker compose up -d
+```
+
+3. **Run database migrations:**
+```bash
+docker compose exec backend npm run migrate
+```
+
+4. **Access the application:**
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:3001
+- **API Docs**: http://localhost:3001/api/docs
+- **Health Check**: http://localhost:3001/health
+
+### 🛠️ Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| `frontend` | 5173 | React app with hot reload |
+| `backend` | 3001 | Express API with TypeScript |
+| `db` | 5432 | PostgreSQL database |
+
+### 🔧 Configuration
+
+The setup uses the following environment files:
+- **Root**: `.env` - Docker Compose variables
+- **Backend**: `backend/.env` - API configuration
+- **Frontend**: `frontend/.env` - React app configuration
+
+### 📝 Development Commands
+
+```bash
+# Start all services
+docker compose up -d
+
+# View logs
+docker compose logs -f [service-name]
+
+# Stop all services
+docker compose down
+
+# Rebuild and restart
+docker compose up --build -d
+
+# Execute commands in containers
+docker compose exec backend npm run migrate
+docker compose exec backend npm run build
+```
+
+---
+
+# 🔌 Connector Testing Guide
+
+The platform includes built-in connectors for integrating with external services. This guide walks you through testing each connector end-to-end.
+
+## 📋 Available Connectors
+
+| Connector | Purpose | Configuration Required |
+|-----------|---------|----------------------|
+| **Email** | Send form submissions via email | SMTP credentials |
+| **Slack** | Post to Slack channels | Webhook URL |
+| **Google Sheets** | Add rows to spreadsheets | Service account credentials |
+| **Airtable** | Create records | API key & base ID |
+| **HubSpot** | Create contacts/leads | API key |
+| **Microsoft Teams** | Team notifications | Webhook URL |
+
+## 🧪 End-to-End Testing Workflow
+
+### 1. Setup Test Environment
+
+**Start the development environment:**
+```bash
+docker compose up -d
+docker compose exec backend npm run migrate
+```
+
+**Access the application:**
+- Open http://localhost:5173 in your browser
+- Create an account or login
+- Create a test form
+
+### 2. Email Connector Testing
+
+**Configure Email Connector:**
+
+1. **Update backend/.env:**
+```env
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USER=your-test-email@gmail.com
+EMAIL_PASS=your-app-password
+```
+
+2. **Test via API:**
+```bash
+# Get auth token first
+curl -X POST http://localhost:3001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password"}'
+
+# Test email connector
+curl -X POST http://localhost:3001/api/forms/1/test-connector \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connectorType": "email",
+    "settings": {
+      "to": "recipient@example.com",
+      "subject": "Test Form Submission"
+    }
+  }'
+```
+
+3. **Verify:**
+   - Check backend logs: `docker compose logs backend`
+   - Look for email sending confirmation
+   - Check recipient inbox
+
+### 3. Slack Connector Testing
+
+**Setup Slack Webhook:**
+
+1. **Create Slack App:**
+   - Go to https://api.slack.com/apps
+   - Create new app → From scratch
+   - Select your workspace
+
+2. **Enable Incoming Webhooks:**
+   - Go to "Incoming Webhooks" → Activate
+   - Click "Add New Webhook to Workspace"
+   - Select channel and copy webhook URL
+
+3. **Configure Environment:**
+```env
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+```
+
+4. **Test Connector:**
+```bash
+curl -X POST http://localhost:3001/api/forms/1/test-connector \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connectorType": "slack",
+    "settings": {
+      "webhookUrl": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+      "channel": "#general"
+    }
+  }'
+```
+
+5. **Verify:**
+   - Check Slack channel for test message
+   - Verify message formatting and content
+
+### 4. Google Sheets Connector Testing
+
+**Setup Google Sheets Access:**
+
+1. **Create Service Account:**
+   - Go to Google Cloud Console
+   - Enable Google Sheets API
+   - Create service account
+   - Download JSON credentials
+
+2. **Configure Credentials:**
+```bash
+# Base64 encode the service account JSON
+cat service-account.json | base64 -w 0
+```
+
+```env
+GOOGLE_SHEETS_CREDENTIALS=your-base64-encoded-json
+```
+
+3. **Prepare Test Sheet:**
+   - Create Google Sheet
+   - Share with service account email
+   - Copy spreadsheet ID from URL
+
+4. **Test Connector:**
+```bash
+curl -X POST http://localhost:3001/api/forms/1/test-connector \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "connectorType": "googleSheets",
+    "settings": {
+      "spreadsheetId": "your-spreadsheet-id",
+      "sheetName": "Sheet1"
+    }
+  }'
+```
+
+5. **Verify:**
+   - Check Google Sheet for new row
+   - Verify data mapping
+
+### 5. Complete Form Submission Flow
+
+**Test Real Form Submission:**
+
+1. **Create Form in UI:**
+   - Open http://localhost:5173
+   - Navigate to form builder
+   - Create test form with fields
+
+2. **Configure Connectors:**
+   - Go to form settings
+   - Add and configure desired connectors
+   - Save configuration
+
+3. **Submit Test Data:**
+   - Use the form's public URL
+   - Fill out and submit form
+   - Monitor all configured connectors
+
+4. **Verify End-to-End:**
+   - Check each connector received data
+   - Verify data format and completeness
+   - Review logs for any errors
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**Database Connection Errors:**
+```bash
+# Check database status
+docker compose logs db
+
+# Restart database
+docker compose restart db
+```
+
+**Backend Build Failures:**
+```bash
+# Rebuild backend
+docker compose build backend
+docker compose up -d backend
+```
+
+**Connector Authentication Issues:**
+- Verify environment variables are set correctly
+- Check credential formats (base64 encoding for Google Sheets)
+- Ensure external service permissions are configured
+
+**CORS Issues:**
+- Verify `FRONTEND_URL` is set correctly in backend/.env
+- Check that frontend is accessible at configured URL
+
+### Debugging Tips
+
+1. **Monitor Logs:**
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f backend
+```
+
+2. **Check Environment Variables:**
+```bash
+docker compose exec backend env | grep -E "(EMAIL|SLACK|GOOGLE)"
+```
+
+3. **Test API Directly:**
+```bash
+# Health check
+curl http://localhost:3001/health
+
+# Connector definitions
+curl http://localhost:3001/api/connector-definitions
+```
+
+## 🔒 Security Notes
+
+- Never commit real credentials to version control
+- Use environment variables for all sensitive data
+- Rotate API keys and tokens regularly
+- Test with non-production accounts when possible
+
 ## License
 
 ISC License

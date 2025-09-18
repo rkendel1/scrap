@@ -31,17 +31,21 @@ export interface GeneratedForm {
 }
 
 export class LLMService {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
+  private isEnabled: boolean;
 
   constructor() {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required');
-    }
+    this.isEnabled = !!apiKey;
     
-    this.openai = new OpenAI({
-      apiKey: apiKey,
-    });
+    if (apiKey) {
+      this.openai = new OpenAI({
+        apiKey: apiKey,
+      });
+    } else {
+      this.openai = null;
+      console.warn('⚠️  OPENAI_API_KEY not configured - AI form generation disabled (development mode)');
+    }
   }
 
   async generateFormFromWebsite(
@@ -55,6 +59,11 @@ export class LLMService {
     },
     formPurpose: string
   ): Promise<GeneratedForm> {
+    if (!this.isEnabled || !this.openai) {
+      console.log('📝 OpenAI not available - returning mock form for development');
+      return this.generateMockForm(websiteData, formPurpose);
+    }
+
     const prompt = this.buildFormGenerationPrompt(websiteData, formPurpose);
 
     try {
@@ -273,6 +282,11 @@ Return a JSON object with this structure:
   }
 
   async generateFormVariations(originalForm: GeneratedForm, count: number = 3): Promise<GeneratedForm[]> {
+    if (!this.isEnabled || !this.openai) {
+      console.log('📝 OpenAI not available - returning original form only');
+      return [originalForm];
+    }
+
     const prompt = `
 Create ${count} variations of this form for A/B testing:
 
@@ -331,5 +345,44 @@ Return an array of ${count} JSON objects with the same structure as the original
       console.error('LLM variation generation error:', error);
       return [originalForm];
     }
+  }
+
+  private generateMockForm(websiteData: any, formPurpose: string): GeneratedForm {
+    const purposeFields = {
+      'contact': [
+        { type: 'text' as const, name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+        { type: 'email' as const, name: 'email', label: 'Email Address', placeholder: 'your@email.com', required: true },
+        { type: 'phone' as const, name: 'phone', label: 'Phone Number', placeholder: '(555) 123-4567', required: false },
+        { type: 'textarea' as const, name: 'message', label: 'Message', placeholder: 'How can we help you?', required: true }
+      ],
+      'newsletter': [
+        { type: 'text' as const, name: 'firstName', label: 'First Name', placeholder: 'Enter your first name', required: true },
+        { type: 'email' as const, name: 'email', label: 'Email Address', placeholder: 'your@email.com', required: true }
+      ],
+      'quote': [
+        { type: 'text' as const, name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+        { type: 'email' as const, name: 'email', label: 'Email Address', placeholder: 'your@email.com', required: true },
+        { type: 'text' as const, name: 'company', label: 'Company Name', placeholder: 'Your company', required: false },
+        { type: 'select' as const, name: 'service', label: 'Service Interest', required: true, options: ['Consulting', 'Development', 'Support', 'Training'] },
+        { type: 'textarea' as const, name: 'requirements', label: 'Project Requirements', placeholder: 'Describe your project needs', required: true }
+      ]
+    };
+
+    const fields = purposeFields[formPurpose as keyof typeof purposeFields] || purposeFields.contact;
+
+    return {
+      title: `${formPurpose.charAt(0).toUpperCase() + formPurpose.slice(1)} Form`,
+      description: `Get in touch with us through this ${formPurpose} form.`,
+      fields,
+      ctaText: formPurpose === 'newsletter' ? 'Subscribe' : 'Submit',
+      thankYouMessage: `Thank you for your ${formPurpose} submission! We'll get back to you soon.`,
+      styling: {
+        primaryColor: '#007bff',
+        backgroundColor: '#ffffff',
+        fontFamily: 'system-ui, -apple-system, sans-serif',
+        borderRadius: '8px',
+        buttonStyle: 'solid'
+      }
+    };
   }
 }
