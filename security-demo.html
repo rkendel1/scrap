@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FormCraft AI Security Demo</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .demo-section {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .security-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .secure { background: #d4edda; color: #155724; }
+        .insecure { background: #f8d7da; color: #721c24; }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin: 24px 0;
+        }
+        .feature-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .feature-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+        .check { color: #28a745; }
+        .cross { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>🔒 FormCraft AI Security Demo</h1>
+    <p>This page demonstrates the security improvements implemented for FormCraft AI's embed system.</p>
+
+    <div class="demo-section">
+        <h2>🛡️ Security Features Overview</h2>
+        <div class="feature-list">
+            <div class="feature-card">
+                <div class="feature-icon">🎫</div>
+                <h3>JWT-Based Tokens</h3>
+                <p>Short-lived signed tokens replace simple embed codes, preventing unauthorized access.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌐</div>
+                <h3>Domain Validation</h3>
+                <p>Whitelist specific domains that can embed your forms, with wildcard support.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Rate Limiting</h3>
+                <p>Prevent abuse with subscription-tier based rate limits (10-100 submissions/hour).</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💳</div>
+                <h3>Subscription Enforcement</h3>
+                <p>Real-time validation ensures only active subscribers can use forms.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="demo-section">
+        <h2>📋 Old vs New Implementation</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Old System (Iframe)</th>
+                    <th>New System (Secure JS)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Authentication</td>
+                    <td><span class="cross">❌</span> Simple embed codes</td>
+                    <td><span class="check">✅</span> Signed JWT tokens</td>
+                </tr>
+                <tr>
+                    <td>Domain Restrictions</td>
+                    <td><span class="cross">❌</span> None</td>
+                    <td><span class="check">✅</span> Configurable whitelist</td>
+                </tr>
+                <tr>
+                    <td>Rate Limiting</td>
+                    <td><span class="cross">❌</span> Basic global limits</td>
+                    <td><span class="check">✅</span> Per-form, per-IP, subscription-aware</td>
+                </tr>
+                <tr>
+                    <td>Token Expiry</td>
+                    <td><span class="cross">❌</span> Permanent codes</td>
+                    <td><span class="check">✅</span> 1-hour expiration</td>
+                </tr>
+                <tr>
+                    <td>Subscription Validation</td>
+                    <td><span class="cross">❌</span> No real-time checks</td>
+                    <td><span class="check">✅</span> Live subscription status</td>
+                </tr>
+                <tr>
+                    <td>Security Headers</td>
+                    <td><span class="cross">❌</span> Basic</td>
+                    <td><span class="check">✅</span> Enhanced validation</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="demo-section">
+        <h2>🚫 Old Insecure Method</h2>
+        <div class="security-badge insecure">❌ DEPRECATED - SECURITY RISK</div>
+        <p>The old iframe method allowed anyone to copy and use embed codes without authorization:</p>
+        <div class="code-block">&lt;iframe src="https://formcraft.ai/embed.html?code=embed_abc123def456" 
+        width="100%" height="500" frameborder="0"&gt;&lt;/iframe&gt;</div>
+        <p><strong>Security Issues:</strong></p>
+        <ul>
+            <li>No domain restrictions - anyone can embed forms anywhere</li>
+            <li>Permanent codes - no expiration or regeneration</li>
+            <li>No subscription validation - works even with cancelled accounts</li>
+            <li>No rate limiting per form - vulnerable to abuse</li>
+        </ul>
+    </div>
+
+    <div class="demo-section">
+        <h2>✅ New Secure Method</h2>
+        <div class="security-badge secure">✅ SECURE - RECOMMENDED</div>
+        <p>The new JavaScript embed method uses signed tokens and domain validation:</p>
+        <div class="code-block">&lt;script src="https://formcraft.ai/embed.js?id=123&amp;key=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."&gt;&lt;/script&gt;</div>
+        <p><strong>Security Features:</strong></p>
+        <ul>
+            <li>Domain whitelist - only authorized domains can load forms</li>
+            <li>Time-limited tokens - 1-hour expiration for security</li>
+            <li>Real-time subscription checks - inactive accounts blocked immediately</li>
+            <li>Enhanced rate limiting - per-form, per-IP, subscription-aware</li>
+            <li>Signed tokens - prevents tampering and unauthorized access</li>
+        </ul>
+    </div>
+
+    <div class="demo-section">
+        <h2>🔧 Implementation Details</h2>
+        <h3>1. Token Generation</h3>
+        <div class="code-block">POST /api/forms/:id/generate-token
+Authorization: Bearer &lt;user_token&gt;
+
+Response:
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": "1h"
+}</div>
+
+        <h3>2. Domain Configuration</h3>
+        <div class="code-block">PUT /api/forms/:id/allowed-domains
+Authorization: Bearer &lt;user_token&gt;
+Content-Type: application/json
+
+{
+  "allowedDomains": [
+    "example.com",
+    "*.mydomain.com",
+    "app.company.com"
+  ]
+}</div>
+
+        <h3>3. Secure Form Loading</h3>
+        <div class="code-block">POST /api/forms/embed-secure
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "hostname": "example.com"
+}</div>
+
+        <h3>4. Secure Form Submission</h3>
+        <div class="code-block">POST /api/forms/submit-secure
+Content-Type: application/json
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "data": {
+    "name": "John Doe",
+    "email": "john@example.com",
+    "message": "Hello world"
+  },
+  "hostname": "example.com"
+}</div>
+    </div>
+
+    <div class="demo-section">
+        <h2>🎯 Rate Limiting</h2>
+        <table class="comparison-table">
+            <thead>
+                <tr>
+                    <th>Subscription Tier</th>
+                    <th>Submissions per Hour</th>
+                    <th>Domain Restrictions</th>
+                    <th>Analytics</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Free</td>
+                    <td>10 per IP</td>
+                    <td><span class="check">✅</span> Supported</td>
+                    <td><span class="cross">❌</span> Basic</td>
+                </tr>
+                <tr>
+                    <td>Paid</td>
+                    <td>100 per IP</td>
+                    <td><span class="check">✅</span> Supported</td>
+                    <td><span class="check">✅</span> Advanced</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="demo-section">
+        <h2>🚀 Migration Guide</h2>
+        <p>To upgrade from the old insecure embed system to the new secure system:</p>
+        <ol>
+            <li><strong>Configure Domain Whitelist:</strong> Add authorized domains in the form builder</li>
+            <li><strong>Generate Secure Token:</strong> Click "Generate Secure Embed Code" in the form builder</li>
+            <li><strong>Update Website:</strong> Replace old iframe tags with new script tags</li>
+            <li><strong>Test Functionality:</strong> Verify forms load and submit correctly</li>
+            <li><strong>Monitor Usage:</strong> Check analytics for any blocked attempts</li>
+        </ol>
+        <p><strong>Note:</strong> Old iframe embeds will continue to work during the transition period, but should be migrated for enhanced security.</p>
+    </div>
+
+    <script>
+        // Demo script to show how the secure embed system works
+        console.log('🔒 FormCraft AI Security Demo Loaded');
+        console.log('This page demonstrates the security features without actual form embedding.');
+        console.log('In production, the secure embed.js would:');
+        console.log('1. Validate the JWT token');
+        console.log('2. Check the current domain against the whitelist');
+        console.log('3. Load the form only if validation passes');
+        console.log('4. Handle submissions with rate limiting');
+    </script>
+</body>
+</html>
