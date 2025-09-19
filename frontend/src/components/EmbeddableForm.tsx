@@ -196,6 +196,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         textAlign: 'center' as const,
         border: '1px solid #e1e5e9',
         maxWidth: form.styling.maxWidth || '100%', // Apply maxWidth here
+        width: '100%', // Ensure it takes full width of its container
         margin: '0 auto', // Center the form
         maxHeight: '100%', // Ensure it doesn't grow beyond parent
         overflowY: 'auto' // Add internal scroll if content is too tall
@@ -225,6 +226,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
       fontFamily: form.styling.fontFamily || 'system-ui',
       border: '1px solid #e1e5e9',
       maxWidth: form.styling.maxWidth || '100%', // Apply maxWidth here
+      width: '100%', // Ensure it takes full width of its container
       margin: '0 auto', // Center the form
       maxHeight: '100%', // Ensure it doesn't grow beyond parent
       overflowY: 'auto' // Add internal scroll if content is too tall

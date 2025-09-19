@@ -176,6 +176,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         borderRadius: '8px',
         fontFamily: 'system-ui',
         maxWidth: '500px', // Adjusted max-width
+        width: '100%', // Ensure it takes full width of its container
         margin: '0 auto',
         textAlign: 'left',
         marginTop: 'auto', /* Pushes this div to the bottom */
@@ -184,7 +185,6 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         border: '1px solid #e1e5e9',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
         flexShrink: 0, /* Prevent it from shrinking */
-        width: '100%', /* Ensure it takes full width */
       }}>
         <summary style={{ 
           fontWeight: '600', 
@@ -346,14 +346,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   
 
   // Determine the appropriate justify-content class for the wrapper
-  let wrapperJustifyClass = '';
-  if (isZeroState && hasAnalysisData) {
-    wrapperJustifyClass = 'justify-end'; // Push analysis to bottom in zero state
-  } else if (isZeroState && !hasAnalysisData) {
-    wrapperJustifyClass = 'justify-center'; // Center placeholder in zero state
-  } else {
-    wrapperJustifyClass = 'justify-start'; // Default for when form is present (form + analysis below)
-  }
+  // Always center vertically now
+  let wrapperJustifyClass = 'justify-center'; 
 
   return (
     <div className={`live-preview-card ${className || ''}`}>
