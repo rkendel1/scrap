@@ -11,7 +11,7 @@ export interface EmbedTokenPayload {
 
 export class EmbedSecurityService {
   private readonly JWT_SECRET = process.env.EMBED_JWT_SECRET || process.env.JWT_SECRET || 'embed-secret-change-in-production';
-  private readonly TOKEN_EXPIRES_IN = '1h'; // Short-lived tokens
+  private readonly TOKEN_EXPIRES_IN = '12h'; // Changed from '1h' to '12h'
 
   /**
    * Generate a signed JWT token for form embedding
