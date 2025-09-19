@@ -30,7 +30,6 @@ services:
       - ./.env         # shared root env
       - ./backend/.env # optional backend-specific overrides
     environment:
-      # DATABASE_URL is constructed here as it depends on DB_HOST, DB_PORT, etc.
       DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:${DB_PORT:-5432}/${DB_NAME:-scrap_db}
       # Removed redundant DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, PORT, NODE_ENV, FRONTEND_URL
       # These are now sourced from ./.env or backend/.env via env_file
@@ -55,12 +54,7 @@ services:
     env_file:
       - ./.env          # shared root env
       - ./frontend/.env # optional frontend-specific overrides
-    environment:
-      # Removed redundant VITE_API_BASE_URL, it's now sourced from ./.env or frontend/.env
-      # The VITE_API_BASE_URL should be explicitly set in frontend/.env or .env
-      # If it's in .env, it will be picked up.
-      # If it's in frontend/.env, it will override.
-      # No need to explicitly set it here if it's in an env_file.
+    # Removed the empty 'environment:' block as it's not needed and causes a YAML error.
     ports:
       - "5173:5173"
     volumes:
