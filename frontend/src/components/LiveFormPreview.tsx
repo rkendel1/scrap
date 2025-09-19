@@ -275,7 +275,6 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${isZeroState ? 'is-zero-state' : ''}`}>
-        {/* This div will take up available space, pushing the analysis summary to the bottom */}
         <div
           style={{
             display: 'flex',
@@ -287,6 +286,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             padding: '20px',
             boxSizing: 'border-box',
             flexGrow: 1, /* This makes it take up available space */
+            minHeight: 0, /* Allow content to shrink */
+            overflowY: 'auto' /* Add scroll to this inner div if form content is too tall */
           }}
         >
           {/* Render Form Content if available */}
@@ -320,83 +321,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         </div>
       )}
 
-      {/* Only show embed section if not hidden and createdForm exists */}
-      {createdForm && !hideEmbedSection && (
-        <div className="ready-to-embed-card">
-          <h3>Ready to embed?</h3>
-          <p>
-            Your form is configured and ready to use. Get the embed code
-            to add it to your website.
-          </p>
-          <button 
-            onClick={() => onGetEmbedCodeClick?.(createdForm)} // Use optional chaining
-            className="btn-embed-code"
-          >
-            {showEmbedCodeSection ? <EyeOff size={18} /> : <Lock size={18} />}
-            {showEmbedCodeSection ? 'Hide Embed Code' : 'Get Embed Code'}
-          </button>
-          {!user && (
-            <p style={{ 
-              marginTop: '12px', 
-              fontSize: '13px', 
-              color: '#a0aec0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}>
-              <Lock size={16} /> Sign in or register to activate your form and ensure it never expires.
-            </p>
-          )}
-
-          {/* NEW: Embed Code Display Section */}
-          {showEmbedCodeSection && (
-            <div style={{ 
-              marginTop: '24px', 
-              backgroundColor: '#2d3748', // Darker background for code block
-              borderRadius: '8px', 
-              padding: '16px',
-              textAlign: 'left'
-            }}>
-              <h4 style={{ color: 'white', fontSize: '16px', marginBottom: '12px' }}>
-                JavaScript Embed Code
-              </h4>
-              <p style={{ color: '#a0aec0', fontSize: '13px', marginBottom: '12px' }}>
-                Copy and paste this code into your website's HTML where you want the form to appear.
-              </p>
-              <div className="code-block" style={{ 
-                backgroundColor: '#1a202c', // Even darker for code itself
-                color: '#48bb78', // Greenish text for code
-                border: '1px solid #4a5568',
-                padding: '12px',
-                borderRadius: '6px',
-                overflowX: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
-                fontSize: '13px'
-              }}>
-                {scriptEmbedCode}
-              </div>
-              <button 
-                onClick={handleCopyCode}
-                className="btn-embed-code"
-                style={{ marginTop: '16px', backgroundColor: '#4a5568' }}
-              >
-                <Copy size={18} />
-                Copy Code
-              </button>
-              <button 
-                onClick={onToggleEmbedCodeSection}
-                className="btn-embed-code"
-                style={{ marginTop: '16px', marginLeft: '8px', backgroundColor: '#4a5568' }}
-              >
-                <EyeOff size={18} />
-                Hide Code
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Removed the "Ready to embed?" section entirely */}
     </div>
   );
 };
