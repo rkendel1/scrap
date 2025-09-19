@@ -22,10 +22,17 @@ html, body, #root, .App {
   flex-direction: column;
 }
 
+/* Define CSS variables for consistent sizing */
+:root {
+  --header-height: 50px; /* Adjusted header height */
+  --main-padding-y: 24px; /* Vertical padding for main content */
+  --chat-input-height: 80px; /* Height for input and quick replies */
+}
+
 .container {
-  max-width: 1280px;
+  max-width: 1400px; /* Increased overall width */
   margin: 0 auto;
-  padding: 20px;
+  padding: 0 20px; /* Horizontal padding only, vertical handled by main */
   width: 100%;
   box-sizing: border-box;
 }
@@ -33,22 +40,27 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 0px 0; /* This padding is on the header itself, not the content inside */
+  height: var(--header-height); /* Fixed height for header */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  position: relative; /* Needed for z-index to work */
-  z-index: 10; /* Ensure header is always on top */
+  position: relative;
+  z-index: 10;
+  display: flex; /* Use flex to center content vertically */
+  align-items: center;
 }
 
-/* Specific padding for the container inside the header to control its height */
 .header .container {
-  padding: 10px 20px; /* Reduced vertical padding for a shorter header */
+  padding: 0; /* Remove padding from container inside header, handled by header flex */
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%; /* Take full height of header */
 }
 
 .header .logo {
   display: flex;
   align-items: center;
-  font-size: 14px; /* Reduced font size */
+  font-size: 14px;
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.5px;
@@ -57,41 +69,41 @@ html, body, #root, .App {
 .header .logo-icon {
   background-color: #007bff;
   color: white;
-  width: 12px; /* Reduced size */
-  height: 12px; /* Reduced size */
-  border-radius: 4px; /* Adjusted border-radius for smaller size */
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 8px; /* Reduced font size */
+  font-size: 8px;
   margin-right: 8px;
 }
 
-/* New class for smaller header buttons */
 .btn-header-small {
-  padding: 6px 12px; /* Smaller padding */
-  font-size: 12px;   /* Smaller font size */
-  border-radius: 6px; /* Slightly smaller border-radius */
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 6px;
 }
 
 /* Main Content Area */
 main {
   flex-grow: 1;
-  padding: 24px 0;
-  display: flex; /* Make main a flex container */
+  padding: var(--main-padding-y) 0; /* Vertical padding for main content */
+  display: flex;
   align-items: stretch;
   gap: 24px;
-  background-color: #f0f2f5; /* Match body background */
-  height: calc(100vh - 100px); /* Adjusted height for better fit */
+  background-color: #f0f2f5;
+  /* Calculate height to fill remaining viewport space */
+  height: calc(100vh - var(--header-height) - (var(--main-padding-y) * 2)); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
 /* Styles for the conversational builder layout */
 .builder-layout {
   display: flex;
-  flex-direction: row; /* Always row for builder layout */
+  flex-direction: row;
   gap: 24px;
-  flex: 1; /* Take full width of main */
+  flex: 1;
   height: 100%; /* Take full height of main */
 }
 
@@ -99,20 +111,17 @@ main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 50%; /* Each column takes half width */
+  max-width: 50%;
+  height: 100%; /* Take full height of parent */
 }
 
 .preview-column {
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 50%; /* Each column takes half width */
+  max-width: 50%;
+  height: 100%; /* Take full height of parent */
 }
-
-/* FormEditor will now be a direct child of main and use its internal grid */
-/* No specific styles needed for FormEditor as a direct child of main,
-   its internal grid handles the layout. */
-
 
 /* Card Component */
 .card {
@@ -120,7 +129,7 @@ main {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
   padding: 24px;
-  margin-bottom: 0; /* Remove default margin-bottom */
+  margin-bottom: 0;
   border: 1px solid #e1e5e9;
   transition: all 0.3s ease;
 }
@@ -361,11 +370,6 @@ main {
   }
 }
 
-/* Specific styles for the conversational builder and preview */
-/* Removed .App > main > div styles as they are now handled by .builder-column and .preview-column */
-/* Removed .App > main flex-direction: row as it's now handled by .builder-layout */
-
-
 /* Fixed Error Message */
 .fixed-error-alert {
   position: fixed;
@@ -413,14 +417,14 @@ main {
   display: flex;
   flex-direction: column;
   flex: 1;
-  padding-bottom: 16px; /* Keep internal padding */
-  overflow: hidden;
+  height: 100%; /* Take full height of parent column */
+  padding-bottom: 0; /* Remove bottom padding, handled by chat input container */
+  overflow: hidden; /* Hide overflow from internal elements */
 }
 
 /* Chat History Container */
 .chat-history-container {
   flex: 1 1 auto; /* Evenly share remaining space, allow to grow and shrink */
-  /* Removed overflow-y: auto; scrolling handled in .chat-history-scroll */
   display: flex;
   flex-direction: column;
   margin-bottom: 12px;
@@ -430,50 +434,51 @@ main {
 .chat-history-scroll {
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow-y: auto; /* Enable internal scrolling */
   border: 1px solid #e1e5e9;
   border-radius: 12px;
   padding: 16px;
-  background-color: #f8f9fa; /* Lighter background for chat area */
-  /* Removed display: flex and flex-direction: column; inherited from parent */
-  gap: 16px; /* Increased gap for more spacing */
+  background-color: #f8f9fa;
+  gap: 16px;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
+  display: flex; /* Ensure flex for chat bubbles */
+  flex-direction: column; /* Stack chat bubbles */
 }
 
 /* Chat Bubbles */
 .chat-bubble {
   max-width: 75%;
   padding: 10px 14px;
-  border-radius: 10px; /* Smaller radius for bubbles */
+  border-radius: 10px;
   font-size: 14px;
   line-height: 1.4;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  position: relative; /* For timestamp positioning */
+  position: relative;
 }
 
 .chat-bubble.user {
-  background-color: #007bff; /* User blue */
+  background-color: #007bff;
   color: white;
   align-self: flex-end;
-  border-bottom-right-radius: 4px; /* Pointed corner */
+  border-bottom-right-radius: 4px;
 }
 
 .chat-bubble.prompt {
-  background-color: #e9ecef; /* AI light gray */
+  background-color: #e9ecef;
   color: #333;
   align-self: flex-start;
-  border-bottom-left-radius: 4px; /* Pointed corner */
+  border-bottom-left-radius: 4px;
 }
 
 .chat-bubble.error {
-  background-color: #f8d7da; /* Light red */
+  background-color: #f8d7da;
   color: #721c24;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
 }
 
 .chat-bubble.success {
-  background-color: #d4edda; /* Light green */
+  background-color: #d4edda;
   color: #155724;
   align-self: flex-start;
   border-bottom-left-radius: 4px;
@@ -481,9 +486,9 @@ main {
 
 .chat-timestamp {
   font-size: 10px;
-  color: rgba(0,0,0,0.4); /* Darker for AI, lighter for user */
+  color: rgba(0,0,0,0.4);
   position: absolute;
-  bottom: -14px; /* Position below bubble */
+  bottom: -14px;
   white-space: nowrap;
 }
 
@@ -502,42 +507,42 @@ main {
 
 /* Quick Reply Buttons */
 .quick-reply-container {
-  margin-top: 12px; /* Adjusted margin */
+  margin-top: 12px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px; /* Adjusted gap */
+  gap: 8px;
   justify-content: flex-start;
   flex-shrink: 0;
 }
 
 .quick-reply-btn {
-  padding: 8px 14px; /* Adjusted padding */
-  border: 1px solid #e1e5e9; /* Light border */
-  border-radius: 8px; /* Slightly less rounded for a card-like feel */
-  font-size: 13px; /* Adjusted font size */
+  padding: 8px 14px;
+  border: 1px solid #e1e5e9;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  background-color: #ffffff; /* White background */
-  color: #495057; /* Darker text */
+  background-color: #ffffff;
+  color: #495057;
   text-align: center;
   white-space: nowrap;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-  display: flex; /* Enable flex for icon and text alignment */
+  display: flex;
   align-items: center;
-  gap: 6px; /* Space between icon and text */
+  gap: 6px;
 }
 
 .quick-reply-btn:hover {
-  background-color: #f8f9fa; /* Lighter background on hover */
-  border-color: #ced4da; /* Slightly darker border on hover */
+  background-color: #f8f9fa;
+  border-color: #ced4da;
   color: #333;
-  transform: translateY(-1px); /* Subtle lift effect */
+  transform: translateY(-1px);
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .quick-reply-btn svg {
-  width: 16px; /* Icon size */
+  width: 16px;
   height: 16px;
 }
 
@@ -548,6 +553,8 @@ main {
   gap: 10px;
   margin-top: 12px;
   flex-shrink: 0;
+  padding-top: 12px; /* Add padding to separate from quick replies */
+  border-top: 1px solid #e1e5e9; /* Separator line */
 }
 
 .form-input-container .form-input {
@@ -565,23 +572,23 @@ main {
 
 /* Live Preview Specifics */
 .live-preview-card {
-  /* Removed position: sticky, top, and max-height for static height */
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; /* Align to top */
+  justify-content: flex-start;
   text-align: center;
   padding: 24px;
-  background-color: #f0f2f5; /* Match main background */
-  box-shadow: none; /* Remove shadow to make it float */
-  border: none; /* Remove border */
+  background-color: #f0f2f5;
+  box-shadow: none;
+  border: none;
+  height: 100%; /* Take full height of parent column */
 }
 
 .live-preview-card .preview-header {
   width: 100%;
   text-align: left;
-  margin-bottom: 8px; /* Reduced margin-bottom */
+  margin-bottom: 8px;
 }
 
 .live-preview-card .preview-header h3 {
@@ -589,7 +596,7 @@ main {
   font-size: 18px;
   font-weight: 600;
   color: #0f172a;
-  margin-top: 0; /* Ensure no extra top margin */
+  margin-top: 0;
   margin-bottom: 4px;
 }
 
@@ -605,21 +612,21 @@ main {
   background-color: #f8f9fa;
   flex: 1;
   height: 100%;
-  /* Removed: overflow-y: auto; */ /* Allow scrolling if content is too tall */
+  overflow-y: auto; /* Enable internal scrolling for preview content */
   overflow-x: hidden;
   position: relative;
   display: flex;
-  flex-direction: column; /* Added to make it a column container */
-  align-items: center; /* Keep for horizontal centering of content */
-  justify-content: flex-start; /* Changed from flex-end to flex-start */
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
   width: 100%;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
-  min-height: 500px; /* Added min-height */
+  min-height: 0; /* Allow content to shrink */
 }
 
 /* New rule for zero state centering */
 .live-preview-content-wrapper.is-zero-state {
-  justify-content: center; /* Center content vertically */
+  justify-content: center;
 }
 
 .live-preview-card .sparkle-icon {
@@ -674,12 +681,12 @@ main {
 
 /* Ready to Embed Section */
 .ready-to-embed-card {
-  background-color: #1a202c; /* Dark background */
+  background-color: #1a202c;
   color: white;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   padding: 24px;
-  margin-top: 24px; /* Space from the preview above */
+  margin-top: 24px;
   width: 100%;
   text-align: center;
 }
@@ -694,12 +701,12 @@ main {
 
 .ready-to-embed-card p {
   font-size: 14px;
-  color: #a0aec0; /* Lighter gray for text */
+  color: #a0aec0;
   margin-bottom: 20px;
 }
 
 .ready-to-embed-card .btn-embed-code {
-  background-color: #4a5568; /* Darker gray button */
+  background-color: #4a5568;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -714,7 +721,7 @@ main {
 }
 
 .ready-to-embed-card .btn-embed-code:hover {
-  background-color: #2d3748; /* Even darker on hover */
+  background-color: #2d3748;
 }
 
 .ready-to-embed-card .btn-embed-code svg {
@@ -726,21 +733,21 @@ main {
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .container {
-    padding: 16px;
+    padding: 0 16px;
   }
 
   .header .container {
-    padding: 8px 16px; /* Adjusted vertical padding for smaller screens */
+    padding: 0;
   }
 
   .header .logo {
-    font-size: 12px; /* Further decreased font size */
+    font-size: 12px;
   }
 
   .header .logo-icon {
-    width: 10px; /* Further decreased size */
-    height: 10px; /* Further decreased size */
-    font-size: 7px; /* Further decreased font size */
+    width: 10px;
+    height: 10px;
+    font-size: 7px;
   }
 
   .card {
@@ -768,42 +775,42 @@ main {
 
   /* Responsive for builder layout */
   .builder-layout {
-    flex-direction: column; /* Stack columns on smaller screens */
+    flex-direction: column;
     height: auto;
   }
 
   .builder-column, .preview-column {
-    max-width: none; /* Allow full width */
+    max-width: none;
     height: auto;
   }
 
   .live-preview-card {
-    height: auto; /* Allow height to be flexible on smaller screens */
-    min-height: 300px; /* Ensure a minimum height for the preview area */
+    height: auto;
+    min-height: 300px;
     padding: 20px;
   }
 
   .live-preview-content-wrapper {
-    height: auto; /* Changed from fixed height */
-    min-height: 400px; /* Ensure a minimum height for the preview area */
+    height: auto;
+    min-height: 400px;
   }
 
   .chat-history-container {
-    height: 40vh; /* Adjust chat height for smaller screens */
+    height: 40vh;
   }
 }
 
 @media (max-width: 768px) {
   .header .container {
-    padding: 6px 16px; /* Adjusted vertical padding for even smaller screens */
+    padding: 0;
   }
   .header .logo {
-    font-size: 10px; /* Further decreased font size */
+    font-size: 10px;
   }
   .header .logo-icon {
-    width: 8px; /* Further decreased size */
-    height: 8px; /* Further decreased size */
-    font-size: 6px; /* Further decreased font size */
+    width: 8px;
+    height: 8px;
+    font-size: 6px;
   }
   .card {
     padding: 16px;

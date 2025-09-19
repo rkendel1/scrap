@@ -802,13 +802,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   return (
-    <div className="conversational-builder-card"> {/* Apply className here */}
-      {/* Removed: {currentContextSummary && (
-        <div className="context-summary">
-          Current Form: {currentContextSummary}
-        </div>
-      )} */}
-
+    <div className="conversational-builder-card">
       <div className="chat-history-container">
         <div
           ref={chatHistoryRef}

@@ -150,141 +150,141 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     return (
       <div style={{ 
         backgroundColor: '#ffffff',
-        padding: '16px',
+        padding: '12px', /* Reduced padding */
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        maxWidth: '750px', /* Keep max-width for overall container */
+        maxWidth: '750px',
         margin: '0 auto',
         textAlign: 'left',
-        marginTop: '12px', /* Reduced margin-top */
-        fontSize: '11px', /* Smaller font size */
+        marginTop: '12px',
+        fontSize: '10px', /* Reduced font size */
         color: '#555',
         border: '1px solid #e1e5e9',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
       }}>
-        <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '15px', fontWeight: '600', textAlign: 'center' }}>
+        <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px', fontWeight: '600', textAlign: 'center' }}>
           Website Analysis Summary
         </h4>
-        <p style={{ margin: '0 0 16px 0', fontSize: '10px', color: '#666', textAlign: 'center' }}>
+        <p style={{ margin: '0 0 12px 0', fontSize: '9px', color: '#666', textAlign: 'center' }}>
           From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}> {/* Explicit 4-column grid, reduced gap */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}> {/* Explicit 4-column grid, reduced gap */}
           {/* Card 1: Colors & Brand Colors */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
           >
-            <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
+            <strong style={{ color: '#007bff', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Colors & Brand:</strong>
             {((colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0)) ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
                 {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
                   <div key={`brand-${index}`} style={{ 
-                    width: '14px', height: '14px', borderRadius: '3px', backgroundColor: color, 
+                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
                     border: '1px solid #ccc', display: 'inline-block' 
                   }}></div>
                 ))}
                 {colorPalette && colorPalette.slice(0, 2).map((color: string, index: number) => ( 
                   <div key={`palette-${index}`} style={{ 
-                    width: '14px', height: '14px', borderRadius: '3px', backgroundColor: color, 
+                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
                     border: '1px solid #eee', display: 'inline-block' 
                   }}></div>
                 ))}
-                {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '10px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
+                {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '9px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
               </div>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 2: Typography */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
           >
-            <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Typography:</strong>
+            <strong style={{ color: '#28a745', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Typography:</strong>
             {(fontFamilies && fontFamilies.length > 0) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 {fontFamilies.slice(0, 1).join(', ')}
                 {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 3: Spacing */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
           >
-            <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Spacing:</strong>
+            <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Spacing:</strong>
             {((margins && margins.length > 0) || (paddings && paddings.length > 0)) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 4: Layout Structure */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
           >
-            <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Layout Structure:</strong>
+            <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Layout Structure:</strong>
             {(layoutStructure && Object.keys(layoutStructure).length > 0) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 Header: {layoutStructure.hasHeader ? 'Yes' : 'No'} | Sections: {layoutStructure.sections || 'N/A'}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 5: UI Components (Buttons, Forms, Cards, Navigation) */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
           >
-            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '4px', fontSize: '11px' }}>UI Components:</strong>
+            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
             {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 6: CSS Details (Variables, Raw CSS) */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
           >
-            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '4px', fontSize: '11px' }}>CSS Details:</strong>
+            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
             {(cssVariables && Object.keys(cssVariables).length > 0) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 7: Media & Icons */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Images: ${formatArray((images || []).map((i: any) => i.src), 5)}\nIcons: ${formatArray((icons || []).map((i: any) => i.classes), 5)}\nLogo URL: ${logoUrl || 'N/A'}`}
           >
-            <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Media & Icons:</strong>
+            <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Media & Icons:</strong>
             {((images && images.length > 0) || (icons && icons.length > 0) || logoUrl) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>
+              <span style={{ fontSize: '10px', color: '#555' }}>
                 Imgs: {images?.length || 0} | Icons: {icons?.length || 0}
               </span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
           {/* Card 8: Voice Tone & Personality */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
           >
-            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Voice Tone:</strong>
+            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
             {(tone && tone.primary) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>{tone.primary}</span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+              <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
             {(personalityTraits && personalityTraits.length > 0) && (
-              <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
                 Personality: {personalityTraits.slice(0, 1).join(', ')}
               </span>
             )}
@@ -292,15 +292,15 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
           {/* Card 9: Audience & Messaging */}
           <div 
-            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
           >
-            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience & Messaging:</strong>
+            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
             {(audienceAnalysis && audienceAnalysis.primary) ? (
-              <span style={{ fontSize: '11px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
-            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+              <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
             {(messaging && messaging.length > 0) && (
-              <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
                 Messages: {messaging.length}
               </span>
             )}
@@ -339,9 +339,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             width: '100%',
             padding: '20px',
             boxSizing: 'border-box',
-            flexGrow: 1, /* This makes it take up available space */
-            minHeight: 0, /* Allow content to shrink */
-            overflowY: 'auto' /* Add scroll to this inner div if form content is too tall */
+            flexGrow: 1,
+            minHeight: 0,
+            overflowY: 'auto'
           }}
         >
           {/* Render Form Content if available */}
