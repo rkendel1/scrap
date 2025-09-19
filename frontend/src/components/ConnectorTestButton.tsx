@@ -11,7 +11,7 @@ interface TestResult {
   success: boolean;
   message: string;
   errors?: string[];
-  error?: string;
+  error?: string | object; // Allow error to be an object
 }
 
 export const ConnectorTestButton: React.FC<ConnectorTestButtonProps> = ({
@@ -143,7 +143,7 @@ export const ConnectorTestButton: React.FC<ConnectorTestButtonProps> = ({
                     Show technical details
                   </summary>
                   <pre className="mt-1 text-xs text-red-600 bg-red-100 p-2 rounded overflow-x-auto">
-                    {result.error}
+                    {typeof result.error === 'object' ? JSON.stringify(result.error, null, 2) : result.error}
                   </pre>
                 </details>
               )}

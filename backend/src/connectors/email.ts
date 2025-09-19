@@ -86,12 +86,16 @@ export async function send(
       success: true,
       message: `Email sent to ${to}`
     };
-  } catch (error) {
+  } catch (error: any) { // Explicitly type error as any to access properties
     console.error('📧 Email connector: Failed to send email:', error);
+    let errorMessage = `Failed to send email: ${error.message || String(error)}`;
+    if (error.response) {
+      errorMessage = `Failed to send email: ${error.response}`;
+    }
     return {
       success: false,
-      error,
-      message: `Failed to send email: ${error instanceof Error ? error.message : String(error)}`
+      error: error, // Keep the full error object for technical details
+      message: errorMessage
     };
   }
 }
