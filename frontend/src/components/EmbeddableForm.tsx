@@ -195,7 +195,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         fontFamily: form.styling.fontFamily || 'system-ui',
         textAlign: 'center' as const,
         border: '1px solid #e1e5e9',
-        maxWidth: form.styling.maxWidth || '100%',
+        maxWidth: form.styling.maxWidth || '250px', // Changed from '100%' to '250px'
         width: '100%',
         margin: '0 auto',
         maxHeight: '100%',
@@ -225,7 +225,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
       borderRadius: form.styling.borderRadius || '8px',
       fontFamily: form.styling.fontFamily || 'system-ui',
       border: '1px solid #e1e5e9',
-      maxWidth: form.styling.maxWidth || '100%',
+      maxWidth: form.styling.maxWidth || '250px', // Changed from '100%' to '250px'
       width: '100%',
       margin: '0 auto',
       maxHeight: '100%',
