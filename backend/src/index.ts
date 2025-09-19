@@ -836,6 +836,247 @@ app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
   }
 });
 
+// Development: Create test form (remove in production)
+app.post('/api/dev/create-test-form', async (req, res) => {
+  try {
+    // Create a test form directly in the database
+    const testForm = {
+      user_id: null,
+      guest_token_id: null,
+      url: 'https://example.com',
+      form_name: 'Test Contact Form',
+      form_description: 'A test form for embed functionality',
+      is_live: true,
+      embed_code: 'test_embed_123',
+      title: 'Contact Us',
+      description: 'Get in touch with our team',
+      favicon: 'https://example.com/favicon.ico',
+      color_palette: JSON.stringify(['#007bff', '#6c757d', '#28a745']),
+      primary_colors: JSON.stringify(['#007bff']),
+      color_usage: JSON.stringify({}),
+      font_families: JSON.stringify(['system-ui', 'Arial']),
+      headings: JSON.stringify([]),
+      text_samples: JSON.stringify([]),
+      margins: JSON.stringify([]),
+      paddings: JSON.stringify([]),
+      spacing_scale: JSON.stringify([]),
+      layout_structure: JSON.stringify({}),
+      grid_system: JSON.stringify({}),
+      breakpoints: JSON.stringify([]),
+      buttons: JSON.stringify([]),
+      form_fields: JSON.stringify([
+        { type: 'text', name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+        { type: 'email', name: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+        { type: 'textarea', name: 'message', label: 'Message', placeholder: 'Your message', required: true }
+      ]),
+      cards: JSON.stringify([]),
+      navigation: JSON.stringify([]),
+      images: JSON.stringify([]),
+      css_variables: JSON.stringify({}),
+      raw_css: '',
+      form_schema: JSON.stringify([{
+        title: 'Contact Us',
+        description: 'Get in touch with our team',
+        fields: [
+          { type: 'text', name: 'name', label: 'Full Name', placeholder: 'Enter your name', required: true },
+          { type: 'email', name: 'email', label: 'Email', placeholder: 'your@email.com', required: true },
+          { type: 'textarea', name: 'message', label: 'Message', placeholder: 'Your message', required: true }
+        ],
+        ctaText: 'Send Message',
+        thankYouMessage: 'Thank you for your message! We\'ll get back to you soon.',
+        styling: {
+          primaryColor: '#007bff',
+          backgroundColor: '#ffffff',
+          fontFamily: 'system-ui',
+          borderRadius: '8px',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          buttonBackgroundColor: '#007bff',
+          buttonBorder: '1px solid #ccc',
+        }
+      }]),
+      logo_url: '',
+      brand_colors: JSON.stringify(['#007bff']),
+      icons: JSON.stringify([]),
+      messaging: JSON.stringify([]),
+      preview_html: '',
+      voice_tone: JSON.stringify({}),
+      personality_traits: JSON.stringify([]),
+      audience_analysis: JSON.stringify({}),
+      extracted_at: new Date().toISOString()
+    };
+
+    // Insert into forms table
+    const formQuery = `
+      INSERT INTO forms (
+        user_id, guest_token_id, url, form_name, form_description, 
+        is_live, embed_code, title, description, favicon,
+        color_palette, primary_colors, color_usage, font_families, 
+        headings, text_samples, margins, paddings, spacing_scale,
+        layout_structure, grid_system, breakpoints, buttons, 
+        form_fields, cards, navigation, images, css_variables, 
+        raw_css, form_schema, logo_url, brand_colors, icons, 
+        messaging, preview_html, voice_tone, personality_traits, 
+        audience_analysis, extracted_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23, $24, $25, $26, $27, $28,
+        $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39
+      )
+      ON CONFLICT (embed_code) DO UPDATE SET
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+
+    const formValues = [
+      testForm.user_id, testForm.guest_token_id, testForm.url, testForm.form_name, testForm.form_description,
+      testForm.is_live, testForm.embed_code, testForm.title, testForm.description, testForm.favicon,
+      testForm.color_palette, testForm.primary_colors, testForm.color_usage, testForm.font_families,
+      testForm.headings, testForm.text_samples, testForm.margins, testForm.paddings, testForm.spacing_scale,
+      testForm.layout_structure, testForm.grid_system, testForm.breakpoints, testForm.buttons,
+      testForm.form_fields, testForm.cards, testForm.navigation, testForm.images, testForm.css_variables,
+      testForm.raw_css, testForm.form_schema, testForm.logo_url, testForm.brand_colors, testForm.icons,
+      testForm.messaging, testForm.preview_html, testForm.voice_tone, testForm.personality_traits,
+      testForm.audience_analysis, testForm.extracted_at
+    ];
+
+    const formResult = await pool.query(formQuery, formValues);
+    const createdForm = formResult.rows[0];
+
+    // Create embed code record
+    await pool.query(`
+      INSERT INTO embed_codes (form_id, code, is_active)
+      VALUES ($1, $2, true)
+      ON CONFLICT (code) DO UPDATE SET
+        is_active = true, form_id = $1
+    `, [createdForm.id, testForm.embed_code]);
+
+    res.json({
+      success: true,
+      message: 'Test form created successfully',
+      form: createdForm,
+      embedCode: testForm.embed_code,
+      testUrl: `http://localhost:${PORT}/embed.html?code=${testForm.embed_code}`
+    });
+  } catch (error) {
+    console.error('Create test form error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to create test form',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Serve embed.html for testing
+app.get('/embed.html', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*'); 
+  res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow framing
+  res.removeHeader('X-Frame-Options'); // Remove default frame blocking
+  res.sendFile(path.join(__dirname, '../frontend/public/embed.html')); // Use absolute path
+});
+
+// NEW: Serve test-embed.html from backend
+app.get('/test-embed.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/public/test-embed.html')); // Use absolute path
+});
+
+// Serve embed.js script
+app.get('/embed.js', (req, res) => {
+  const embedJsPath = path.join(__dirname, '../frontend/public/embed.js'); // Correct path to static file
+  fs.readFile(embedJsPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading embed.js file:', err); // Detailed error logging
+      return res.status(500).send('Error loading embed script.');
+    }
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    // It's generally not recommended to remove X-Content-Type-Options,
+    // but if it's causing issues with specific browsers/configurations,
+    // it can be removed here. For now, let's keep it as is, as the
+    // Content-Type header is explicitly set.
+    res.send(data);
+  });
+});
+
+// Get form data for legacy iframe embed (public endpoint)
+app.get('/api/forms/embed/:embedCode', async (req, res) => {
+  try {
+    const { embedCode } = req.params;
+    const hostname = req.query.hostname as string || req.headers.origin || req.headers.referer;
+    const isTestMode = req.query.testMode === 'true'; // Check for testMode query parameter
+
+    if (!embedCode) {
+      return res.status(400).json({ success: false, message: 'Embed code is required' });
+    }
+    if (!hostname) {
+      return res.status(400).json({ success: false, message: 'Hostname is required for domain validation' });
+    }
+
+    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname, isTestMode);
+
+    if (!formData) {
+      return res.status(403).json({ success: false, message: 'Unauthorized, form not active, or domain not allowed' });
+    }
+
+    res.json({
+      success: true,
+      data: formData
+    });
+  } catch (error) {
+    console.error('Legacy embed form data fetch error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch form data for embed',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// REMOVED: Submit form (public endpoint) - replaced by submitPublicForm
+// app.post('/api/forms/submit/:embedCode', async (req, res) => { /* ... */ });
+
+// NEW: Submit form publicly with embed code validation
+app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
+  try {
+    const { embedCode } = req.params;
+    const { isTestSubmission, ...submissionData } = req.body; // Extract isTestSubmission
+
+    const metadata = {
+      submittedFromUrl: req.headers.referer,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      hostname: req.headers.origin || req.headers.referer, // Use origin or referer for hostname
+      isTestSubmission: isTestSubmission === true // Ensure boolean type
+    };
+
+    if (!embedCode || !submissionData || !metadata.hostname) {
+      return res.status(400).json({ success: false, message: 'Embed code, submission data, and hostname are required' });
+    }
+
+    const result = await saasService.submitPublicForm(embedCode, submissionData, metadata);
+
+    if (!result.success && result.message?.includes('Rate limit exceeded')) {
+      return res.status(429).json(result);
+    }
+    if (!result.success && (result.message?.includes('Unauthorized') || result.message?.includes('active') || result.message?.includes('allowed'))) {
+      return res.status(403).json(result);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Public form submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to submit form publicly'
+    });
+  }
+});
+
 // Get available connectors
 app.get('/api/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -901,7 +1142,7 @@ app.post('/api/forms/:id/connectors', authService.authenticateToken, async (req:
       success: true,
       message: 'Connectors saved successfully'
     });
-  } catch (error) {
+  }<ctrl63> catch (error) {
     console.error('Save form connectors error:', error);
     res.status(500).json({ 
       error: 'Failed to save form connectors',
@@ -1027,7 +1268,7 @@ app.post('/api/customer-configs', authService.authenticateToken, async (req: Aut
       error: 'Failed to create customer configuration',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
-  });
+  }
 });
 
 // Update customer configuration
