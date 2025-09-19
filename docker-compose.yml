@@ -45,7 +45,8 @@ services:
       - ./backend/src:/app/src
       - ./backend/package.json:/app/package.json
       - ./backend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/public:/app/frontend/public # Added this line to mount frontend/public
+      - ./frontend/public:/app/frontend/public
+      - backend_node_modules:/app/node_modules # <--- ADDED THIS LINE
     depends_on:
       db:
         condition: service_healthy
@@ -110,3 +111,4 @@ services:
 volumes:
   postgres_data:
   n8n_data:
+  backend_node_modules: # <--- ADDED THIS NAMED VOLUME
