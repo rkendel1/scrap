@@ -90,8 +90,6 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
 
-  const [isAnalysisSummaryOpen, setIsAnalysisSummaryOpen] = useState(false); // State for collapsible summary
-
   const getPreviewForm = (): GeneratedForm | null => {
     // Prioritize direct preview form (for FormEditor)
     if (previewGeneratedForm) {
@@ -108,6 +106,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   const currentFormToRender = getPreviewForm();
   const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
 
+  const [isAnalysisSummaryOpen, setIsAnalysisSummaryOpen] = useState(hasAnalysisData ? false : true); // Open by default if no data, collapse if data is present
+
   // Effect to manage the open/close state of the analysis summary
   useEffect(() => {
     if (hasAnalysisData && !currentFormToRender) {
@@ -116,6 +116,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     } else if (currentFormToRender) {
       // If a form is rendered, collapse the summary
       setIsAnalysisSummaryOpen(false);
+    } else {
+      // If no form and no analysis data, keep it open
+      setIsAnalysisSummaryOpen(true);
     }
   }, [hasAnalysisData, currentFormToRender]);
 
@@ -142,7 +145,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   const renderDesignTokens = () => {
-    if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
+    const hasActualData = (extractedDesignTokens && Object.keys(extractedDesignTokens).length > 0) || 
+                          (extractedVoiceAnalysis && Object.keys(extractedVoiceAnalysis).length > 0);
 
     const { 
       colorPalette, primaryColors, colorUsage, fontFamilies, headings, textSamples,
@@ -193,130 +197,137 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           Website Analysis Summary {url && `from ${new URL(url).hostname}`}
         </summary>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', paddingTop: '10px', borderTop: '1px solid #eee' }}> {/* Explicit 4-column grid, reduced gap */}
-          {/* Card 1: Colors & Brand Colors */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
-          >
-            <strong style={{ color: '#007bff', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Colors & Brand:</strong>
-            {((colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0)) ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
-                {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
-                  <div key={`brand-${index}`} style={{ 
-                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
-                    border: '1px solid #ccc', display: 'inline-block' 
-                  }}></div>
-                ))}
-                {colorPalette && colorPalette.slice(0, 2).map((color: string, index: number) => ( 
-                  <div key={`palette-${index}`} style={{ 
-                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
-                    border: '1px solid #eee', display: 'inline-block' 
-                  }}></div>
-                ))}
-                {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '9px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
-              </div>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+        {hasActualData ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', paddingTop: '10px', borderTop: '1px solid #eee' }}> {/* Explicit 4-column grid, reduced gap */}
+            {/* Card 1: Colors & Brand Colors */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
+            >
+              <strong style={{ color: '#007bff', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Colors & Brand:</strong>
+              {((colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0)) ? (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                  {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
+                    <div key={`brand-${index}`} style={{ 
+                      width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
+                      border: '1px solid #ccc', display: 'inline-block' 
+                    }}></div>
+                  ))}
+                  {colorPalette && colorPalette.slice(0, 2).map((color: string, index: number) => ( 
+                    <div key={`palette-${index}`} style={{ 
+                      width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
+                      border: '1px solid #eee', display: 'inline-block' 
+                    }}></div>
+                  ))}
+                  {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '9px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
+                </div>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 2: Typography */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
-          >
-            <strong style={{ color: '#28a745', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Typography:</strong>
-            {(fontFamilies && fontFamilies.length > 0) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                {fontFamilies.slice(0, 1).join(', ')}
-                {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+            {/* Card 2: Typography */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
+            >
+              <strong style={{ color: '#28a745', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Typography:</strong>
+              {(fontFamilies && fontFamilies.length > 0) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  {fontFamilies.slice(0, 1).join(', ')}
+                  {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
+                </span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 3: Spacing */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
-          >
-            <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Spacing:</strong>
-            {((margins && margins.length > 0) || (paddings && paddings.length > 0)) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+            {/* Card 3: Spacing */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
+            >
+              <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Spacing:</strong>
+              {((margins && margins.length > 0) || (paddings && paddings.length > 0)) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
+                </span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 4: Layout Structure */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
-          >
-            <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Layout Structure:</strong>
-            {(layoutStructure && Object.keys(layoutStructure).length > 0) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                Header: {layoutStructure.hasHeader ? 'Yes' : 'No'} | Sections: {layoutStructure.sections || 'N/A'}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+            {/* Card 4: Layout Structure */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
+            >
+              <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Layout Structure:</strong>
+              {(layoutStructure && Object.keys(layoutStructure).length > 0) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  Header: {layoutStructure.hasHeader ? 'Yes' : 'No'} | Sections: {layoutStructure.sections || 'N/A'}
+                </span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 5: UI Components (Buttons, Forms, Cards, Navigation) */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
-          >
-            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
-            {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+            {/* Card 5: UI Components (Buttons, Forms, Cards, Navigation) */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
+            >
+              <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
+              {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
+                </span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 6: CSS Details (Variables, Raw CSS) */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
-          >
-            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
-            {(cssVariables && Object.keys(cssVariables).length > 0) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
+            {/* Card 6: CSS Details (Variables, Raw CSS) */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
+            >
+              <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
+              {(cssVariables && Object.keys(cssVariables).length > 0) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>
+                  {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
+                </span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            </div>
 
-          {/* Card 7: Voice Tone & Personality */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
-          >
-            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
-            {(tone && tone.primary) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-            {(personalityTraits && personalityTraits.length > 0) && (
-              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
-                Personality: {personalityTraits.slice(0, 1).join(', ')}
-              </span>
-            )}
-          </div>
+            {/* Card 7: Voice Tone & Personality */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
+            >
+              <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
+              {(tone && tone.primary) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+              {(personalityTraits && personalityTraits.length > 0) && (
+                <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                  Personality: {personalityTraits.slice(0, 1).join(', ')}
+                </span>
+              )}
+            </div>
 
-          {/* Card 8: Audience & Messaging */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
-          >
-            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
-            {(audienceAnalysis && audienceAnalysis.primary) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-            {(messaging && messaging.length > 0) && (
-              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
-                Messages: {messaging.length}
-              </span>
-            )}
+            {/* Card 8: Audience & Messaging */}
+            <div 
+              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
+            >
+              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
+              {(audienceAnalysis && audienceAnalysis.primary) ? (
+                <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
+              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+              {(messaging && messaging.length > 0) && (
+                <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                  Messages: {messaging.length}
+                </span>
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '12px' }}>
+            <div className="sparkle-icon" style={{ fontSize: '24px', marginBottom: '8px' }}>✨</div>
+            <p style={{ margin: 0 }}>No website analysis data yet. Enter a URL to begin!</p>
+          </div>
+        )}
       </details>
     );
   };
@@ -363,8 +374,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           </>
         )}
 
-        {/* If no form and no analysis data, show the initial placeholder */}
-        {!currentFormToRender && !hasAnalysisData && (
+        {/* If no form is generated, show the initial placeholder */}
+        {!currentFormToRender && (
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
             <div className="sparkle-icon">✨</div>
             <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -375,8 +386,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         )}
       </div>
 
-      {/* Render Design Tokens if analysis data is present and not explicitly hidden */}
-      {hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
+      {/* Render Design Tokens if not explicitly hidden */}
+      {!hideAnalysisSection && renderDesignTokens()}
     </div>
   );
 };
