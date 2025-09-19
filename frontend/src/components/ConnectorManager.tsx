@@ -19,11 +19,13 @@ interface ConnectorConfig {
 
 interface ConnectorManagerProps {
   formId: number;
+  userEmail?: string; // New prop for user's email
   onSave?: (connectors: ConnectorConfig[]) => void;
 }
 
 export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
   formId,
+  userEmail, // Destructure new prop
   onSave
 }) => {
   const [definitions, setDefinitions] = useState<ConnectorDefinition[]>([]);
@@ -118,11 +120,18 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
   // Add new connector (wizard step 2: type selected)
   const handleSelectConnectorType = (type: string) => {
     setSelectedConnectorType(type);
+    
     // Automatically add a new connector to the list for configuration
     const newConnector: ConnectorConfig = {
       type: type,
       settings: {}
     };
+
+    // Pre-populate email 'to' field if it's an email connector and userEmail is available
+    if (type === 'email' && userEmail) {
+      newConnector.settings.to = userEmail;
+    }
+
     setConnectors([...connectors, newConnector]);
     setAddingNewConnector(false); // Exit the type selection phase
   };

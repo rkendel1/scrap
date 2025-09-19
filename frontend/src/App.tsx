@@ -543,6 +543,7 @@ function App() {
               
               <ConnectorManager 
                 formId={selectedForm.id} // Use selectedForm.id
+                userEmail={user.email} // Pass user's email here
                 onSave={() => {
                   // Optionally refresh forms list or show success message
                   console.log('Connectors saved successfully');
