@@ -460,10 +460,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setExtractedVoiceAnalysis(voiceAnalysis);
     setFormData((prev) => ({ ...prev, url }));
 
-    addPrompt(
-      `Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles. Now, what do you want to capture with this form?`
-      // Removed quick responses
-    );
+    // Split the prompt into two messages
+    addPrompt(`Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles.`);
+    addPrompt(`Now, what do you want to capture with this form?`);
     setCurrentStep('ASK_PURPOSE');
   };
 
