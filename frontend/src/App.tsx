@@ -10,6 +10,7 @@ import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { FormEditor } from './components/FormEditor'; // New import
 import { ToggleSwitch } from './components/ToggleSwitch'; // New import
 import { FormThumbnail } from './components/FormThumbnail'; // New import
+import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -24,7 +25,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor'>('builder'); // Added 'form-editor'
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display'>('builder'); // Added 'embed-code-display'
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -35,7 +36,6 @@ function App() {
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
     isDestinationConfigured: boolean;
-    showEmbedCodeSection: boolean; // Added
   }>({
     formData: {},
     generatedForm: null,
@@ -43,7 +43,6 @@ function App() {
     extractedDesignTokens: null,
     extractedVoiceAnalysis: null,
     isDestinationConfigured: false,
-    showEmbedCodeSection: false, // Initialize
   });
 
   // Initialize authentication on app load
@@ -158,14 +157,10 @@ function App() {
     setCurrentView('form-manage');
   };
 
-  // MODIFIED: This now toggles the embed code section in LiveFormPreview
+  // MODIFIED: This now navigates to the EmbedCodeDisplay component
   const handleGetEmbedCodeClick = (form: SaaSForm) => {
-    setSelectedForm(form); // Ensure selectedForm is set for context
-    setBuilderState(prev => ({
-      ...prev,
-      showEmbedCodeSection: !prev.showEmbedCodeSection, // Toggle visibility
-      createdForm: form // Ensure the correct form is in builderState
-    }));
+    setSelectedForm(form);
+    setCurrentView('embed-code-display'); // Navigate to the new embed code display view
   };
 
   const handleShowAnalytics = (form: SaaSForm) => {
@@ -192,7 +187,6 @@ function App() {
     setCurrentView('dashboard');
     setError(null); // Clear any previous errors when navigating back
     fetchUserForms(); // Refresh forms list after returning to dashboard
-    setBuilderState(prev => ({ ...prev, showEmbedCodeSection: false })); // Hide embed code section
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -419,8 +413,9 @@ function App() {
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
                 isDestinationConfigured={builderState.isDestinationConfigured} // Pass new state
-                showEmbedCodeSection={builderState.showEmbedCodeSection} // Pass new state
-                onToggleEmbedCodeSection={() => setBuilderState(prev => ({ ...prev, showEmbedCodeSection: !prev.showEmbedCodeSection }))} // Pass toggle handler
+                // The embed code section in LiveFormPreview is now controlled by its internal state
+                // and the onGetEmbedCodeClick from builder will trigger a view change instead.
+                // So, we don't need to pass showEmbedCodeSection or onToggleEmbedCodeSection here.
               />
             </div>
           </div>
@@ -562,6 +557,12 @@ function App() {
             form={selectedForm}
             onSaveSuccess={handleFormEditorSave}
             onCancel={handleBackToDashboard}
+          />
+        ) : currentView === 'embed-code-display' && user && selectedForm ? ( // New view for embed code
+          <EmbedCodeDisplay
+            form={selectedForm}
+            user={user}
+            onBack={handleBackToDashboard}
           />
         ) : currentView === 'legacy' ? (
           <>
