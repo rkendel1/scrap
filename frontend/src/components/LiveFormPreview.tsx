@@ -275,6 +275,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${isZeroState ? 'is-zero-state' : ''}`}>
+        {/* This div will take up available space, pushing the analysis summary to the bottom */}
         <div
           style={{
             display: 'flex',
@@ -284,7 +285,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             flexDirection: 'column',
             width: '100%',
             padding: '20px',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            flexGrow: 1, /* This makes it take up available space */
           }}
         >
           {/* Render Form Content if available */}
@@ -307,10 +309,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
               </p>
             </div>
           )}
-
-          {/* Render Design Tokens if available and not explicitly hidden */}
-          { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
         </div>
+
+        {/* Render Design Tokens if available and not explicitly hidden */}
+        { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
       </div>
       {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && (
         <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
