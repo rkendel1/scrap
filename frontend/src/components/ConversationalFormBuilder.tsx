@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
 import { Mail, Sheet, Slack, Link, Zap, Copy, Check } from 'lucide-react'; // Import Lucide icons, including Copy and Check
+import { WebsiteAnalysisSummary } from './WebsiteAnalysisSummary'; // Import the new component
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
@@ -133,7 +134,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const addPrompt = (content: string | JSX.Element) => { // Removed quickResponses parameter
     addEntry({ type: 'prompt', content });
-    // Removed setCurrentQuickResponses(quickResponses);
+    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 

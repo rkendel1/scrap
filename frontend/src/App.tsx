@@ -11,6 +11,7 @@ import { FormEditor } from './components/FormEditor'; // New import
 import { ToggleSwitch } from './components/ToggleSwitch'; // New import
 import { FormThumbnail } from './components/FormThumbnail'; // New import
 import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
+import { WebsiteAnalysisSummary } from './components/WebsiteAnalysisSummary'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -409,13 +410,18 @@ function App() {
                 generatedForm={builderState.generatedForm}
                 createdForm={builderState.createdForm}
                 user={user}
-                extractedDesignTokens={builderState.extractedDesignTokens} // Pass new state
-                extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
+                // Removed extractedDesignTokens and extractedVoiceAnalysis from here
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
                 isDestinationConfigured={builderState.isDestinationConfigured} // Pass new state
                 // The embed code section in LiveFormPreview is now controlled by its internal state
                 // and the onGetEmbedCodeClick from builder will trigger a view change instead.
                 // So, we don't need to pass showEmbedCodeSection or onToggleEmbedCodeSection here.
+              />
+              {/* NEW: Render WebsiteAnalysisSummary below LiveFormPreview */}
+              <WebsiteAnalysisSummary
+                extractedDesignTokens={builderState.extractedDesignTokens}
+                extractedVoiceAnalysis={builderState.extractedVoiceAnalysis}
+                formData={builderState.formData}
               />
             </div>
           </div>
