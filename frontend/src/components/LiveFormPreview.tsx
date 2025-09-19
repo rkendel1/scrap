@@ -90,6 +90,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
 
+  const [isAnalysisSummaryOpen, setIsAnalysisSummaryOpen] = useState(false); // State for collapsible summary
+
   const getPreviewForm = (): GeneratedForm | null => {
     // Prioritize direct preview form (for FormEditor)
     if (previewGeneratedForm) {
@@ -104,6 +106,19 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   const currentFormToRender = getPreviewForm();
+  const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
+
+  // Effect to manage the open/close state of the analysis summary
+  useEffect(() => {
+    if (hasAnalysisData && !currentFormToRender) {
+      // If analysis data is present but no form is rendered, open the summary
+      setIsAnalysisSummaryOpen(true);
+    } else if (currentFormToRender) {
+      // If a form is rendered, collapse the summary
+      setIsAnalysisSummaryOpen(false);
+    }
+  }, [hasAnalysisData, currentFormToRender]);
+
 
   const formContent = currentFormToRender ? (
     <EmbeddableForm
@@ -148,12 +163,15 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         : 'None';
 
     return (
-      <details style={{ 
+      <details 
+        open={isAnalysisSummaryOpen} // Bind to state
+        onToggle={(e) => setIsAnalysisSummaryOpen(e.currentTarget.open)} // Update state on manual toggle
+        style={{ 
         backgroundColor: '#ffffff',
         padding: '12px', /* Reduced padding */
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        maxWidth: '750px',
+        maxWidth: '500px', // Adjusted max-width
         margin: '0 auto',
         textAlign: 'left',
         marginTop: 'auto', /* Pushes this div to the bottom */
@@ -314,7 +332,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   // Determine if the zero state is active (no form generated yet)
   const isZeroState = !currentFormToRender;
-  const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
+  
 
   // Determine the appropriate justify-content class for the wrapper
   let wrapperJustifyClass = '';
@@ -377,7 +395,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
 
       {/* Render Design Tokens if a form IS generated and not explicitly hidden */}
-      {currentFormToRender && hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
+      {hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
     </div>
   );
 };
