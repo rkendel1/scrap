@@ -309,6 +309,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   // Determine if the zero state is active (no form generated yet)
   const isZeroState = !currentFormToRender;
+  const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
 
   return (
     <div className={`live-preview-card ${className || ''}`}>
@@ -317,8 +318,21 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${isZeroState ? 'is-zero-state' : ''}`}>
-        <div
-          style={{
+        {/* If a form is generated, show the form and destination status */}
+        {currentFormToRender && (
+          <>
+            {formContent}
+            {isDestinationConfigured && (
+              <div className="form-submit-status" style={{ marginTop: '24px' }}>
+                <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* If no form is generated, but analysis data is present, show analysis summary */}
+        {!currentFormToRender && hasAnalysisData && (
+          <div style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
@@ -327,36 +341,28 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             width: '100%',
             padding: '20px',
             boxSizing: 'border-box',
-            flexGrow: 1, /* This makes it take up available space */
-            minHeight: 0, /* Allow content to shrink */
-            overflowY: 'auto' /* Add scroll to this inner div if form content is too tall */
-          }}
-        >
-          {/* Render Form Content if available */}
-          { currentFormToRender && formContent }
+            flexGrow: 1,
+            minHeight: 0,
+            overflowY: 'auto'
+          }}>
+            {renderDesignTokens()} {/* Render analysis summary here */}
+          </div>
+        )}
 
-          {/* Render Destination Configured status if form is present and destination is configured */}
-          { currentFormToRender && isDestinationConfigured && (
-            <div className="form-submit-status" style={{ marginTop: '24px' }}>
-              <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
-            </div>
-          )}
-
-          {/* Render Placeholder if no form is generated yet */}
-          { isZeroState && (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-              <div className="sparkle-icon">✨</div>
-              <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
-              <p className="placeholder-text">
-                Start by entering a website URL in the chat to the left to generate your form!
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Render Design Tokens if available and not explicitly hidden */}
-        { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
+        {/* If no form and no analysis data, show the initial placeholder */}
+        {!currentFormToRender && !hasAnalysisData && (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+            <div className="sparkle-icon">✨</div>
+            <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
+            <p className="placeholder-text">
+              Start by entering a website URL in the chat to the left to generate your form!
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Render Design Tokens if a form IS generated and not explicitly hidden */}
+      {currentFormToRender && hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
     </div>
   );
 };
