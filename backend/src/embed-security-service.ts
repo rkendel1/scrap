@@ -20,6 +20,11 @@ export class EmbedSecurityService {
    * Check if a domain is allowed to embed the form
    */
   isDomainAllowed(hostname: string, allowedDomains: string[]): boolean {
+    // Always allow localhost and 127.0.0.1 for development/testing
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return true;
+    }
+
     if (!allowedDomains || allowedDomains.length === 0) {
       return true; // No restrictions if no domains specified
     }
