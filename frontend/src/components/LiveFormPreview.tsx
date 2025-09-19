@@ -161,22 +161,22 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
 
     const { colorPalette, fontFamilies, primaryColors } = extractedDesignTokens || {};
-    const { tone, personalityTraits } = extractedVoiceAnalysis || {};
+    const { tone, personalityTraits, audienceAnalysis } = extractedVoiceAnalysis || {};
 
     return (
       <div style={{ 
         backgroundColor: '#ffffff',
-        padding: '16px', /* Slightly increased padding for the overall section */
+        padding: '16px',
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        maxWidth: '500px',
+        maxWidth: '600px', /* Increased max-width */
         margin: '0 auto',
         textAlign: 'left',
         marginTop: '16px',
         fontSize: '12px',
         color: '#555',
-        border: '1px solid #e1e5e9', /* Added border */
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)' /* Added shadow */
+        border: '1px solid #e1e5e9',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
       }}>
         <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '16px', fontWeight: '600', textAlign: 'center' }}>
           Website Analysis Summary
@@ -185,18 +185,18 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}> {/* Adjusted minmax for wider cards */}
           {colorPalette && colorPalette.length > 0 && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px' }}>Colors:</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {colorPalette.slice(0, 2).map((color: string, index: number) => (
+                {colorPalette.slice(0, 3).map((color: string, index: number) => ( {/* Show 3 colors */}
                   <div key={index} style={{ 
                     width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
                     border: '1px solid #eee', display: 'inline-block' 
                   }}></div>
                 ))}
-                {colorPalette.length > 2 && <span style={{ fontSize: '11px', color: '#888' }}> +{colorPalette.length - 2}</span>}
+                {colorPalette.length > 3 && <span style={{ fontSize: '11px', color: '#888' }}> +{colorPalette.length - 3}</span>}
               </div>
             </div>
           )}
@@ -205,8 +205,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px' }}>Fonts:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>
-                {fontFamilies.slice(0, 1).join(', ')}
-                {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
+                {fontFamilies.slice(0, 2).join(', ')} {/* Show 2 fonts */}
+                {fontFamilies.length > 2 && ` +${fontFamilies.length - 2}`}
               </span>
             </div>
           )}
@@ -216,22 +216,15 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
               <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px' }}>Tone:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>{tone.primary}</span>
               {personalityTraits && personalityTraits.length > 0 && (
-                <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 1).join(', ')})</span>
+                <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 2).join(', ')})</span> {/* Show 2 personality traits */}
               )}
             </div>
           )}
 
-          {primaryColors && primaryColors.length > 0 && (
+          {audienceAnalysis && audienceAnalysis.primary && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px' }}>Brand Colors:</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {primaryColors.slice(0, 2).map((color: string, index: number) => (
-                  <div key={index} style={{ 
-                    width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
-                    border: '1px solid #eee', display: 'inline-block' 
-                  }}></div>
-                ))}
-              </div>
+              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px' }}>Audience:</strong>
+              <span style={{ fontSize: '12px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
             </div>
           )}
         </div>
