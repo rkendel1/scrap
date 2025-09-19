@@ -173,59 +173,40 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsLoading(false);
   };
 
+  // New helper function to parse commands
+  const parseCommand = (lowerInput: string): string | null => {
+    if (lowerInput.includes('help')) return 'help';
+    if (lowerInput.includes('start over') || lowerInput.includes('reset')) return 'start over';
+    if (lowerInput === 'yes') return 'yes';
+    if (lowerInput === 'no') return 'no';
+    if (lowerInput.includes('configure destination') || lowerInput.includes('set destination')) return 'configure destination';
+    if (lowerInput.includes('get embed code') || lowerInput.includes('embed code')) return 'get embed code';
+    if (lowerInput.includes('create account')) return 'create account';
+    if (lowerInput.includes('provide email')) return 'provide email';
+    if (lowerInput.includes('i\'m done') || lowerInput.includes('im done')) return 'im done';
+    if (lowerInput.includes('make changes') || lowerInput.includes('change form')) return 'make changes';
+    return null; // No command found
+  };
+
   const parseUserInput = (input: string) => {
     const parsed: {
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email' | 'im done' | 'make changes';
+      command?: string;
       configInput?: string;
     } = {};
 
     const lowerInput = input.toLowerCase();
 
-    if (lowerInput.includes('help')) {
-      parsed.command = 'help';
-      return parsed;
-    }
-    if (lowerInput.includes('start over') || lowerInput.includes('reset')) {
-      parsed.command = 'start over';
-      return parsed;
-    }
-    if (lowerInput === 'yes') {
-      parsed.command = 'yes';
-      return parsed;
-    }
-    if (lowerInput === 'no') {
-      parsed.command = 'no';
-      return parsed;
-    }
-    if (lowerInput.includes('configure destination') || lowerInput.includes('set destination')) {
-      parsed.command = 'configure destination';
-      return parsed;
-    }
-    if (lowerInput.includes('get embed code') || lowerInput.includes('embed code')) {
-      parsed.command = 'get embed code';
-      return parsed;
-    }
-    if (lowerInput.includes('create account')) {
-      parsed.command = 'create account';
-      return parsed;
-    }
-    if (lowerInput.includes('provide email')) {
-      parsed.command = 'provide email';
-      return parsed;
-    }
-    if (lowerInput.includes('i\'m done') || lowerInput.includes('im done')) {
-      parsed.command = 'im done';
-      return parsed;
-    }
-    if (lowerInput.includes('make changes') || lowerInput.includes('change form')) {
-      parsed.command = 'make changes';
-      return parsed;
+    // First, try to parse a command
+    const command = parseCommand(lowerInput);
+    if (command) {
+      parsed.command = command;
+      return parsed; // If a command is found, prioritize it and return immediately
     }
 
-
+    // If no command, proceed with other parsing based on current step
     const urlMatch = input.match(/https?:\/\/[^\s]+/i);
     if (urlMatch) {
       parsed.url = urlMatch[0];
