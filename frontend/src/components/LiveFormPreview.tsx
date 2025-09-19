@@ -140,12 +140,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     const formatArray = (arr: any[], limit = 3) => 
       Array.isArray(arr) && arr.length > 0 
         ? arr.slice(0, limit).join(', ') + (arr.length > limit ? ` +${arr.length - limit} more` : '')
-        : 'N/A';
+        : 'None';
 
     const formatObject = (obj: Record<string, any>, limit = 2) => 
       obj && Object.keys(obj).length > 0
         ? Object.entries(obj).slice(0, limit).map(([key, val]) => `${key}: ${val}`).join(', ') + (Object.keys(obj).length > limit ? ` +${Object.keys(obj).length - limit} more` : '')
-        : 'N/A';
+        : 'None';
 
     return (
       <div style={{ 
@@ -171,12 +171,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}> {/* Explicit 4-column grid, reduced gap */}
           {/* Card 1: Colors & Brand Colors */}
-          {(colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0) ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
-            >
-              <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
+          >
+            <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
+            {((colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0)) ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
                 {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
                   <div key={`brand-${index}`} style={{ 
@@ -192,119 +192,119 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
                 ))}
                 {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '10px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
               </div>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 2: Typography */}
-          {fontFamilies && fontFamilies.length > 0 && (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
-            >
-              <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Typography:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
+          >
+            <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Typography:</strong>
+            {(fontFamilies && fontFamilies.length > 0) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 {fontFamilies.slice(0, 1).join(', ')}
                 {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
               </span>
-            </div>
-          )}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 3: Spacing */}
-          {(margins && margins.length > 0) || (paddings && paddings.length > 0) ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
-            >
-              <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Spacing:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
+          >
+            <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Spacing:</strong>
+            {((margins && margins.length > 0) || (paddings && paddings.length > 0)) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
               </span>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 4: Layout Structure */}
-          {layoutStructure && Object.keys(layoutStructure).length > 0 ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
-            >
-              <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Layout Structure:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
+          >
+            <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Layout Structure:</strong>
+            {(layoutStructure && Object.keys(layoutStructure).length > 0) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 Header: {layoutStructure.hasHeader ? 'Yes' : 'No'} | Sections: {layoutStructure.sections || 'N/A'}
               </span>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 5: UI Components (Buttons, Forms, Cards, Navigation) */}
-          {(buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0) ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
-            >
-              <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '4px', fontSize: '11px' }}>UI Components:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
+          >
+            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '4px', fontSize: '11px' }}>UI Components:</strong>
+            {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
               </span>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 6: CSS Details (Variables, Raw CSS) */}
-          {cssVariables && Object.keys(cssVariables).length > 0 ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
-            >
-              <strong style={{ color: '#6c757d', display: 'block', marginBottom: '4px', fontSize: '11px' }}>CSS Details:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
+          >
+            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '4px', fontSize: '11px' }}>CSS Details:</strong>
+            {(cssVariables && Object.keys(cssVariables).length > 0) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
               </span>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 7: Media & Icons */}
-          {(images && images.length > 0) || (icons && icons.length > 0) || logoUrl ? (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Images: ${formatArray((images || []).map((i: any) => i.src), 5)}\nIcons: ${formatArray((icons || []).map((i: any) => i.classes), 5)}\nLogo URL: ${logoUrl || 'N/A'}`}
-            >
-              <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Media & Icons:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Images: ${formatArray((images || []).map((i: any) => i.src), 5)}\nIcons: ${formatArray((icons || []).map((i: any) => i.classes), 5)}\nLogo URL: ${logoUrl || 'N/A'}`}
+          >
+            <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Media & Icons:</strong>
+            {((images && images.length > 0) || (icons && icons.length > 0) || logoUrl) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>
                 Imgs: {images?.length || 0} | Icons: {icons?.length || 0}
               </span>
-            </div>
-          ) : null}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+          </div>
 
           {/* Card 8: Voice Tone & Personality */}
-          {tone && tone.primary && (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
-            >
-              <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Voice Tone:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
+          >
+            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Voice Tone:</strong>
+            {(tone && tone.primary) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>{tone.primary}</span>
-              {personalityTraits && personalityTraits.length > 0 && (
-                <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
-                  Personality: {personalityTraits.slice(0, 1).join(', ')}
-                </span>
-              )}
-            </div>
-          )}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            {(personalityTraits && personalityTraits.length > 0) && (
+              <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
+                Personality: {personalityTraits.slice(0, 1).join(', ')}
+              </span>
+            )}
+          </div>
 
           {/* Card 9: Audience & Messaging */}
-          {audienceAnalysis && audienceAnalysis.primary && (
-            <div 
-              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
-            >
-              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience & Messaging:</strong>
+          <div 
+            style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
+          >
+            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience & Messaging:</strong>
+            {(audienceAnalysis && audienceAnalysis.primary) ? (
               <span style={{ fontSize: '11px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
-              {messaging && messaging.length > 0 && (
-                <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
-                  Messages: {messaging.length}
-                </span>
-              )}
-            </div>
-          )}
+            ) : <span style={{ fontSize: '11px', color: '#888' }}>None</span>}
+            {(messaging && messaging.length > 0) && (
+              <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
+                Messages: {messaging.length}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     );
