@@ -62,6 +62,7 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
   const [editingField, setEditingField] = useState<number | null>(null); // Index of field being edited
   const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
   const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
+  const [showEmbedCodeSection, setShowEmbedCodeSection] = useState(false); // State for embed code section visibility
 
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<GeneratedForm>({
@@ -168,16 +169,6 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
               </option>
             ))}
           </select>
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Field Label</label>
-          <input
-            type="text"
-            {...register(`fields.${index}.label`, { required: true })}
-            className="form-input"
-          />
-          {errors.fields?.[index]?.label && <span className="error-message">Label is required</span>}
         </div>
 
         <div className="form-group">
@@ -376,12 +367,14 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
       <div className="card live-preview-card">
         <LiveFormPreview
           previewGeneratedForm={watchedFormConfig} // Pass the live-watched form config
-          hideEmbedSection={true} // Hide embed section in editor
-          hideAnalysisSection={false} // Now show analysis section
+          createdForm={form} // Pass the original form to enable embed section
+          user={null} // User context is not directly relevant for preview in editor
           extractedDesignTokens={extractedDesignTokens} // Pass extracted design tokens
           extractedVoiceAnalysis={extractedVoiceAnalysis} // Pass extracted voice analysis
           formData={{ url: form.url }} // Pass form URL for context in analysis display
           className="h-full" // Ensure it takes full height
+          showEmbedCodeSection={showEmbedCodeSection} // Control embed section visibility
+          onToggleEmbedCodeSection={() => setShowEmbedCodeSection(prev => !prev)} // Toggle handler
         />
       </div>
     </div>
