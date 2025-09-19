@@ -11,6 +11,7 @@ import { FormEditor } from './components/FormEditor'; // New import
 import { ToggleSwitch } from './components/ToggleSwitch'; // New import
 import { FormThumbnail } from './components/FormThumbnail'; // New import
 import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
+import { WebsiteAnalysisSummary } from './components/WebsiteAnalysisSummary'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 

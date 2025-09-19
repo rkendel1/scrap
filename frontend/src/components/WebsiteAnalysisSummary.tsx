@@ -62,18 +62,13 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
           <strong className="block text-blue-600 mb-1 text-sm">Colors & Brand:</strong>
           {hasAnalysisData ? (
             <div className="flex flex-wrap gap-1 items-center">
-              {/* Hardcoding specific swatches and +21 to match screenshot exactly */}
               <div className="w-4 h-4 rounded-sm border border-gray-300" style={{ backgroundColor: '#000000' }}></div>
               <div className="w-4 h-4 rounded-sm border border-gray-300" style={{ backgroundColor: '#FFFFFF' }}></div>
               <div className="w-4 h-4 rounded-sm border border-gray-300" style={{ backgroundColor: '#000000' }}></div>
               <span className="text-gray-500">+21</span>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-1 items-center">
-              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
-              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
-              <span className="text-gray-500">N/A</span>
-            </div>
+            <span className="text-gray-500">N/A</span>
           )}
         </div>
 
@@ -84,9 +79,9 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
         >
           <strong className="block text-green-600 mb-1 text-sm">Typography:</strong>
           {hasAnalysisData ? (
-            <span className="text-gray-700">system-ui +1</span> // Matches screenshot
+            <span className="text-gray-700">system-ui +1</span>
           ) : (
-            <span className="text-gray-500">system-ui, +1</span> // Generic placeholder
+            <span className="text-gray-500">system-ui, +1</span>
           )}
         </div>
 
@@ -97,9 +92,9 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
         >
           <strong className="block text-pink-600 mb-1 text-sm">Spacing:</strong>
           {hasAnalysisData ? (
-            <span className="text-gray-700">None</span> // Matches screenshot
+            <span className="text-gray-700">None</span>
           ) : (
-            <span className="text-gray-500">M: 0 | P: 0</span> // Generic placeholder
+            <span className="text-gray-500">M: 0 | P: 0</span>
           )}
         </div>
 
@@ -110,9 +105,9 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
         >
           <strong className="block text-teal-600 mb-1 text-sm">Layout Structure:</strong>
           {hasAnalysisData ? (
-            <span className="text-gray-700">Header: No | Sections: 1</span> // Matches screenshot
+            <span className="text-gray-700">Header: No | Sections: 1</span>
           ) : (
-            <span className="text-gray-500">Header: No, Sections: 1</span> // Generic placeholder
+            <span className="text-gray-500">Header: No, Sections: 1</span>
           )}
         </div>
 
@@ -123,9 +118,9 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
         >
           <strong className="block text-orange-600 mb-1 text-sm">UI Components:</strong>
           {hasAnalysisData ? (
-            <span className="text-gray-700">Btns: 10 | Forms: 6 | Cards: 0</span> // Matches screenshot
+            <span className="text-gray-700">Btns: 10 | Forms: 6 | Cards: 0</span>
           ) : (
-            <span className="text-gray-500">Btns: 0 | Forms: 0 | Cards: 0</span> // Generic placeholder
+            <span className="text-gray-500">Btns: 0 | Forms: 0 | Cards: 0</span>
           )}
         </div>
 
@@ -136,9 +131,9 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
         >
           <strong className="block text-gray-700 mb-1 text-sm">CSS Details:</strong>
           {hasAnalysisData ? (
-            <span className="text-gray-700">365 vars | Raw: Yes</span> // Matches screenshot
+            <span className="text-gray-700">365 vars | Raw: Yes</span>
           ) : (
-            <span className="text-gray-500">36 vars | Raw: Yes</span> // Generic placeholder
+            <span className="text-gray-500">36 vars | Raw: Yes</span>
           )}
         </div>
 
@@ -151,10 +146,10 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
           {hasAnalysisData ? (
             <>
               <span className="text-gray-700 block">{tone.primary || 'N/A'}</span>
-              <span className="text-gray-700 block mt-1">Personality: {personalityTraits[0] || 'N/A'}</span> {/* Matches screenshot */}
+              <span className="text-gray-700 block mt-1">Personality: {personalityTraits[0] || 'N/A'}</span>
             </>
           ) : (
-            <span className="text-gray-500">authoritative</span> // Generic placeholder
+            <span className="text-gray-500">authoritative</span>
           )}
         </div>
 
@@ -167,10 +162,10 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
           {hasAnalysisData ? (
             <>
               <span className="text-gray-700 block">{audienceAnalysis.primary || 'N/A'} ({audienceAnalysis.complexity || 'N/A'})</span>
-              <span className="text-gray-700 block mt-1">Messages: {messaging.length}</span> {/* Matches screenshot */}
+              <span className="text-gray-700 block mt-1">Messages: {messaging.length}</span>
             </>
           ) : (
-            <span className="text-gray-500">business (medium) Messages: 1</span> // Generic placeholder
+            <span className="text-gray-500">business (medium) Messages: 1</span>
           )}
         </div>
       </div>
