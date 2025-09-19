@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EmbeddableForm } from './EmbeddableForm';
 import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
-import { CheckCircle, Lock, Copy, EyeOff } from 'lucide-react'; // Import CheckCircle, Lock, Copy, EyeOff icon
+import { CheckCircle, Lock, Copy, EyeOff, Palette, Type, Mic, Sparkles } from 'lucide-react'; // Import new Lucide icons
 
 // Helper to determine if a color is light (simplified for demo)
 const isLightColor = (color: string): boolean => {
