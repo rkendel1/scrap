@@ -435,6 +435,15 @@ app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (re
     });
   } catch (error) {
     console.error('Design token extraction error:', error);
+    
+    // Check for specific error message from WebsiteExtractor indicating a block
+    if (error instanceof Error && error.message.includes('blocked the request')) {
+      return res.status(403).json({
+        error: 'Website blocked request',
+        message: error.message
+      });
+    }
+
     res.status(500).json({
       error: 'Failed to extract design tokens',
       message: error instanceof Error ? error.message : 'Unknown error'
