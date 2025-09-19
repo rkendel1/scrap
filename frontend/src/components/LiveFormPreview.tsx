@@ -100,7 +100,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     }
 
     const descriptionText = extractedDesignTokens?.messaging?.[0] || 
-                            (url ? `This form will adapt to the style of ${url}` : 'Start by entering a website URL.');
+                            (url ? `This form will adapt to the style of ${url}` : 'Start by entering a website URL in the chat to the left.');
 
     return {
       title: purpose ? `AI Form: ${purpose}` : 'Customer feedback', // Default title for preview
@@ -135,6 +135,105 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     }
   };
 
+  const renderDesignTokens = () => {
+    if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
+
+    const { colorPalette, fontFamilies, headings, primaryColors } = extractedDesignTokens || {};
+    const { tone, personalityTraits } = extractedVoiceAnalysis || {};
+
+    return (
+      <div style={{ 
+        backgroundColor: '#ffffff',
+        padding: '24px',
+        borderRadius: '8px',
+        fontFamily: 'system-ui',
+        border: '1px solid #e1e5e9',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        maxWidth: '500px',
+        margin: '0 auto',
+        textAlign: 'left'
+      }}>
+        <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '20px' }}>
+          Website Analysis Complete!
+        </h3>
+        <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '14px' }}>
+          Here's what we've learned from <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
+        </p>
+
+        {colorPalette && colorPalette.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#007bff' }}>🎨 Color Palette</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {colorPalette.slice(0, 8).map((color: string, index: number) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      backgroundColor: color,
+                      border: '1px solid #eee'
+                    }}
+                  ></div>
+                  <span style={{ fontSize: '12px', color: '#555' }}>{color}</span>
+                </div>
+              ))}
+              {colorPalette.length > 8 && <span style={{ fontSize: '12px', color: '#888' }}>+{colorPalette.length - 8} more</span>}
+            </div>
+          </div>
+        )}
+
+        {fontFamilies && fontFamilies.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#28a745' }}>🔠 Typography</h4>
+            <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc' }}>
+              {fontFamilies.slice(0, 3).map((font: string, index: number) => (
+                <li key={index} style={{ fontSize: '14px', color: '#555', fontFamily: font }}>{font}</li>
+              ))}
+              {fontFamilies.length > 3 && <li style={{ fontSize: '12px', color: '#888' }}>+{fontFamilies.length - 3} more</li>}
+            </ul>
+          </div>
+        )}
+
+        {tone && tone.primary && (
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#ffc107' }}>🗣️ Voice & Tone</h4>
+            <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#555' }}>
+              Primary Tone: <strong style={{ color: '#333' }}>{tone.primary}</strong>
+            </p>
+            {personalityTraits && personalityTraits.length > 0 && (
+              <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
+                Personality: {personalityTraits.slice(0, 3).join(', ')}
+              </p>
+            )}
+          </div>
+        )}
+
+        {primaryColors && primaryColors.length > 0 && (
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#6f42c1' }}>✨ Brand Colors</h4>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {primaryColors.slice(0, 3).map((color: string, index: number) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <div
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '4px',
+                      backgroundColor: color,
+                      border: '1px solid #eee'
+                    }}
+                  ></div>
+                  <span style={{ fontSize: '12px', color: '#555' }}>{color}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="card live-preview-card">
       <div className="preview-header">
@@ -154,7 +253,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             padding: '20px'
           }}
         >
-          {url || purpose || generatedForm ? (
+          {generatedForm ? (
             <>
               {formContent}
               {isDestinationConfigured && ( // Show status only if configured
@@ -163,7 +262,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
                 </div>
               )}
             </>
+          ) : (extractedDesignTokens || extractedVoiceAnalysis) ? (
+            // Render design token information when URL is processed but form not generated
+            renderDesignTokens()
           ) : (
+            // Placeholder when nothing is extracted yet
             <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -177,6 +280,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       {generatedForm && (
         <div className="ai-generated-badge">
           ✅ AI-generated form preview.
+        </div>
+      )}
+      {(extractedDesignTokens || extractedVoiceAnalysis) && !generatedForm && (
+        <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
+          ✅ Design tokens extracted. Ready for form generation!
         </div>
       )}
 
