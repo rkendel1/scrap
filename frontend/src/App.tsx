@@ -36,6 +36,7 @@ function App() {
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
     isDestinationConfigured: boolean;
+    isGeneratingForm: boolean; // New: Indicate if form generation is in progress
   }>({
     formData: {},
     generatedForm: null,
@@ -43,6 +44,7 @@ function App() {
     extractedDesignTokens: null,
     extractedVoiceAnalysis: null,
     isDestinationConfigured: false,
+    isGeneratingForm: false, // Initialize to false
   });
 
   // Initialize authentication on app load
@@ -413,6 +415,7 @@ function App() {
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
                 isDestinationConfigured={builderState.isDestinationConfigured} // Pass new state
+                isGeneratingForm={builderState.isGeneratingForm} // New: Pass isGeneratingForm
                 // The embed code section in LiveFormPreview is now controlled by its internal state
                 // and the onGetEmbedCodeClick from builder will trigger a view change instead.
                 // So, we don't need to pass showEmbedCodeSection or onToggleEmbedCodeSection here.
@@ -620,8 +623,6 @@ function App() {
           </>
         ) : null}
       </main>
-
-      {/* Removed the footer from here */}
 
       {/* Auth Modal - Moved outside of <main> */}
       {showAuth && (

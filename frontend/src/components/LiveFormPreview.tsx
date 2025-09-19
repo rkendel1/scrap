@@ -63,6 +63,7 @@ interface LiveFormPreviewProps {
   className?: string;
   showEmbedCodeSection?: boolean; // New prop, optional
   onToggleEmbedCodeSection?: () => void; // New prop, optional
+  isGeneratingForm?: boolean; // New: Indicate if form generation is in progress
 
   // New props for direct form preview (e.g., in FormEditor)
   previewGeneratedForm?: GeneratedForm | null;
@@ -82,6 +83,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   className,
   showEmbedCodeSection,
   onToggleEmbedCodeSection,
+  isGeneratingForm = false, // Default to false
   previewGeneratedForm, // New prop
   hideEmbedSection = false, // New prop
   hideAnalysisSection = false, // New prop
@@ -356,8 +358,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${wrapperJustifyClass}`}>
-        {/* If a form is generated, show the form and destination status */}
-        {currentFormToRender ? (
+        {isGeneratingForm ? (
+          <div className="loading">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-2 text-gray-600">Generating AI Form...</span>
+          </div>
+        ) : currentFormToRender ? (
           <>
             {formContent}
             {isDestinationConfigured && (

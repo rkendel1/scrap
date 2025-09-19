@@ -14,6 +14,7 @@ interface ConversationalFormBuilderProps {
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
     isDestinationConfigured: boolean; // Added
+    isGeneratingForm: boolean; // New: Indicate if form generation is in progress
   }) => void;
   onGetEmbedCodeClick: (form: SaaSForm) => void;
   onShowAuth: (mode: 'login' | 'register') => void; // New prop
@@ -56,7 +57,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  // Removed currentQuickResponses state
   
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -68,6 +68,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [selectedDestinationType, setSelectedDestinationType] = useState<string | null>(null);
   const [destinationConfig, setDestinationConfig] = useState<any>({});
   const [isDestinationConfigured, setIsDestinationConfigured] = useState(false); // New state
+  const [isGeneratingForm, setIsGeneratingForm] = useState(false); // New: Indicate if form generation is in progress
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle'); // State for copy button feedback
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
@@ -113,7 +114,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory]); // Removed currentQuickResponses from dependency array
+  }, [conversationHistory]);
 
   useEffect(() => {
     onStateChange({
@@ -122,36 +123,33 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       createdForm,
       extractedDesignTokens,
       extractedVoiceAnalysis,
-      isDestinationConfigured, // Pass new state
+      isDestinationConfigured,
+      isGeneratingForm, // Pass new state
     });
     buildContextSummary();
-  }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, isDestinationConfigured, onStateChange]);
+  }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, isDestinationConfigured, isGeneratingForm, onStateChange]);
 
   const addEntry = (entry: ConversationEntry) => {
     setConversationHistory((prev) => [...prev, { ...entry, timestamp: new Date() }]);
   };
 
-  const addPrompt = (content: string | JSX.Element) => { // Removed quickResponses parameter
+  const addPrompt = (content: string | JSX.Element) => {
     addEntry({ type: 'prompt', content });
-    // Removed setCurrentQuickResponses(quickResponses);
     setIsLoading(false);
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
-    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
-    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
-    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
@@ -160,7 +158,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email'; // Added commands
+      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email';
       configInput?: string;
     } = {};
 
@@ -279,14 +277,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         setCurrentStep('ASK_DESTINATION_TYPE');
         addPrompt(
           "Okay, where should I send the form submissions?"
-          // Removed quick responses
         );
         return;
       }
       if (parsedInput.command === 'get embed code') {
         if (createdForm) {
           onGetEmbedCodeClick(createdForm);
-          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?"); // Removed quick responses
+          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?");
           setCurrentStep('DONE');
         } else {
           addPrompt("No form has been generated yet. Please start by providing a URL.");
@@ -334,7 +331,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?"); // Removed quick responses
+            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
           }
           break;
 
@@ -346,7 +343,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationConfigInput(parsedInput.configInput);
           }
           else {
-            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".'); // Removed quick responses
+            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".');
           }
           break;
 
@@ -389,7 +386,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'DESTINATION_CONFIGURED':
-          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?"); // Removed quick responses
+          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?");
           setCurrentStep('ASK_GO_LIVE');
           break;
 
@@ -397,7 +394,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.command === 'yes') {
             await processGoLive();
           } else if (parsedInput.command === 'no') {
-            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?"); // Removed quick responses
+            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?");
             setCurrentStep('DONE');
           } else {
             addPrompt("Please respond with 'Yes' or 'No'.");
@@ -460,7 +457,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setExtractedVoiceAnalysis(voiceAnalysis);
     setFormData((prev) => ({ ...prev, url }));
 
-    // Split the prompt into two messages
     addPrompt(`Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles.`);
     addPrompt(`Now, what do you want to capture with this form?`);
     setCurrentStep('ASK_PURPOSE');
@@ -475,9 +471,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const processPurposeInput = async (purpose: string) => {
     setCurrentStep('PROCESSING_PURPOSE');
+    setIsGeneratingForm(true); // Set generating state to true
     if (!extractedRecordId) {
       addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
       setCurrentStep('ASK_URL');
+      setIsGeneratingForm(false); // Reset generating state
       return;
     }
 
@@ -508,6 +506,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
       }
       setCurrentStep('ASK_PURPOSE'); // Stay on this step
+      setIsGeneratingForm(false); // Reset generating state
       return;
     }
 
@@ -515,12 +514,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(generateResult.generatedForm);
     setCreatedForm(newForm);
     setFormData((prev) => ({ ...prev, purpose }));
-    // isDestinationConfigured remains as is, it doesn't block embed code anymore
 
     const embedCode = newForm.embed_code;
     const isGuestForm = !user; // Check if it's a guest form
 
     setCurrentStep('FORM_GENERATED_REVIEW'); // New state
+    setIsGeneratingForm(false); // Reset generating state
     addPrompt(
       <>
         Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
@@ -547,7 +546,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           Are there any changes you'd like to make, or would you like to configure delivery?
         </div>
       </>
-      // Removed quick responses
     );
   };
 
@@ -556,7 +554,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier'];
 
     if (!availableTypes.includes(normalizedType)) {
-      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.'); // Removed quick responses
+      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.');
       setCurrentStep('ASK_DESTINATION_TYPE'); // Stay on this step
       return;
     }
@@ -570,7 +568,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           <>
             Okay, I'll send submissions to your registered email: <strong>{user.email}</strong>. Is that correct?
           </>
-          // Removed quick responses
         );
         setCurrentStep('CONFIRM_DEFAULT_EMAIL');
         return;
@@ -579,7 +576,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           <>
             To use your email as the default, you need to create an account. Alternatively, you can provide a recipient email address now.
           </>
-          // Removed quick responses
         );
         setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step to await input or command
         return;
@@ -687,7 +683,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
       "Your form is ready! Would you like to make this form live now?"
-      // Removed quick responses
     );
     setCurrentStep('ASK_GO_LIVE'); // Transition to new step
     onFormGenerated(createdForm);
@@ -722,17 +717,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (result.success) {
         setCreatedForm(prev => prev ? { ...prev, is_live: true } : null);
         addSuccess("Great! Your form is now live and ready to collect submissions.");
-        addPrompt("Would you like to create another form?"); // Removed quick responses
+        addPrompt("Would you like to create another form?");
         setCurrentStep('DONE');
       } else {
         addError(result.message || "Failed to make the form live. Please try again or check your subscription status.");
-        addPrompt("Would you like to create another form?"); // Removed quick responses
+        addPrompt("Would you like to create another form?");
         setCurrentStep('DONE');
       }
     } catch (err: any) {
       console.error('Go live error:', err);
       addError(err.message || 'An unexpected error occurred while trying to make the form live.');
-      addPrompt("Would you like to create another form?"); // Removed quick responses
+      addPrompt("Would you like to create another form?");
       setCurrentStep('DONE');
     }
   };
@@ -753,13 +748,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setSelectedDestinationType(null);
       setDestinationConfig({});
       setIsDestinationConfigured(false); // Reset
+      setIsGeneratingForm(false); // Reset
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
-      // Removed setCurrentQuickResponses(null);
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!", null);
       setUserInput('');
-      // Removed setCurrentQuickResponses(null);
     }
   };
 
@@ -778,9 +772,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setSelectedDestinationType(null);
     setDestinationConfig({});
     setIsDestinationConfigured(false); // Reset
+    setIsGeneratingForm(false); // Reset
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
-    // Removed setCurrentQuickResponses(null);
   };
 
   const formatTimestamp = (date: Date) => {
@@ -823,8 +817,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           ))}
         </div>
       </div>
-
-      {/* Removed Quick Responses Container */}
 
       <form onSubmit={handleUserInput} className="form-input-container">
         <input
