@@ -242,13 +242,8 @@ function App() {
 
   // New handler for the "Sign in to get embed code" button in LiveFormPreview
   const handleGetEmbedCodeClick = (form: SaaSForm) => {
-    if (user) {
-      handleShowEmbedCode(form);
-    } else {
-      setShowAuth(true); // Open auth modal
-      setAuthMode('login'); // Default to login
-      setError('Please sign in or register to get your embed code.');
-    }
+    // Always navigate to the embed code display, regardless of user login status
+    handleShowEmbedCode(form);
   };
 
   const handleToggleFormLive = async (formId: number) => {
@@ -518,7 +513,7 @@ function App() {
               />
             </div>
           </div>
-        ) : currentView === 'embed-code' && user && selectedForm ? (
+        ) : currentView === 'embed-code' && selectedForm ? ( // Removed user check here
           <EmbedCodeDisplay 
             form={selectedForm} 
             user={user} 

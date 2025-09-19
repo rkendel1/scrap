@@ -190,11 +190,24 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           <button 
             onClick={() => onGetEmbedCodeClick(createdForm)}
             className="btn-embed-code"
-            disabled={!user} // Only disable if not logged in
+            // Removed disabled={!user}
           >
             <Lock size={18} />
-            {!user ? 'Sign in to get embed code' : 'Get Embed Code'}
+            Get Embed Code
           </button>
+          {!user && (
+            <p style={{ 
+              marginTop: '12px', 
+              fontSize: '13px', 
+              color: '#a0aec0', // Lighter gray for guest message
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}>
+              <Lock size={16} /> Sign in or register to activate your form and ensure it never expires.
+            </p>
+          )}
         </div>
       )}
     </div>
