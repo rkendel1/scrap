@@ -582,16 +582,21 @@ main {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  /* Removed fixed justify-content here, it will be set by dynamic class */
   width: 100%;
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
   min-height: 0; /* Allow content to shrink */
 }
 
-/* New rule for zero state centering */
-.live-preview-content-wrapper.is-zero-state {
+/* Utility classes for flex justification */
+.justify-start { justify-content: flex-start; }
+.justify-center { justify-content: center; }
+.justify-end { justify-content: flex-end; }
+
+/* Removed .is-zero-state as it will be replaced by dynamic class */
+/* .live-preview-content-wrapper.is-zero-state {
   justify-content: center;
-}
+} */
 
 .live-preview-card .sparkle-icon {
   font-size: 48px;

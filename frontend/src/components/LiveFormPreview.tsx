@@ -311,13 +311,23 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   const isZeroState = !currentFormToRender;
   const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
 
+  // Determine the appropriate justify-content class for the wrapper
+  let wrapperJustifyClass = '';
+  if (isZeroState && hasAnalysisData) {
+    wrapperJustifyClass = 'justify-end'; // Push analysis to bottom in zero state
+  } else if (isZeroState && !hasAnalysisData) {
+    wrapperJustifyClass = 'justify-center'; // Center placeholder in zero state
+  } else {
+    wrapperJustifyClass = 'justify-start'; // Default for when form is present (form + analysis below)
+  }
+
   return (
     <div className={`live-preview-card ${className || ''}`}>
       <div className="preview-header">
         <h3>Live Form Preview</h3>
       </div>
       
-      <div className={`live-preview-content-wrapper ${isZeroState ? 'is-zero-state' : ''}`}>
+      <div className={`live-preview-content-wrapper ${wrapperJustifyClass}`}>
         {/* If a form is generated, show the form and destination status */}
         {currentFormToRender && (
           <>
