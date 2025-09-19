@@ -49,7 +49,7 @@
             if (!data.success) {
                 throw new Error(data.message || 'Failed to load form');
             }
-            renderForm(data.data, container);
+            renderForm(data.data, container, isTestMode); // Pass isTestMode to renderForm
         })
         .catch(error => {
             console.error('FormCraft: Error loading form:', error);
@@ -61,7 +61,7 @@
             `;
         });
 
-    function renderForm(formData, container) {
+    function renderForm(formData, container, isTestMode) { // Accept isTestMode
         const form = formData.generated_form;
         if (!form) {
             container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Form configuration not found</div>';
@@ -149,7 +149,7 @@
         if (formElement) {
             formElement.addEventListener('submit', function(e) {
                 e.preventDefault();
-                handleFormSubmission(formData, embedCode);
+                handleFormSubmission(formData, embedCode, isTestMode); // Pass isTestMode to submission handler
             });
         }
     }
@@ -219,7 +219,7 @@
         }).join('');
     }
 
-    function handleFormSubmission(formData, embedCode) {
+    function handleFormSubmission(formData, embedCode, isTestMode) { // Accept isTestMode
         const formElement = document.getElementById(`formcraft-form-${embedCode}`);
         const submitBtn = document.getElementById(`submit-btn-${embedCode}`);
         const messageDiv = document.getElementById(`form-message-${embedCode}`);
@@ -236,6 +236,11 @@
         const data = {};
         for (let [key, value] of formDataObj.entries()) {
             data[key] = value;
+        }
+
+        // Add isTestSubmission flag to the payload
+        if (isTestMode) {
+            data.isTestSubmission = true;
         }
 
         // Submit to the new public API endpoint

@@ -681,6 +681,7 @@ export class SaaSService {
       ipAddress?: string;
       userAgent?: string;
       hostname?: string;
+      isTestSubmission?: boolean; // Added isTestSubmission flag
     }
   ): Promise<{ success: boolean; message: string; remaining?: number }> {
     try {
@@ -690,14 +691,19 @@ export class SaaSService {
         await client.query('BEGIN');
 
         // Get embed code and form info
-        const embedQuery = `
+        let embedQuery = `
           SELECT ec.*, f.is_live, f.user_id, f.id as form_id, f.allowed_domains, u.subscription_tier
           FROM embed_codes ec
           JOIN forms f ON f.id = ec.form_id
           JOIN users u ON f.user_id = u.id
-          WHERE ec.code = $1 AND ec.is_active = true
+          WHERE ec.code = $1
         `;
         
+        // Conditionally add is_active and is_live checks for non-test submissions
+        if (!metadata.isTestSubmission) {
+          embedQuery += ` AND ec.is_active = true AND f.is_live = true`;
+        }
+
         const embedResult = await client.query(embedQuery, [embedCode]);
         
         if (embedResult.rows.length === 0) {
@@ -706,7 +712,8 @@ export class SaaSService {
 
         const embed = embedResult.rows[0];
         
-        if (!embed.is_live) {
+        // For non-test submissions, also check if the form is live
+        if (!metadata.isTestSubmission && !embed.is_live) {
           return { success: false, message: 'Form is not currently live' };
         }
 
@@ -751,18 +758,20 @@ export class SaaSService {
           metadata.userAgent
         ]);
 
-        // Update counters
-        await client.query(`
-          UPDATE embed_codes 
-          SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
-          WHERE id = $1
-        `, [embed.id]);
+        // Update counters (only for non-test submissions)
+        if (!metadata.isTestSubmission) {
+          await client.query(`
+            UPDATE embed_codes 
+            SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
+            WHERE id = $1
+          `, [embed.id]);
 
-        await client.query(`
-          UPDATE forms 
-          SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
-          WHERE id = $1
-        `, [embed.form_id]);
+          await client.query(`
+            UPDATE forms 
+            SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
+            WHERE id = $1
+          `, [embed.form_id]);
+        }
 
         await client.query('COMMIT');
 

@@ -63,7 +63,7 @@
                     if (!data.success) {
                         throw new Error(data.message || 'Failed to load form');
                     }
-                    renderForm(data.data, embedCode, true);
+                    renderForm(data.data, embedCode, isTestMode); // Pass isTestMode to renderForm
                 })
                 .catch(error => {
                     console.error('Error loading form:', error);
@@ -71,7 +71,7 @@
                         `<div class="error-message">Error loading form: ${error.message}</div>`;
                 });
 
-            function renderForm(formData, embedCode, showBranding) {
+            function renderForm(formData, embedCode, isTestMode) { // Accept isTestMode
                 const form = formData.generated_form;
                 if (!form) {
                     document.getElementById('formcraft-embed-container').innerHTML = 
@@ -143,7 +143,7 @@
                 // Add form submission handler
                 document.getElementById('formcraft-form').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    handleFormSubmission(form, embedCode);
+                    handleFormSubmission(form, embedCode, isTestMode); // Pass isTestMode to submission handler
                 });
             }
 
@@ -211,7 +211,7 @@
                 }).join('');
             }
 
-            function handleFormSubmission(formData, embedCode) {
+            function handleFormSubmission(formData, embedCode, isTestMode) { // Accept isTestMode
                 const formElement = document.getElementById('formcraft-form');
                 const submitBtn = document.getElementById('submit-btn');
                 const messageDiv = document.getElementById('form-message');
@@ -226,6 +226,11 @@
                 const data = {};
                 for (let [key, value] of formDataObj.entries()) {
                     data[key] = value;
+                }
+
+                // Add isTestSubmission flag to the payload
+                if (isTestMode) {
+                    data.isTestSubmission = true;
                 }
 
                 // Submit to the new public API endpoint

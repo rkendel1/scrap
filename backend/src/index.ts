@@ -765,13 +765,14 @@ app.get('/api/forms/embed-config/:embedCode', async (req, res) => {
 app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
   try {
     const { embedCode } = req.params;
-    const submissionData = req.body;
+    const { isTestSubmission, ...submissionData } = req.body; // Extract isTestSubmission
 
     const metadata = {
       submittedFromUrl: req.headers.referer,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
-      hostname: req.headers.origin || req.headers.referer // Use origin or referer for hostname
+      hostname: req.headers.origin || req.headers.referer, // Use origin or referer for hostname
+      isTestSubmission: isTestSubmission === true // Ensure boolean type
     };
 
     if (!embedCode || !submissionData || !metadata.hostname) {
