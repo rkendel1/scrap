@@ -1,5 +1,8 @@
 import jwt from 'jsonwebtoken'; // Still needed for other JWTs, but not for embed.js
 import pool from './database';
+import dotenv from 'dotenv'; // Import dotenv to access environment variables
+
+dotenv.config(); // Load environment variables
 
 export interface EmbedTokenPayload {
   formId: number;
@@ -11,10 +14,18 @@ export interface EmbedTokenPayload {
 
 export class EmbedSecurityService {
   private readonly JWT_SECRET = process.env.EMBED_JWT_SECRET || process.env.JWT_SECRET || 'embed-secret-change-in-production';
-  // Removed TOKEN_EXPIRES_IN as it's no longer relevant for the public embed script
+  private readonly FRONTEND_URL_HOSTNAME: string | null;
 
-  // Removed generateEmbedToken method
-  // Removed verifyEmbedToken method
+  constructor() {
+    // Extract hostname from FRONTEND_URL for automatic whitelisting
+    try {
+      const frontendUrl = process.env.FRONTEND_URL;
+      this.FRONTEND_URL_HOSTNAME = frontendUrl ? new URL(frontendUrl).hostname.replace(/^www\./, '').toLowerCase() : null;
+    } catch (e) {
+      console.warn('Invalid FRONTEND_URL in environment variables. Cannot auto-whitelist frontend domain for embeds.');
+      this.FRONTEND_URL_HOSTNAME = null;
+    }
+  }
 
   /**
    * Check if a domain is allowed to embed the form
@@ -22,6 +33,11 @@ export class EmbedSecurityService {
   isDomainAllowed(hostname: string, allowedDomains: string[]): boolean {
     // Always allow localhost and 127.0.0.1 for development/testing
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return true;
+    }
+
+    // Always allow the configured FRONTEND_URL's hostname
+    if (this.FRONTEND_URL_HOSTNAME && hostname.toLowerCase().replace(/^www\./, '') === this.FRONTEND_URL_HOSTNAME) {
       return true;
     }
 
