@@ -322,6 +322,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             )}
           </div>
         </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '12px' }}>
+            <div className="sparkle-icon" style={{ fontSize: '24px', marginBottom: '8px' }}>✨</div>
+            <p style={{ margin: 0 }}>No website analysis data yet. Enter a URL to begin!</p>
+          </div>
+        )}
       </details>
     );
   };
@@ -357,7 +363,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       
       <div className={`live-preview-content-wrapper ${wrapperJustifyClass}`}>
         {/* If a form is generated, show the form and destination status */}
-        {currentFormToRender && (
+        {currentFormToRender ? (
           <>
             {formContent}
             {isDestinationConfigured && (
@@ -366,10 +372,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
               </div>
             )}
           </>
-        )}
-
-        {/* If no form and no analysis data, show the initial placeholder */}
-        {!currentFormToRender && !hasAnalysisData && (
+        ) : (
+          // This is the placeholder for "Your AI-Powered Form"
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
             <div className="sparkle-icon">✨</div>
             <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
