@@ -169,7 +169,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         padding: '16px',
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        maxWidth: '600px', /* Increased max-width */
+        maxWidth: '750px', /* Increased max-width for 3 columns */
         margin: '0 auto',
         textAlign: 'left',
         marginTop: '16px',
@@ -185,7 +185,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}> {/* Explicit 3-column grid */}
+          {/* Card 1: Colors */}
           {colorPalette && colorPalette.length > 0 && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px' }}>Colors:</strong>
@@ -201,6 +202,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             </div>
           )}
 
+          {/* Card 2: Fonts */}
           {fontFamilies && fontFamilies.length > 0 && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px' }}>Fonts:</strong>
@@ -211,20 +213,39 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             </div>
           )}
 
+          {/* Card 3: Tone & Personality */}
           {tone && tone.primary && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px' }}>Tone:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>{tone.primary}</span>
               {personalityTraits && personalityTraits.length > 0 && (
-                <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 2).join(', ')})</span>
+                <span style={{ fontSize: '12px', color: '#555', display: 'block', marginTop: '4px' }}>
+                  <strong>Personality:</strong> {personalityTraits.slice(0, 1).join(', ')}
+                </span>
               )}
             </div>
           )}
 
+          {/* Card 4: Audience */}
           {audienceAnalysis && audienceAnalysis.primary && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px' }}>Audience:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
+            </div>
+          )}
+
+          {/* Card 5: Brand Colors (if distinct from main palette) */}
+          {primaryColors && primaryColors.length > 0 && (
+            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+              <strong style={{ color: '#dc3545', display: 'block', marginBottom: '4px' }}>Brand Colors:</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                {primaryColors.slice(0, 2).map((color: string, index: number) => (
+                  <div key={index} style={{ 
+                    width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
+                    border: '1px solid #eee', display: 'inline-block' 
+                  }}></div>
+                ))}
+              </div>
             </div>
           )}
         </div>
