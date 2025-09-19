@@ -96,6 +96,15 @@ export interface Connector {
 export class SaaSService {
   private embedSecurity = new EmbedSecurityService();
   
+  /**
+   * Generates a unique embed code string.
+   * This is a simple implementation; in a production environment, you might want
+   * a more robust, collision-resistant ID generation strategy.
+   */
+  private generateEmbedCode(): string {
+    return `embed_${Math.random().toString(36).substring(2, 15)}${Date.now().toString(36)}`;
+  }
+
   async createForm(
     userId: number | null,
     guestTokenId: number | null,
