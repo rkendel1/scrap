@@ -6,7 +6,6 @@ import { ConversationalFormBuilder } from './components/ConversationalFormBuilde
 import { LoginForm, RegisterForm } from './components/AuthForms';
 import { ConnectorManager } from './components/ConnectorManager';
 import { LiveFormPreview } from './components/LiveFormPreview';
-import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
 import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
@@ -22,7 +21,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'embed-code' | 'analytics'>('builder');
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics'>('builder'); // Removed 'embed-code'
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -32,14 +31,16 @@ function App() {
     createdForm: SaaSForm | null;
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
-    isDestinationConfigured: boolean; // Added
+    isDestinationConfigured: boolean;
+    showEmbedCodeSection: boolean; // Added
   }>({
     formData: {},
     generatedForm: null,
     createdForm: null,
     extractedDesignTokens: null,
     extractedVoiceAnalysis: null,
-    isDestinationConfigured: false, // Initialize
+    isDestinationConfigured: false,
+    showEmbedCodeSection: false, // Initialize
   });
 
   // Initialize authentication on app load
@@ -154,9 +155,14 @@ function App() {
     setCurrentView('form-manage');
   };
 
-  const handleShowEmbedCode = (form: SaaSForm) => {
-    setSelectedForm(form);
-    setCurrentView('embed-code');
+  // MODIFIED: This now toggles the embed code section in LiveFormPreview
+  const handleGetEmbedCodeClick = (form: SaaSForm) => {
+    setSelectedForm(form); // Ensure selectedForm is set for context
+    setBuilderState(prev => ({
+      ...prev,
+      showEmbedCodeSection: !prev.showEmbedCodeSection, // Toggle visibility
+      createdForm: form // Ensure the correct form is in builderState
+    }));
   };
 
   const handleShowAnalytics = (form: SaaSForm) => {
@@ -177,6 +183,7 @@ function App() {
     setCurrentView('dashboard');
     setError(null); // Clear any previous errors when navigating back
     fetchUserForms(); // Refresh forms list after returning to dashboard
+    setBuilderState(prev => ({ ...prev, showEmbedCodeSection: false })); // Hide embed code section
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -239,12 +246,6 @@ function App() {
       return () => clearTimeout(timeoutId);
     }
   }, [searchQuery, currentView]);
-
-  // New handler for the "Sign in to get embed code" button in LiveFormPreview
-  const handleGetEmbedCodeClick = (form: SaaSForm) => {
-    // Always navigate to the embed code display, regardless of user login status
-    handleShowEmbedCode(form);
-  };
 
   const handleToggleFormLive = async (formId: number) => {
     if (!authToken) {
@@ -395,6 +396,8 @@ function App() {
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
                 isDestinationConfigured={builderState.isDestinationConfigured} // Pass new state
+                showEmbedCodeSection={builderState.showEmbedCodeSection} // Pass new state
+                onToggleEmbedCodeSection={() => setBuilderState(prev => ({ ...prev, showEmbedCodeSection: !prev.showEmbedCodeSection }))} // Pass toggle handler
               />
             </div>
           </>
@@ -461,7 +464,7 @@ function App() {
                             ⚙️ Edit
                           </button>
                           <button 
-                            onClick={() => handleShowEmbedCode(form)} // Pass full form object
+                            onClick={() => handleGetEmbedCodeClick(form)} // Pass full form object
                             className="btn btn-secondary" 
                             style={{ fontSize: '12px' }}
                           >
@@ -510,12 +513,6 @@ function App() {
               />
             </div>
           </div>
-        ) : currentView === 'embed-code' && selectedForm ? ( // Removed user check here
-          <EmbedCodeDisplay 
-            form={selectedForm} 
-            user={user} 
-            onBack={handleBackToDashboard} 
-          />
         ) : currentView === 'analytics' && user && selectedForm ? (
           <FormAnalytics 
             form={selectedForm} 

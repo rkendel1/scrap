@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { EmbeddableForm } from './EmbeddableForm';
 import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
-import { CheckCircle, Lock } from 'lucide-react'; // Import CheckCircle and Lock icon
+import { CheckCircle, Lock, Copy, EyeOff } from 'lucide-react'; // Import CheckCircle, Lock, Copy, EyeOff icon
 
 // Helper to determine if a color is light (simplified for demo)
 const isLightColor = (color: string): boolean => {
@@ -59,8 +59,10 @@ interface LiveFormPreviewProps {
   extractedDesignTokens: any | null;
   extractedVoiceAnalysis: any | null;
   onGetEmbedCodeClick: (form: SaaSForm) => void;
-  isDestinationConfigured: boolean; // New prop
-  className?: string; // Add className prop
+  isDestinationConfigured: boolean;
+  className?: string;
+  showEmbedCodeSection: boolean; // New prop
+  onToggleEmbedCodeSection: () => void; // New prop
 }
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
@@ -71,10 +73,14 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   extractedDesignTokens,
   extractedVoiceAnalysis,
   onGetEmbedCodeClick,
-  isDestinationConfigured, // Destructure new prop
-  className, // Destructure new prop
+  isDestinationConfigured,
+  className,
+  showEmbedCodeSection, // Destructure new prop
+  onToggleEmbedCodeSection, // Destructure new prop
 }) => {
   const { url, purpose, destinationType } = formData;
+
+  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
 
   const getPreviewForm = (): GeneratedForm => {
     if (generatedForm) {
@@ -132,7 +138,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       case 'googlesheets': return 'Google Sheets';
       case 'slack': return 'Slack';
       case 'webhook': return 'Webhook';
-      case 'zapier': return 'Zapier'; // Added Zapier
+      case 'zapier': return 'Zapier';
       default: return '';
     }
   };
@@ -236,8 +242,17 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     );
   };
 
+  const scriptEmbedCode = createdForm?.embed_code
+    ? `<script src="${API_BASE}/embed.js" data-form="${createdForm.embed_code}"></script>`
+    : '<!-- Form embed code not available. -->';
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(scriptEmbedCode);
+    alert('Embed code copied to clipboard!');
+  };
+
   return (
-    <div className={`live-preview-card ${className || ''}`}> {/* Apply className here */}
+    <div className={`live-preview-card ${className || ''}`}>
       <div className="preview-header">
         <h3>Live Form Preview</h3>
         {url && <p>Styled with design tokens from: {url}</p>}
@@ -259,17 +274,15 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {generatedForm ? (
             <>
               {formContent}
-              {isDestinationConfigured && ( // Show status only if configured
+              {isDestinationConfigured && (
                 <div className="form-submit-status">
                   <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
                 </div>
               )}
             </>
           ) : (extractedDesignTokens || extractedVoiceAnalysis) ? (
-            // Render design token information when URL is processed but form not generated
             renderDesignTokens()
           ) : (
-            // Placeholder when nothing is extracted yet
             <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -299,18 +312,17 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             to add it to your website.
           </p>
           <button 
-            onClick={() => onGetEmbedCodeClick(createdForm)}
+            onClick={() => onGetEmbedCodeClick(createdForm)} // This now calls the prop to toggle visibility
             className="btn-embed-code"
-            // Removed disabled={!user}
           >
-            <Lock size={18} />
-            Get Embed Code
+            {showEmbedCodeSection ? <EyeOff size={18} /> : <Lock size={18} />}
+            {showEmbedCodeSection ? 'Hide Embed Code' : 'Get Embed Code'}
           </button>
           {!user && (
             <p style={{ 
               marginTop: '12px', 
               fontSize: '13px', 
-              color: '#a0aec0', // Lighter gray for guest message
+              color: '#a0aec0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -318,6 +330,53 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             }}>
               <Lock size={16} /> Sign in or register to activate your form and ensure it never expires.
             </p>
+          )}
+
+          {/* NEW: Embed Code Display Section */}
+          {showEmbedCodeSection && (
+            <div style={{ 
+              marginTop: '24px', 
+              backgroundColor: '#2d3748', // Darker background for code block
+              borderRadius: '8px', 
+              padding: '16px',
+              textAlign: 'left'
+            }}>
+              <h4 style={{ color: 'white', fontSize: '16px', marginBottom: '12px' }}>
+                JavaScript Embed Code
+              </h4>
+              <p style={{ color: '#a0aec0', fontSize: '13px', marginBottom: '12px' }}>
+                Copy and paste this code into your website's HTML where you want the form to appear.
+              </p>
+              <div className="code-block" style={{ 
+                backgroundColor: '#1a202c', // Even darker for code itself
+                color: '#48bb78', // Greenish text for code
+                border: '1px solid #4a5568',
+                padding: '12px',
+                borderRadius: '6px',
+                overflowX: 'auto',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-all',
+                fontSize: '13px'
+              }}>
+                {scriptEmbedCode}
+              </div>
+              <button 
+                onClick={handleCopyCode}
+                className="btn-embed-code"
+                style={{ marginTop: '16px', backgroundColor: '#4a5568' }}
+              >
+                <Copy size={18} />
+                Copy Code
+              </button>
+              <button 
+                onClick={onToggleEmbedCodeSection}
+                className="btn-embed-code"
+                style={{ marginTop: '16px', marginLeft: '8px', backgroundColor: '#4a5568' }}
+              >
+                <EyeOff size={18} />
+                Hide Code
+              </button>
+            </div>
           )}
         </div>
       )}
