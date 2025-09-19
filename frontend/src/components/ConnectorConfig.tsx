@@ -56,7 +56,7 @@ export const ConnectorConfig: React.FC<ConnectorConfigProps> = ({
         setLoading(true);
         const response = await fetch('/api/connector-definitions', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
         

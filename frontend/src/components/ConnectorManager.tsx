@@ -42,7 +42,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         // Fetch definitions
         const definitionsResponse = await fetch('/api/connector-definitions', {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
         
@@ -54,7 +54,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         // Fetch current connectors
         const connectorsResponse = await fetch(`/api/forms/${formId}/connectors`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
           }
         });
         
@@ -81,7 +81,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         },
         body: JSON.stringify({ connectors })
       });
@@ -233,8 +233,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                     </div>
                     <div className="text-xs text-gray-600">{def.description}</div>
                   </div>
-                </div>
-              </button>
+                </button>
             ))}
           </div>
           
