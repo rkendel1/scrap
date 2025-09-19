@@ -141,7 +141,7 @@ export class SaaSService {
           headings, text_samples, margins, paddings, spacing_scale,
           layout_structure, grid_system, breakpoints, buttons, 
           form_fields, cards, navigation, images, css_variables, 
-          raw_css, logo_url, brand_colors, icons, 
+          raw_css, form_schema, logo_url, brand_colors, icons, 
           messaging, preview_html, voice_tone, personality_traits, 
           audience_analysis, extracted_at
         ) VALUES (
@@ -175,14 +175,15 @@ export class SaaSService {
         JSON.stringify(extractedData.designTokens.images),
         JSON.stringify(extractedData.designTokens.cssVariables),
         extractedData.designTokens.rawCSS,
+        JSON.stringify(extractedData.designTokens.formSchema), // NEW: form_schema
         extractedData.designTokens.logoUrl,
         JSON.stringify(extractedData.designTokens.brandColors),
         JSON.stringify(extractedData.designTokens.icons),
         JSON.stringify(extractedData.designTokens.messaging),
         extractedData.designTokens.previewHTML,
-        JSON.stringify(extractedData.voiceAnalysis),
-        JSON.stringify(extractedData.voiceAnalysis.personalityTraits),
-        JSON.stringify(extractedData.voiceAnalysis.audienceAnalysis),
+        JSON.stringify(extractedData.voiceAnalysis), // This is the voice_tone column
+        JSON.stringify(extractedData.voiceAnalysis.personalityTraits), // This is personality_traits
+        JSON.stringify(extractedData.voiceAnalysis.audienceAnalysis), // This is audience_analysis
         new Date().toISOString()
       ];
 
