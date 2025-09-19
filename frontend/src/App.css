@@ -78,8 +78,8 @@ main {
   /* Header height: 10px (container top padding) + 12px (logo height) + 10px (container bottom padding) = 32px */
   /* Main vertical padding: 24px (top) + 24px (bottom) = 48px */
   /* Total fixed vertical space: 32px (header) + 48px (main padding) = 80px */
-  /* To make it shorter, let's add another 100px to the fixed space. */
-  height: calc(100vh - 180px); /* Reduced by 100px from previous calc(100vh - 80px) */
+  /* To make it shorter, let's add another 170px to the fixed space. */
+  height: calc(100vh - 250px); /* Reduced by 170px from previous calc(100vh - 80px) */
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -333,7 +333,7 @@ main {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 180px); /* Set static height for main content area */
+  height: calc(100vh - 250px); /* Set static height for main content area */
 }
 
 .App > main > div {
