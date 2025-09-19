@@ -508,7 +508,35 @@ main {
 }
 
 
-/* Quick Reply Buttons - REMOVED */
+/* Quick Reply Buttons */
+.quick-reply-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 12px; /* Space between buttons and input */
+  flex-shrink: 0;
+}
+
+.quick-reply-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 20px; /* Pill shape */
+  background-color: #e9ecef;
+  color: #495057;
+  border: 1px solid #ced4da;
+  box-shadow: none;
+}
+
+.quick-reply-btn:hover {
+  background-color: #dee2e6;
+  border-color: #c5c9ce;
+}
+
+.quick-reply-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 
 
 /* Chat Input Container */

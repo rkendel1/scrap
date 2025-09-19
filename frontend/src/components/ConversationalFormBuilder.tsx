@@ -158,7 +158,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email';
+      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email' | 'im done';
       configInput?: string;
     } = {};
 
@@ -196,6 +196,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       parsed.command = 'provide email';
       return parsed;
     }
+    if (lowerInput.includes('i\'m done') || lowerInput.includes('im done')) {
+      parsed.command = 'im done';
+      return parsed;
+    }
+
 
     const urlMatch = input.match(/https?:\/\/[^\s]+/i);
     if (urlMatch) {
@@ -276,8 +281,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (parsedInput.command === 'configure destination') {
         setCurrentStep('ASK_DESTINATION_TYPE');
         addPrompt(
-          "Okay, where should I send the form submissions?"
+          "Okay, where should I send the form submissions? You can choose from: Email, Google Sheets, Slack, Webhook, or Zapier."
         );
+        return;
+      }
+      if (parsedInput.command === 'im done') {
+        handleDoneClick();
         return;
       }
       if (parsedInput.command === 'get embed code') {
@@ -551,7 +560,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           </a>
         </div>
         <p style={{ margin: 0, fontSize: '14px', color: '#333' }}>
-          Are there any changes you'd like to make, or would you like to configure delivery?
+          Would you like to configure where submissions are sent, or are you done for now?
         </p>
       </>
     );
@@ -785,6 +794,26 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentContextSummary('');
   };
 
+  const handleConfigureDestinationClick = () => {
+    handleQuickResponseClick('configure destination');
+  };
+
+  const handleDoneClick = () => {
+    handleQuickResponseClick('im done');
+  };
+
+  const handleDestinationTypeClick = (type: string) => {
+    handleQuickResponseClick(type);
+  };
+
+  const handleGoLiveClick = () => {
+    handleQuickResponseClick('yes');
+  };
+
+  const handleNotLiveClick = () => {
+    handleQuickResponseClick('no');
+  };
+
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
@@ -800,6 +829,59 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       case 'provide email': return 'Provide Email';
       default: return type;
     }
+  };
+
+  const renderQuickReplyButtons = () => {
+    let buttons: { label: string; command: string; icon?: JSX.Element }[] = [];
+
+    switch (currentStep) {
+      case 'FORM_GENERATED_REVIEW':
+        buttons = [
+          { label: 'Configure Destination', command: 'configure destination' },
+          { label: "I'm Done", command: 'im done' },
+        ];
+        break;
+      case 'ASK_DESTINATION_TYPE':
+        buttons = [
+          { label: 'Email', command: 'email', icon: <Mail size={16} /> },
+          { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
+          { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
+          { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
+          { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
+        ];
+        break;
+      case 'CONFIRM_DEFAULT_EMAIL':
+      case 'ASK_GO_LIVE':
+        buttons = [
+          { label: 'Yes', command: 'yes' },
+          { label: 'No', command: 'no' },
+        ];
+        break;
+      case 'DONE':
+        buttons = [
+          { label: 'Yes, another form!', command: 'yes' },
+          { label: 'No, I\'m good.', command: 'no' },
+        ];
+        break;
+      default:
+        return null;
+    }
+
+    return (
+      <div className="quick-reply-buttons">
+        {buttons.map((button, index) => (
+          <button
+            key={index}
+            onClick={() => handleQuickResponseClick(button.command)}
+            className="btn btn-secondary quick-reply-btn"
+            disabled={isLoading}
+          >
+            {button.icon && <span className="mr-1">{button.icon}</span>}
+            {button.label}
+          </button>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -825,6 +907,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           ))}
         </div>
       </div>
+
+      {renderQuickReplyButtons()} {/* Render quick reply buttons here */}
 
       <form onSubmit={handleUserInput} className="form-input-container">
         <input
