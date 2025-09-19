@@ -1131,6 +1131,315 @@ app.post('/api/extract', authService.optionalAuth, async (req, res) => {
         });
     }
 });
+// ====== ENHANCED STRUCTURED FLOW ENDPOINTS ======
+// Initialize form creation flow
+app.post('/api/forms/flow/init', async (req, res) => {
+    try {
+        const flowState = llmService.initializeFormFlow();
+        res.json({
+            success: true,
+            flowState
+        });
+    }
+    catch (error) {
+        console.error('Flow initialization error:', error);
+        res.status(500).json({
+            error: 'Failed to initialize form flow',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Process website URL input in flow
+app.post('/api/forms/flow/website-input', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) {
+            return res.status(400).json({ error: 'URL is required' });
+        }
+        const flowState = llmService.processWebsiteInput(url);
+        if (flowState.validationErrors) {
+            return res.status(400).json({
+                error: 'Invalid input',
+                flowState
+            });
+        }
+        res.json({
+            success: true,
+            flowState
+        });
+    }
+    catch (error) {
+        console.error('Website input processing error:', error);
+        res.status(500).json({
+            error: 'Failed to process website input',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Get form type recommendations after design extraction
+app.post('/api/forms/flow/design-extracted', async (req, res) => {
+    try {
+        const { extractedRecordId } = req.body;
+        if (!extractedRecordId) {
+            return res.status(400).json({ error: 'Extracted record ID is required' });
+        }
+        // Fetch the extracted data
+        const extractedDataRecord = await dbService.getRecordById(extractedRecordId);
+        if (!extractedDataRecord) {
+            return res.status(404).json({ error: 'Extracted website data not found' });
+        }
+        // Reconstruct the extracted data for flow processing
+        const extractedData = {
+            url: extractedDataRecord.url,
+            title: extractedDataRecord.title,
+            description: extractedDataRecord.description,
+            designTokens: {
+                colorPalette: extractedDataRecord.color_palette,
+                primaryColors: extractedDataRecord.primary_colors,
+                fontFamilies: extractedDataRecord.font_families,
+                // Add other design tokens as needed
+            },
+            messaging: extractedDataRecord.messaging || []
+        };
+        const flowState = llmService.processDesignExtraction(extractedData);
+        const recommendations = llmService.getSmartRecommendations(extractedData);
+        res.json({
+            success: true,
+            flowState,
+            recommendations,
+            formTypes: llmService.getFormTypeOptions(extractedData)
+        });
+    }
+    catch (error) {
+        console.error('Design extraction processing error:', error);
+        res.status(500).json({
+            error: 'Failed to process design extraction',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Process form type selection
+app.post('/api/forms/flow/form-type-selected', authService.optionalAuth, async (req, res) => {
+    try {
+        const { extractedRecordId, formType } = req.body;
+        if (!extractedRecordId || !formType) {
+            return res.status(400).json({ error: 'Extracted record ID and form type are required' });
+        }
+        // Fetch the extracted data
+        const extractedDataRecord = await dbService.getRecordById(extractedRecordId);
+        if (!extractedDataRecord) {
+            return res.status(404).json({ error: 'Extracted website data not found' });
+        }
+        // Reconstruct the extracted data
+        const extractedData = {
+            url: extractedDataRecord.url,
+            title: extractedDataRecord.title,
+            description: extractedDataRecord.description,
+            designTokens: {
+                colorPalette: extractedDataRecord.color_palette,
+                primaryColors: extractedDataRecord.primary_colors,
+                fontFamilies: extractedDataRecord.font_families,
+                // Add other design tokens as needed
+            },
+            messaging: extractedDataRecord.messaging || []
+        };
+        const flowState = llmService.processFormTypeSelection(formType, extractedData);
+        if (flowState.validationErrors) {
+            return res.status(400).json({
+                error: 'Invalid form type',
+                flowState
+            });
+        }
+        // Determine user role for flow processing
+        const userRole = req.user ?
+            (req.user.subscription_tier === 'paid' ? 'paid' : 'free') :
+            'guest';
+        res.json({
+            success: true,
+            flowState,
+            userRole,
+            isAuthenticated: !!req.user
+        });
+    }
+    catch (error) {
+        console.error('Form type selection error:', error);
+        res.status(500).json({
+            error: 'Failed to process form type selection',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Enhanced form generation with flow state
+app.post('/api/forms/flow/generate', authService.optionalAuth, async (req, res) => {
+    try {
+        const { extractedRecordId, formPurpose, formName, formDescription, guestToken } = req.body;
+        if (!extractedRecordId || !formPurpose) {
+            return res.status(400).json({ error: 'Extracted record ID and form purpose are required' });
+        }
+        // Determine user role and check limits
+        const userRole = req.user ?
+            (req.user.subscription_tier === 'paid' ? 'paid' : 'free') :
+            'guest';
+        let existingLiveFormsCount = 0;
+        if (req.user) {
+            existingLiveFormsCount = await saasService.getUserLiveFormCount(req.user.id);
+        }
+        // Validate form creation rules
+        const validationResult = llmService.validateFormCreationRules(userRole, existingLiveFormsCount);
+        if (!validationResult.canCreate) {
+            return res.status(403).json({
+                error: validationResult.message,
+                suggestedActions: validationResult.suggestedActions,
+                upgradeRequired: userRole === 'free'
+            });
+        }
+        // Fetch the extracted data
+        const extractedDataRecord = await dbService.getRecordById(extractedRecordId);
+        if (!extractedDataRecord) {
+            return res.status(404).json({ error: 'Extracted website data not found' });
+        }
+        // Reconstruct VoiceAnalysis and extracted data for LLMService
+        const voiceAnalysisForLLM = {
+            tone: extractedDataRecord.voice_tone,
+            personalityTraits: extractedDataRecord.personality_traits,
+            audienceAnalysis: extractedDataRecord.audience_analysis,
+        };
+        const websiteData = {
+            url: extractedDataRecord.url,
+            title: extractedDataRecord.title,
+            description: extractedDataRecord.description,
+            voiceAnalysis: voiceAnalysisForLLM,
+            designTokens: {
+                colorPalette: extractedDataRecord.color_palette,
+                primaryColors: extractedDataRecord.primary_colors,
+                colorUsage: extractedDataRecord.color_usage,
+                fontFamilies: extractedDataRecord.font_families,
+                headings: extractedDataRecord.headings,
+                textSamples: extractedDataRecord.text_samples,
+                margins: extractedDataRecord.margins,
+                paddings: extractedDataRecord.paddings,
+                spacingScale: extractedDataRecord.spacing_scale,
+                layoutStructure: extractedDataRecord.layout_structure,
+                gridSystem: extractedDataRecord.grid_system,
+                breakpoints: extractedDataRecord.breakpoints,
+                buttons: extractedDataRecord.buttons,
+                formFields: extractedDataRecord.form_fields,
+                cards: extractedDataRecord.cards,
+                navigation: extractedDataRecord.navigation,
+                images: extractedDataRecord.images,
+                cssVariables: extractedDataRecord.css_variables,
+                rawCSS: extractedDataRecord.raw_css,
+                formSchema: extractedDataRecord.form_schema,
+                logoUrl: extractedDataRecord.logo_url,
+                brandColors: extractedDataRecord.brand_colors,
+                icons: extractedDataRecord.icons,
+                messaging: extractedDataRecord.messaging,
+                previewHTML: extractedDataRecord.preview_html,
+            },
+            messaging: extractedDataRecord.messaging || []
+        };
+        // Generate form with enhanced flow
+        const { form: generatedForm, flowState } = await llmService.generateFormWithFlow(websiteData, formPurpose, userRole, !!req.user);
+        // Get guest token ID if provided
+        let guestTokenId = null;
+        if (!req.user && guestToken) {
+            const guestQuery = `SELECT id FROM guest_tokens WHERE token = $1`;
+            const guestResult = await database_1.default.query(guestQuery, [guestToken]);
+            guestTokenId = guestResult.rows[0]?.id || null;
+        }
+        // Save form to database
+        const form = await saasService.createForm(req.user?.id || null, guestTokenId, extractedDataRecord.url, formName || generatedForm.title, formDescription || generatedForm.description, generatedForm, {
+            title: extractedDataRecord.title,
+            description: extractedDataRecord.description,
+            favicon: extractedDataRecord.favicon,
+            designTokens: websiteData.designTokens,
+            voiceAnalysis: voiceAnalysisForLLM,
+            extractedAt: extractedDataRecord.extracted_at.toISOString()
+        });
+        // Generate embed code with expiration
+        const embedResult = llmService.generateEmbedCodeWithExpiration(form.id, userRole, !!req.user);
+        res.json({
+            success: true,
+            message: 'Form generated successfully with flow guidance',
+            form,
+            generatedForm,
+            flowState,
+            embedCode: embedResult.embedCode,
+            embedExpires: embedResult.expires,
+            isPermanent: embedResult.isPermanent,
+            userRole,
+            validationResult
+        });
+    }
+    catch (error) {
+        console.error('Enhanced form generation error:', error);
+        res.status(500).json({
+            error: 'Failed to generate form with flow',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Get contextual guidance for current flow step
+app.post('/api/forms/flow/guidance', async (req, res) => {
+    try {
+        const { step, data } = req.body;
+        if (!step) {
+            return res.status(400).json({ error: 'Flow step is required' });
+        }
+        const guidance = llmService.getContextualGuidance(step, data);
+        res.json({
+            success: true,
+            guidance
+        });
+    }
+    catch (error) {
+        console.error('Guidance generation error:', error);
+        res.status(500).json({
+            error: 'Failed to get guidance',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
+// Check embed code expiration status
+app.get('/api/forms/:id/embed-status', authService.optionalAuth, async (req, res) => {
+    try {
+        const formId = parseInt(req.params.id);
+        if (isNaN(formId)) {
+            return res.status(400).json({ error: 'Invalid form ID' });
+        }
+        // Get form details
+        const form = req.user ?
+            await saasService.getFormById(formId, req.user.id) :
+            await saasService.getFormByEmbedCode(req.query.embedCode);
+        if (!form) {
+            return res.status(404).json({ error: 'Form not found' });
+        }
+        // Determine user role
+        const userRole = req.user ?
+            (req.user.subscription_tier === 'paid' ? 'paid' : 'free') :
+            'guest';
+        // Check expiration for guest forms
+        const embedResult = llmService.generateEmbedCodeWithExpiration(formId, userRole, !!req.user);
+        const expirationWarning = llmService.getExpirationWarning(embedResult.expires);
+        const isExpired = llmService.isEmbedCodeExpired(embedResult.expires);
+        res.json({
+            success: true,
+            formId,
+            isPermanent: embedResult.isPermanent,
+            expires: embedResult.expires,
+            isExpired,
+            expirationWarning,
+            userRole
+        });
+    }
+    catch (error) {
+        console.error('Embed status check error:', error);
+        res.status(500).json({
+            error: 'Failed to check embed status',
+            message: error instanceof Error ? error.message : 'Unknown error'
+        });
+    }
+});
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });

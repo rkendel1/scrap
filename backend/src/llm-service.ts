@@ -34,6 +34,62 @@ export interface GeneratedForm {
   };
 }
 
+// Enhanced interfaces for structured flow
+export interface FlowState {
+  step: FormFlowStep;
+  data: {
+    websiteUrl?: string;
+    extractedDesignTokens?: any;
+    selectedFormType?: string;
+    generatedForm?: GeneratedForm;
+    embedCode?: string;
+    embedExpiration?: Date;
+    deliveryConfig?: DeliveryConfiguration;
+    isAuthenticated?: boolean;
+    userRole?: 'guest' | 'free' | 'paid';
+  };
+  guidance: string;
+  nextActions: string[];
+  validationErrors?: string[];
+}
+
+export type FormFlowStep = 
+  | 'input_website'
+  | 'extracting_design'
+  | 'select_form_type'
+  | 'generating_form'
+  | 'preview_form'
+  | 'configure_styling'
+  | 'configure_delivery'
+  | 'publish_form'
+  | 'live_form'
+  | 'expired_form';
+
+export interface DeliveryConfiguration {
+  type: 'email' | 'webhook' | 'google_sheets' | 'zapier';
+  settings: {
+    email?: string;
+    webhookUrl?: string;
+    spreadsheetId?: string;
+    zapierHookUrl?: string;
+  };
+}
+
+export interface UserGuidance {
+  message: string;
+  actions: string[];
+  warnings?: string[];
+  tips?: string[];
+}
+
+export interface FormTypeOption {
+  id: string;
+  name: string;
+  description: string;
+  suggestedFields: string[];
+  useCases: string[];
+}
+
 export class LLMService {
   private openai: OpenAI | null;
   private isEnabled: boolean;
@@ -50,6 +106,563 @@ export class LLMService {
       this.openai = null;
       console.warn('⚠️  OPENAI_API_KEY not configured - AI form generation disabled (development mode)');
     }
+  }
+
+  // ====== STRUCTURED FLOW GUIDANCE METHODS ======
+
+  /**
+   * Initialize the form creation flow and provide guidance for the first step
+   */
+  initializeFormFlow(): FlowState {
+    return {
+      step: 'input_website',
+      data: {},
+      guidance: "Welcome to FormCraft AI! Let's create a beautiful form that matches your website's design. Start by entering your website URL below.",
+      nextActions: [
+        "Enter your website URL (e.g., https://example.com)",
+        "We'll extract design tokens and analyze your brand"
+      ]
+    };
+  }
+
+  /**
+   * Process website URL input and guide user through design extraction
+   */
+  processWebsiteInput(url: string): FlowState {
+    try {
+      new URL(url); // Validate URL format
+      return {
+        step: 'extracting_design',
+        data: { websiteUrl: url },
+        guidance: `Great! We're analyzing ${url} to extract design tokens, colors, fonts, and brand voice. This usually takes 10-30 seconds.`,
+        nextActions: [
+          "Extracting color palette and typography",
+          "Analyzing brand voice and messaging",
+          "Preparing form type recommendations"
+        ]
+      };
+    } catch (error) {
+      return {
+        step: 'input_website',
+        data: {},
+        guidance: "Please provide a valid website URL to get started.",
+        nextActions: ["Enter a valid URL starting with http:// or https://"],
+        validationErrors: ["Invalid URL format. Please include http:// or https://"]
+      };
+    }
+  }
+
+  /**
+   * After design extraction, guide user to select form type
+   */
+  processDesignExtraction(extractedData: any): FlowState {
+    const formTypes = this.getFormTypeOptions(extractedData);
+    
+    return {
+      step: 'select_form_type',
+      data: { 
+        extractedDesignTokens: extractedData,
+        websiteUrl: extractedData.url 
+      },
+      guidance: `Perfect! We've analyzed your website and extracted ${extractedData.designTokens?.colorPalette?.length || 0} colors, ${extractedData.designTokens?.fontFamilies?.length || 0} fonts, and your brand voice. Now, what type of form would you like to create?`,
+      nextActions: formTypes.map(type => `${type.name}: ${type.description}`)
+    };
+  }
+
+  /**
+   * Get available form type options based on website analysis
+   */
+  getFormTypeOptions(extractedData?: any): FormTypeOption[] {
+    const baseTypes: FormTypeOption[] = [
+      {
+        id: 'contact',
+        name: 'Contact Form',
+        description: 'Let visitors get in touch with you',
+        suggestedFields: ['name', 'email', 'message'],
+        useCases: ['Customer inquiries', 'Support requests', 'General contact']
+      },
+      {
+        id: 'newsletter',
+        name: 'Newsletter Signup',
+        description: 'Build your email list',
+        suggestedFields: ['email', 'firstName'],
+        useCases: ['Email marketing', 'Updates', 'Newsletters']
+      },
+      {
+        id: 'feedback',
+        name: 'Feedback Form',
+        description: 'Collect user feedback and reviews',
+        suggestedFields: ['name', 'email', 'rating', 'feedback'],
+        useCases: ['Product feedback', 'Service reviews', 'Suggestions']
+      },
+      {
+        id: 'quote',
+        name: 'Quote Request',
+        description: 'Generate leads for your services',
+        suggestedFields: ['name', 'email', 'company', 'projectDetails'],
+        useCases: ['Service inquiries', 'Project requests', 'Consultations']
+      },
+      {
+        id: 'signup',
+        name: 'User Registration',
+        description: 'Sign up new users for your platform',
+        suggestedFields: ['name', 'email', 'password', 'company'],
+        useCases: ['User onboarding', 'Account creation', 'Platform access']
+      }
+    ];
+
+    // Could enhance with AI-based recommendations based on website content
+    return baseTypes;
+  }
+
+  /**
+   * Process form type selection and start form generation
+   */
+  processFormTypeSelection(formType: string, extractedData: any): FlowState {
+    const selectedType = this.getFormTypeOptions().find(type => type.id === formType);
+    
+    if (!selectedType) {
+      return {
+        step: 'select_form_type',
+        data: { extractedDesignTokens: extractedData },
+        guidance: "Please select a valid form type from the options provided.",
+        nextActions: this.getFormTypeOptions().map(type => `${type.name}: ${type.description}`),
+        validationErrors: ["Invalid form type selected"]
+      };
+    }
+
+    return {
+      step: 'generating_form',
+      data: { 
+        extractedDesignTokens: extractedData,
+        selectedFormType: formType 
+      },
+      guidance: `Excellent choice! We're now generating a ${selectedType.name} that matches your website's design. The AI is creating custom copy, styling, and field layout.`,
+      nextActions: [
+        "Generating form fields and labels",
+        "Applying your brand colors and fonts",
+        "Creating personalized copy that matches your voice"
+      ]
+    };
+  }
+
+  /**
+   * After form generation, provide preview and configuration options
+   */
+  processFormGeneration(generatedForm: GeneratedForm, isAuthenticated: boolean = false, userRole: 'guest' | 'free' | 'paid' = 'guest'): FlowState {
+    const embedExpiration = isAuthenticated ? undefined : new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours for guests
+    
+    return {
+      step: 'preview_form',
+      data: { 
+        generatedForm,
+        isAuthenticated,
+        userRole,
+        embedExpiration
+      },
+      guidance: `Your form is ready! Preview it below and test it out. ${!isAuthenticated ? "As a guest, your embed code will expire in 24 hours. Sign up for a permanent solution." : ""}`,
+      nextActions: [
+        "Preview and test your form",
+        "Make styling adjustments (optional)",
+        "Configure where form submissions should be sent",
+        ...(isAuthenticated ? [] : ["Sign up for permanent embed codes"])
+      ]
+    };
+  }
+
+  /**
+   * Guide user through styling configuration
+   */
+  processStylingConfiguration(currentForm: GeneratedForm, userChanges: string): FlowState {
+    return {
+      step: 'configure_styling',
+      data: { generatedForm: currentForm },
+      guidance: "Perfect! You can now fine-tune the form's appearance. Describe what you'd like to change, and our AI will adjust the styling while maintaining your brand consistency.",
+      nextActions: [
+        "Describe styling changes (e.g., 'make the button larger', 'use a darker background')",
+        "AI will maintain brand consistency automatically",
+        "Continue to delivery configuration when satisfied"
+      ]
+    };
+  }
+
+  /**
+   * Guide user through delivery configuration
+   */
+  processDeliveryConfiguration(): FlowState {
+    return {
+      step: 'configure_delivery',
+      data: {},
+      guidance: "Now let's set up where form submissions should be sent. Choose your preferred delivery method below.",
+      nextActions: [
+        "Email: Get submissions directly in your inbox",
+        "Webhook: Send to your own system or API",
+        "Google Sheets: Automatically save to a spreadsheet (coming soon)",
+        "Zapier: Connect to thousands of apps (coming soon)"
+      ]
+    };
+  }
+
+  /**
+   * Process delivery configuration selection
+   */
+  processDeliverySelection(deliveryType: string, settings: any): FlowState {
+    const deliveryConfig: DeliveryConfiguration = {
+      type: deliveryType as any,
+      settings
+    };
+
+    let guidance = "";
+    let nextActions: string[] = [];
+
+    switch (deliveryType) {
+      case 'email':
+        guidance = `Great! Form submissions will be sent to ${settings.email}. You can add multiple email addresses later.`;
+        nextActions = [
+          "Test the email delivery",
+          "Proceed to publish your form",
+          "Add multiple recipients (upgrade feature)"
+        ];
+        break;
+      case 'webhook':
+        guidance = `Perfect! Submissions will be posted to ${settings.webhookUrl}. Make sure your endpoint can handle POST requests.`;
+        nextActions = [
+          "Test the webhook integration",
+          "Verify your endpoint is ready",
+          "Proceed to publish your form"
+        ];
+        break;
+      default:
+        guidance = `${deliveryType} integration is coming soon! For now, let's set up email delivery.`;
+        nextActions = ["Set up email delivery instead"];
+    }
+
+    return {
+      step: 'configure_delivery',
+      data: { deliveryConfig },
+      guidance,
+      nextActions
+    };
+  }
+
+  /**
+   * Guide user through publishing process
+   */
+  processPublishFlow(isAuthenticated: boolean, userRole: 'guest' | 'free' | 'paid', existingLiveFormsCount: number = 0): FlowState {
+    if (!isAuthenticated) {
+      return {
+        step: 'publish_form',
+        data: { isAuthenticated: false, userRole: 'guest' },
+        guidance: "To publish your form and get a permanent embed code, please sign up or log in. Guest forms expire after 24 hours.",
+        nextActions: [
+          "Sign up for a free account",
+          "Log in to your existing account",
+          "Continue with temporary embed code (expires in 24 hours)"
+        ]
+      };
+    }
+
+    if (userRole === 'free' && existingLiveFormsCount > 0) {
+      return {
+        step: 'publish_form',
+        data: { isAuthenticated: true, userRole: 'free' },
+        guidance: `You already have ${existingLiveFormsCount} live form(s). Free accounts can only have 1 active form at a time. You'll need to deactivate your current form or upgrade to Pro.`,
+        nextActions: [
+          "Deactivate your current live form",
+          "Upgrade to Pro for unlimited forms",
+          "Save as draft for later"
+        ],
+        validationErrors: ["Free account limit reached"]
+      };
+    }
+
+    return {
+      step: 'publish_form',
+      data: { isAuthenticated: true, userRole },
+      guidance: `Ready to publish! ${userRole === 'paid' ? 'As a Pro user, you can have unlimited live forms.' : 'Your form will go live immediately.'}`,
+      nextActions: [
+        "Publish form and get embed code",
+        "Set up domain restrictions (recommended)",
+        "Download embed code for your website"
+      ]
+    };
+  }
+
+  /**
+   * Process successful form publishing
+   */
+  processFormPublished(embedCode: string, isAuthenticated: boolean, userRole: 'guest' | 'free' | 'paid'): FlowState {
+    const isPermanent = isAuthenticated;
+    const expiration = isPermanent ? undefined : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    return {
+      step: 'live_form',
+      data: { 
+        embedCode, 
+        isAuthenticated, 
+        userRole, 
+        embedExpiration: expiration 
+      },
+      guidance: `🎉 Congratulations! Your form is now live. ${isPermanent ? 'Your embed code is permanent and ready to use.' : 'Your guest embed code will expire in 24 hours.'}`,
+      nextActions: [
+        "Copy embed code to your website",
+        "Set up domain restrictions for security",
+        "View form analytics and submissions",
+        ...(isPermanent ? [] : ["Sign up for permanent embed codes"])
+      ]
+    };
+  }
+
+  /**
+   * Handle form expiration for guest users
+   */
+  processFormExpiration(): FlowState {
+    return {
+      step: 'expired_form',
+      data: {},
+      guidance: "Your guest form has expired. Sign up for a free account to create permanent forms that never expire.",
+      nextActions: [
+        "Sign up for a free account",
+        "Create a new form",
+        "Log in to your existing account"
+      ]
+    };
+  }
+
+  /**
+   * Provide contextual guidance based on current flow state
+   */
+  getContextualGuidance(currentStep: FormFlowStep, data: any): UserGuidance {
+    switch (currentStep) {
+      case 'input_website':
+        return {
+          message: "Enter your website URL to begin. We'll analyze your design and create a matching form.",
+          actions: ["Enter website URL"],
+          tips: ["Use your main website URL for best results", "We support any public website"]
+        };
+
+      case 'select_form_type':
+        return {
+          message: "Choose the type of form that best fits your needs. Each type is optimized for different goals.",
+          actions: ["Select form type"],
+          tips: ["Contact forms work well for most websites", "Newsletter forms help build your email list"]
+        };
+
+      case 'preview_form':
+        return {
+          message: "Test your form and make any adjustments before publishing.",
+          actions: ["Test form", "Adjust styling", "Configure delivery"],
+          tips: ["Test the form yourself first", "Check that all fields work correctly"]
+        };
+
+      case 'configure_delivery':
+        return {
+          message: "Set up where form submissions should be sent. Email is the most popular option.",
+          actions: ["Choose delivery method", "Configure settings"],
+          warnings: data?.isAuthenticated ? [] : ["Guest accounts have limited delivery options"]
+        };
+
+      case 'publish_form':
+        return {
+          message: "Ready to go live! Your form will be accessible via embed code.",
+          actions: ["Publish form"],
+          warnings: data?.userRole === 'free' ? ["Free accounts limited to 1 live form"] : []
+        };
+
+      default:
+        return {
+          message: "Continue with the form creation process.",
+          actions: ["Next step"]
+        };
+    }
+  }
+
+  // ====== ACCOUNT RULES AND VALIDATION ======
+
+  /**
+   * Validate if user can create a new form based on their account type
+   */
+  validateFormCreationRules(
+    userRole: 'guest' | 'free' | 'paid', 
+    existingLiveFormsCount: number
+  ): { canCreate: boolean; message: string; suggestedActions: string[] } {
+    if (userRole === 'guest') {
+      return {
+        canCreate: true,
+        message: "Guest users can create forms with 24-hour expiration.",
+        suggestedActions: ["Create temporary form", "Sign up for permanent forms"]
+      };
+    }
+
+    if (userRole === 'free' && existingLiveFormsCount >= 1) {
+      return {
+        canCreate: false,
+        message: "Free accounts are limited to 1 active live form. Deactivate your current form or upgrade to Pro.",
+        suggestedActions: [
+          "Deactivate current live form",
+          "Upgrade to Pro for unlimited forms",
+          "Save new form as draft"
+        ]
+      };
+    }
+
+    if (userRole === 'free') {
+      return {
+        canCreate: true,
+        message: "You can create 1 live form with your free account.",
+        suggestedActions: ["Create form", "Upgrade to Pro for unlimited forms"]
+      };
+    }
+
+    // Paid users
+    return {
+      canCreate: true,
+      message: "Pro users can create unlimited live forms.",
+      suggestedActions: ["Create form"]
+    };
+  }
+
+  /**
+   * Generate embed code with appropriate expiration based on user type
+   */
+  generateEmbedCodeWithExpiration(
+    formId: number,
+    userRole: 'guest' | 'free' | 'paid',
+    isAuthenticated: boolean
+  ): { embedCode: string; expires?: Date; isPermanent: boolean } {
+    const baseEmbedCode = `<script src="${process.env.FRONTEND_URL || 'http://localhost:3001'}/embed.js" data-form-id="${formId}"></script>`;
+    
+    if (!isAuthenticated || userRole === 'guest') {
+      // Guest users get temporary embed codes
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      return {
+        embedCode: baseEmbedCode,
+        expires,
+        isPermanent: false
+      };
+    }
+
+    // Authenticated users (free and paid) get permanent embed codes
+    return {
+      embedCode: baseEmbedCode,
+      isPermanent: true
+    };
+  }
+
+  /**
+   * Check if embed code has expired
+   */
+  isEmbedCodeExpired(expirationDate?: Date): boolean {
+    if (!expirationDate) return false; // Permanent codes never expire
+    return new Date() > expirationDate;
+  }
+
+  /**
+   * Get user-friendly expiration warning message
+   */
+  getExpirationWarning(expirationDate?: Date): string | null {
+    if (!expirationDate) return null;
+    
+    const now = new Date();
+    const timeLeft = expirationDate.getTime() - now.getTime();
+    const hoursLeft = Math.floor(timeLeft / (1000 * 60 * 60));
+    
+    if (timeLeft <= 0) {
+      return "Your embed code has expired. Please sign up for a permanent solution.";
+    }
+    
+    if (hoursLeft <= 1) {
+      const minutesLeft = Math.floor(timeLeft / (1000 * 60));
+      return `Your embed code expires in ${minutesLeft} minutes. Sign up now to keep your form active.`;
+    }
+    
+    if (hoursLeft <= 6) {
+      return `Your embed code expires in ${hoursLeft} hours. Consider signing up for a permanent solution.`;
+    }
+    
+    return `Your guest embed code expires in ${hoursLeft} hours.`;
+  }
+
+  // ====== ENHANCED FORM GENERATION WITH FLOW AWARENESS ======
+
+  /**
+   * Enhanced form generation that includes flow state tracking
+   */
+  async generateFormWithFlow(
+    websiteData: {
+      url: string;
+      title: string;
+      description: string;
+      voiceAnalysis: VoiceAnalysis;
+      designTokens: any;
+      messaging: string[];
+    },
+    formPurpose: string,
+    userRole: 'guest' | 'free' | 'paid' = 'guest',
+    isAuthenticated: boolean = false
+  ): Promise<{ form: GeneratedForm; flowState: FlowState }> {
+    // Generate the form using existing logic
+    const generatedForm = await this.generateFormFromWebsite(websiteData, formPurpose);
+    
+    // Create flow state for the generated form
+    const flowState = this.processFormGeneration(generatedForm, isAuthenticated, userRole);
+    
+    return {
+      form: generatedForm,
+      flowState
+    };
+  }
+
+  /**
+   * Provide smart recommendations based on website analysis
+   */
+  getSmartRecommendations(extractedData: any): { 
+    recommendedFormType: string; 
+    reasoning: string; 
+    alternativeOptions: string[] 
+  } {
+    // Analyze website content to suggest best form type
+    const messaging = extractedData.messaging || [];
+    const hasEcommerce = messaging.some((msg: string) => 
+      /shop|buy|cart|price|product/i.test(msg)
+    );
+    const hasServices = messaging.some((msg: string) => 
+      /service|consult|quote|hire|work with/i.test(msg)
+    );
+    const hasBlog = messaging.some((msg: string) => 
+      /blog|article|news|subscribe|newsletter/i.test(msg)
+    );
+    
+    if (hasServices) {
+      return {
+        recommendedFormType: 'quote',
+        reasoning: "Your website mentions services, making a quote request form ideal for generating leads.",
+        alternativeOptions: ['contact', 'feedback']
+      };
+    }
+    
+    if (hasEcommerce) {
+      return {
+        recommendedFormType: 'newsletter',
+        reasoning: "E-commerce sites benefit from newsletter signups to drive repeat sales.",
+        alternativeOptions: ['feedback', 'contact']
+      };
+    }
+    
+    if (hasBlog) {
+      return {
+        recommendedFormType: 'newsletter',
+        reasoning: "Blog content works well with newsletter signups to build your audience.",
+        alternativeOptions: ['contact', 'feedback']
+      };
+    }
+    
+    // Default recommendation
+    return {
+      recommendedFormType: 'contact',
+      reasoning: "A contact form is the most versatile option and works well for any website.",
+      alternativeOptions: ['newsletter', 'feedback', 'quote']
+    };
   }
 
   async generateFormFromWebsite(

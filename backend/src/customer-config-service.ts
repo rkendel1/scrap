@@ -100,7 +100,7 @@ export class CustomerConfigService {
         'UPDATE customer_configs SET is_active = false WHERE customer_id = $1',
         [customerId]
       );
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     } catch (error) {
       console.error('Error deleting customer config:', error);
       throw error;
