@@ -36,6 +36,8 @@ type ConversationStep =
   | 'ASK_DESTINATION_CONFIG'
   | 'PROCESSING_DESTINATION' // New state
   | 'DESTINATION_CONFIGURED' // New state
+  | 'ASK_GO_LIVE' // New state
+  | 'PROCESSING_GO_LIVE' // New state
   | 'DONE';
 
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
@@ -385,12 +387,18 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'DESTINATION_CONFIGURED':
-          // If user provides a destination type directly in this state
-          if (parsedInput.destinationType) {
-            await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
+          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?", ['Yes', 'No']);
+          setCurrentStep('ASK_GO_LIVE');
+          break;
+
+        case 'ASK_GO_LIVE':
+          if (parsedInput.command === 'yes') {
+            await processGoLive();
+          } else if (parsedInput.command === 'no') {
+            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?", ['Yes', 'No']);
+            setCurrentStep('DONE');
           } else {
-            addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
-            addPrompt("What would you like to do next?", ['Get Embed Code', 'Configure Destination']); // Changed order
+            addError("Please respond with 'Yes' or 'No'.");
           }
           break;
 
@@ -648,11 +656,55 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsDestinationConfigured(true); // Set destination configured status
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
-      "Your form is ready! You can now get the embed code. Would you like to create another form?",
+      "Your form is ready! Would you like to make this form live now?",
       ['Yes', 'No']
     );
-    setCurrentStep('DESTINATION_CONFIGURED'); // New state
+    setCurrentStep('ASK_GO_LIVE'); // Transition to new step
     onFormGenerated(createdForm);
+  };
+
+  const processGoLive = async () => {
+    setCurrentStep('PROCESSING_GO_LIVE');
+    if (!createdForm?.id) {
+      addError('Something went wrong. I lost the form. Please start over.');
+      setCurrentStep('ASK_URL');
+      return;
+    }
+
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+      authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+    } else {
+      addError("You need to be logged in to make a form live. Please create an account.");
+      onShowAuth('register');
+      setCurrentStep('ASK_GO_LIVE'); // Stay in this step
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${createdForm.id}/toggle-live`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({ isLive: true }) // Explicitly set to true
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setCreatedForm(prev => prev ? { ...prev, is_live: true } : null);
+        addSuccess("Great! Your form is now live and ready to collect submissions.");
+        addPrompt("Would you like to create another form?", ['Yes', 'No']);
+        setCurrentStep('DONE');
+      } else {
+        addError(result.message || "Failed to make the form live. Please try again or check your subscription status.");
+        addPrompt("Would you like to create another form?", ['Yes', 'No']);
+        setCurrentStep('DONE');
+      }
+    } catch (err: any) {
+      console.error('Go live error:', err);
+      addError(err.message || 'An unexpected error occurred while trying to make the form live.');
+      addPrompt("Would you like to create another form?", ['Yes', 'No']);
+      setCurrentStep('DONE');
+    }
   };
 
   const handleRestart = (command: 'yes' | 'no') => {
@@ -750,7 +802,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
       {currentQuickResponses && (
         <div style={{ width: '100%', marginTop: '12px' }}>
-          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED' || currentStep === 'CONFIRM_DEFAULT_EMAIL' || (currentStep === 'ASK_DESTINATION_CONFIG' && !user && selectedDestinationType === 'email')) && (
+          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED' || currentStep === 'CONFIRM_DEFAULT_EMAIL' || currentStep === 'ASK_GO_LIVE' || (currentStep === 'ASK_DESTINATION_CONFIG' && !user && selectedDestinationType === 'email')) && (
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
               Use the buttons above to select your option
             </div>
@@ -784,6 +836,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             currentStep === 'PROCESSING_URL' ? 'Analyzing...' :
             currentStep === 'PROCESSING_PURPOSE' ? 'Generating...' :
             currentStep === 'PROCESSING_DESTINATION' ? 'Saving...' :
+            currentStep === 'PROCESSING_GO_LIVE' ? 'Going Live...' :
             'Sending...'
           ) : (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

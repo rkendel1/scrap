@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Get form data from webhook\nconst formData = $input.item.json.formData;\nconst customerId = $input.item.json.customer_id;\nconst formId = $input.item.json.formId;\n\n// Get customer routing rules from previous node (Fetch Customer Config)\nconst customerConfigResponse = $input.item.json.data;\n\nif (!customerConfigResponse || !customerConfigResponse.routing_config || !customerConfigResponse.routing_config.routing_rules) {\n  throw new Error(`Customer configuration or routing rules not found for: ${customerId}`);\n}\n\nconst routingRules = customerConfigResponse.routing_config.routing_rules;\n\nconst outputItems = [];\n\nfor (const rule of routingRules) {\n  let conditionMet = false;\n\n  // Simple condition evaluation (can be expanded for more complex logic)\n  if (rule.condition === 'all_forms') {\n    conditionMet = true;\n  } else if (rule.condition.startsWith('form_type == ')) {\n    // Example: form_type == 'contact'\n    const expectedFormType = rule.condition.split('== ')[1].replace(/['"]/g, '');\n    // Assuming form_data might contain a 'formType' field or similar\n    if (formData.formType && formData.formType === expectedFormType) {\n      conditionMet = true;\n    }\n  } else {\n    // Add more complex condition parsing here (e.g., using a library like 'json-logic-js')\n    console.warn(`Unsupported routing condition: ${rule.condition}`);\n  }\n\n  if (conditionMet) {\n    outputItems.push({\n      json: {\n        formData: formData,\n        customerId: customerId,\n        formId: formId,\n        rule: rule\n      }\n    });\n  }\n}\n\nreturn outputItems;"
+        "jsCode": "// Get form data from webhook\nconst formData = $input.item.json.form_data;\nconst customerId = $input.item.json.customer_id;\nconst formId = $input.item.json.formId;\n\n// Get customer routing rules from previous node (Fetch Customer Config)\nconst customerConfigResponse = $input.item.json.data;\n\nif (!customerConfigResponse || !customerConfigResponse.routing_config || !customerConfigResponse.routing_config.routing_rules) {\n  throw new Error(`Customer configuration or routing rules not found for: ${customerId}`);\n}\n\nconst routingRules = customerConfigResponse.routing_config.routing_rules;\n\nconst outputItems = [];\n\nfor (const rule of routingRules) {\n  let conditionMet = false;\n\n  // Simple condition evaluation (can be expanded for more complex logic)\n  if (rule.condition === 'all_forms') {\n    conditionMet = true;\n  } else if (rule.condition.startsWith('form_id == ')) {\n    const expectedFormId = parseInt(rule.condition.split('== ')[1]);\n    if (formId && formId === expectedFormId) {\n      conditionMet = true;\n    }\n  } else if (rule.condition.startsWith('form_type == ')) {\n    // Example: form_type == 'contact'\n    const expectedFormType = rule.condition.split('== ')[1].replace(/['"]/g, '');\n    // Assuming form_data might contain a 'formType' field or similar\n    if (formData.formType && formData.formType === expectedFormType) {\n      conditionMet = true;\n    }\n  } else {\n    // Add more complex condition parsing here (e.g., using a library like 'json-logic-js')\n    console.warn(`Unsupported routing condition: ${rule.condition}`);\n  }\n\n  if (conditionMet) {\n    outputItems.push({\n      json: {\n        formData: formData,\n        customerId: customerId,\n        formId: formId,\n        rule: rule\n      }\n    });\n  }\n}\n\nreturn outputItems;"
       },
       "id": "process-routing-rules",
       "name": "Process Routing Rules",
@@ -142,16 +142,12 @@
     },
     {
       "parameters": {
-        "fromEmail": "n8n@formcraft.ai",
-        "toEmail": "={{ $json.rule.target }}",
-        "subject": "={{ $json.rule.template ? $json.rule.template.replace(/{{(\\w+)}}/g, (match, key) => $json.formData[key] || '') : 'New Form Submission' }}",
-        "text": "={{ $json.rule.template ? $json.rule.template.replace(/{{(\\w+)}}/g, (match, key) => $json.formData[key] || '') : JSON.stringify($json.formData, null, 2) }}",
-        "options": {}
+        "jsCode": "const formData = $input.item.json.formData;\nconst rule = $input.item.json.rule;\n\nconst toEmail = rule.target;\nconst subject = rule.template ? rule.template.replace(/{{(\\w+)}}/g, (match, key) => formData[key] || '') : 'New Form Submission';\nconst body = rule.template ? rule.template.replace(/{{(\\w+)}}/g, (match, key) => formData[key] || '') : JSON.stringify(formData, null, 2);\n\nconsole.log('--- Simulating Email Send ---');\nconsole.log(`To: ${toEmail}`);\nconsole.log(`Subject: ${subject}`);\nconsole.log(`Body:\\n${body}`);\nconsole.log('-----------------------------');\n\nreturn [{ json: { success: true, message: 'Email simulated successfully' } }];"
       },
-      "id": "send-email",
-      "name": "Send Email",
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 1,
+      "id": "simulate-email-send",
+      "name": "Simulate Email Send",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1100, 400]
     }
   ],
@@ -229,7 +225,7 @@
       "main": [
         [
           {
-            "node": "Send Email",
+            "node": "Simulate Email Send",
             "type": "main",
             "index": 0
           }
@@ -243,7 +239,7 @@
         ]
       ]
     },
-    "Send Email": {
+    "Simulate Email Send": {
       "main": [
         [
           {
