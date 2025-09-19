@@ -539,11 +539,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             " This form is permanent as it's linked to your account."
           )}
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+        <div className="chat-ad-buttons"> {/* New wrapper for ad buttons */}
           <button
             onClick={() => handleCopyEmbedCode(embedCode || '')}
-            className="btn btn-secondary"
-            style={{ backgroundColor: copyStatus === 'copied' ? '#28a745' : '#e9ecef', color: copyStatus === 'copied' ? 'white' : '#495057' }}
+            className="btn chat-ad-btn"
             disabled={!embedCode}
           >
             {copyStatus === 'copied' ? <Check size={16} className="mr-1" /> : <Copy size={16} className="mr-1" />}
@@ -553,13 +552,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             href="/test-embed.html"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-secondary"
-            style={{ fontSize: '14px' }}
+            className="btn chat-ad-btn"
           >
             🧪 Test Embed Page
           </a>
         </div>
-        <p style={{ margin: 0, fontSize: '14px', color: '#333' }}>
+        <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#333' }}>
           Would you like to configure where submissions are sent, or are you done for now?
         </p>
       </>

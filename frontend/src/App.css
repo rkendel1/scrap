@@ -538,6 +538,37 @@ main {
   cursor: not-allowed;
 }
 
+/* Chat Ad Buttons (for embed code, test page) */
+.chat-ad-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  margin-bottom: 0; /* No bottom margin, as it's inside a chat bubble */
+}
+
+.chat-ad-btn {
+  padding: 8px 14px;
+  font-size: 13px;
+  border-radius: 8px; /* Slightly less rounded than quick replies */
+  background-color: #007bff; /* Primary blue */
+  color: white;
+  border: 1px solid #007bff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.chat-ad-btn:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.chat-ad-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background-color: #a0aec0; /* Grayed out when disabled */
+  border-color: #a0aec0;
+}
+
 
 /* Chat Input Container */
 .form-input-container {
