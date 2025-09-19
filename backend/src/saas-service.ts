@@ -977,7 +977,7 @@ export class SaaSService {
         WHERE id = $2 AND user_id = $3
       `;
       const result = await pool.query(query, [allowedDomains, formId, userId]);
-      return result.rowCount > 0;
+      return (result.rowCount ?? 0) > 0;
     } catch (error) {
       console.error('Error updating form allowed domains:', error);
       throw error;
@@ -1120,7 +1120,7 @@ export class SaaSService {
             // Dispatch to the n8n connector with the specific webhook URL
             const { n8nConnector } = await import('./connectors/n8n');
             const n8nConfig = {
-              type: 'n8n',
+              type: 'n8n' as const,
               settings: {
                 webhookUrl: n8nRule.target, // Use target from the rule
                 customerId: customerId,
