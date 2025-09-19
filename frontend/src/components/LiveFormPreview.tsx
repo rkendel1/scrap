@@ -126,7 +126,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     }
   };
 
-  const renderDesignTokens = () => {
+  const renderDesignTokens = (applyMarginTopAuto: boolean = false) => {
     if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
 
     const { 
@@ -156,7 +156,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         maxWidth: '750px',
         margin: '0 auto',
         textAlign: 'left',
-        // Removed: marginTop: 'auto', /* Pushes this div to the bottom */
+        marginTop: applyMarginTopAuto ? 'auto' : '0', /* Apply conditionally */
         fontSize: '10px', /* Reduced font size */
         color: '#555',
         border: '1px solid #e1e5e9',
@@ -328,25 +328,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${wrapperJustifyClass}`}>
-        {/* If a form is generated, show the form and destination status */}
-        {currentFormToRender && (
-          <>
-            {formContent}
-            {isDestinationConfigured && (
-              <div className="form-submit-status" style={{ marginTop: '24px' }}>
-                <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* If no form is generated, but analysis data is present, show analysis summary */}
-        {!currentFormToRender && hasAnalysisData && (
-          renderDesignTokens()
-        )}
-
-        {/* If no form and no analysis data, show the initial placeholder */}
-        {!currentFormToRender && !hasAnalysisData && (
+        {/* Case 1: No form, no analysis data (initial state) */}
+        {isZeroState && !hasAnalysisData && (
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
             <div className="sparkle-icon">✨</div>
             <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -355,10 +338,25 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             </p>
           </div>
         )}
-      </div>
 
-      {/* Render Design Tokens if a form IS generated and not explicitly hidden */}
-      {currentFormToRender && hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
+        {/* Case 2: Form is generated */}
+        {currentFormToRender && (
+          <>
+            {formContent}
+            {isDestinationConfigured && (
+              <div className="form-submit-status" style={{ marginTop: '24px' }}>
+                <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
+              </div>
+            )}
+            {hasAnalysisData && !hideAnalysisSection && renderDesignTokens(true)} {/* Pass true to apply margin-top: auto */}
+          </>
+        )}
+
+        {/* Case 3: No form, but analysis data is present (zero state with analysis) */}
+        {isZeroState && hasAnalysisData && (
+          renderDesignTokens(false) // Don't apply margin-top: auto here, parent handles justify-end
+        )}
+      </div>
     </div>
   );
 };
