@@ -65,7 +65,13 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
               ))}
               {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span className="text-gray-500"> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
             </div>
-          ) : <span className="text-gray-500">N/A</span>}
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
+              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
+              <span className="text-gray-500">N/A</span>
+            </div>
+          )}
         </div>
 
         {/* Card 2: Typography */}
@@ -92,7 +98,7 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
             <span className="text-gray-700">
               M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
             </span>
-          ) : <span className="text-gray-500">None</span>}
+          ) : <span className="text-gray-500">M: 0 | P: 0</span>}
         </div>
 
         {/* Card 4: Layout Structure */}

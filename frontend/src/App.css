@@ -12,7 +12,7 @@ html, body, #root, .App {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f0f2f5; /* Light gray background */
+  background-color: #f0f2f5;
   color: #333;
   line-height: 1.6;
 }
@@ -22,39 +22,37 @@ html, body, #root, .App {
   flex-direction: column;
 }
 
-/* Define CSS variables for consistent sizing */
+/* Layout Variables */
 :root {
-  --header-height: 50px; /* Adjusted header height */
-  --main-padding-y: 24px; /* Vertical padding for main content */
-  --chat-input-height: 80px; /* Height for input and quick replies */
+  --header-height: 50px;
+  --main-gap: 24px;
 }
 
+/* Container */
 .container {
-  max-width: 1400px; /* Increased overall width */
+  max-width: 1400px;
   margin: 0 auto;
-  padding: 0 20px; /* Horizontal padding only, vertical handled by main */
+  padding: 0 20px;
   width: 100%;
   box-sizing: border-box;
 }
 
 /* Header */
 .header {
-  background-color: #ffffff;
-  height: var(--header-height); /* Fixed height for header */
+  background-color: #fff;
+  height: var(--header-height);
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-  position: relative;
-  z-index: 10;
-  display: flex; /* Use flex to center content vertically */
+  display: flex;
   align-items: center;
+  z-index: 10;
 }
 
 .header .container {
-  padding: 0; /* Remove padding from container inside header, handled by header flex */
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: 100%; /* Take full height of header */
+  height: 100%;
 }
 
 .header .logo {
@@ -63,7 +61,6 @@ html, body, #root, .App {
   font-size: 14px;
   font-weight: 700;
   color: #0f172a;
-  letter-spacing: -0.5px;
 }
 
 .header .logo-icon {
@@ -79,372 +76,62 @@ html, body, #root, .App {
   margin-right: 8px;
 }
 
-.btn-header-small {
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: 6px;
-}
-
-/* Main Content Area */
+/* Main */
 main {
   flex-grow: 1;
-  padding: 0; /* Removed vertical padding from main, now handled by builder-layout */
+  padding: 0;
   display: flex;
   align-items: stretch;
-  gap: 24px;
   background-color: #f0f2f5;
-  /* Set height to 80% of viewport height, accounting for header */
-  height: calc(80vh - var(--header-height)); 
-  min-height: 0; /* Allow flex item to shrink */
 }
 
-/* Styles for the conversational builder layout */
+/* Builder Layout */
 .builder-layout {
-  display: flex;
-  flex-direction: row;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--main-gap);
   flex: 1;
-  height: 100%; /* Take full height of main */
-  padding: var(--main-padding-y) 0; /* Re-added vertical padding here */
-  box-sizing: border-box; /* Include padding in the 100% height */
+  padding: var(--main-gap);
+  box-sizing: border-box;
+  align-items: start;
 }
 
+/* Left Column (Chat) */
 .builder-column {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 50%;
-  height: 100%; /* Take full height of parent */
 }
 
-.preview-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 50%;
-  height: 100%; /* Take full height of parent */
-}
-
-/* Card Component */
-.card {
-  background-color: #ffffff;
+.conversational-builder-card {
+  background-color: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  padding: 24px;
-  margin-bottom: 0;
   border: 1px solid #e1e5e9;
-  transition: all 0.3s ease;
-}
-
-.card:hover {
-  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
-}
-
-.card h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-top: 0;
-  margin-bottom: 16px;
-}
-
-.card p {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 12px;
-}
-
-/* Buttons */
-.btn {
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-}
-
-.btn-primary {
-  background-color: #007bff; /* Blue */
-  color: white;
-  border: 1px solid #007bff;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
-  border-color: #0056b3;
-}
-
-.btn-secondary {
-  background-color: #e9ecef; /* Light gray */
-  color: #495057;
-  border: 1px solid #e9ecef;
-  box-shadow: none;
-}
-
-.btn-secondary:hover {
-  background-color: #dee2e6;
-  border-color: #dee2e6;
-}
-
-.btn-danger {
-  background-color: #dc3545; /* Red */
-  color: white;
-  border: 1px solid #dc3545;
-}
-
-.btn-danger:hover {
-  background-color: #c82333;
-  border-color: #bd2130;
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: #007bff;
-  text-decoration: underline;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 400px;
+  overflow: hidden;
   padding: 0;
-  font-size: inherit;
-  font-weight: inherit;
-  box-shadow: none;
 }
 
-.btn-link:hover {
-  color: #0056b3;
-}
-
-/* Form Elements */
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 500;
-  color: #333;
-  font-size: 13px;
-}
-
-.form-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #ced4da;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #495057;
-  background-color: #fff;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-  box-sizing: border-box;
-}
-
-.form-input:focus {
-  border-color: #80bdff;
-  outline: 0;
-  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.form-input.error {
-  border-color: #dc3545;
-}
-
-.error-message {
-  color: #dc3545;
-  font-size: 12px;
-  margin-top: 4px;
-}
-
-.success-message {
-  color: #28a745;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  padding: 10px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-
-/* Table Styles */
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 16px;
-  font-size: 13px;
-}
-
-.table th, .table td {
-  padding: 10px 12px;
-  text-align: left;
-  border-bottom: 1px solid #e1e5e9;
-}
-
-.table th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #495057;
-  text-transform: uppercase;
-  font-size: 11px;
-}
-
-.table tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-/* Badges */
-.badge {
-  display: inline-block;
-  padding: 3px 7px;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-  vertical-align: baseline;
-}
-
-.badge-primary {
-  color: #fff;
-  background-color: #007bff;
-}
-
-.badge-secondary {
-  color: #fff;
-  background-color: #6c757d;
-}
-
-/* JSON Preview */
-.json-preview {
-  background-color: #f8f9fa;
-  border: 1px solid #e1e5e9;
-  border-radius: 8px;
-  padding: 12px;
-  font-family: 'Monaco', 'Menlo', monospace;
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-height: 150px;
-  overflow-y: auto;
-}
-
-/* Color Swatch */
-.color-swatch {
-  width: 18px;
-  height: 18px;
-  border-radius: 3px;
-  border: 1px solid #e1e5e9;
-  margin-right: 6px;
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* Loading State */
-.loading {
-  text-align: center;
-  padding: 30px;
-  font-size: 16px;
-  color: #6c757d;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-/* Spinner for loading */
-.loading::before {
-  content: '';
-  width: 18px;
-  height: 18px;
-  border: 2px solid #007bff;
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* Fixed Error Message */
-.fixed-error-alert {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10000;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  background-color: #f8d7da; /* Light red */
-  border: 1px solid #f5c6cb; /* Red border */
-  color: #721c24; /* Dark red text */
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 15px;
-}
-
-.fixed-error-alert .dismiss-btn {
-  background: none;
-  border: none;
-  color: #721c24;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 15px;
-  text-decoration: underline;
-}
-
-
-/* Context Summary */
-.context-summary {
-  padding: 8px 12px;
-  background-color: #e3f2fd;
-  border: 1px solid #bbdefb;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  font-size: 12px;
-  color: #1565c0;
-  font-weight: 500;
-}
-
-/* Conversational Builder Card */
-.conversational-builder-card {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100%; /* Take full height of parent column */
-  padding-bottom: 0; /* Remove bottom padding, handled by chat input container */
-  overflow: hidden; /* Hide overflow from internal elements */
-}
-
-/* Chat History Container */
+/* Chat History */
 .chat-history-container {
-  flex: 1 1 auto; /* Evenly share remaining space, allow to grow and shrink */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  margin-bottom: 12px;
-  min-height: 0; /* Allow flex item to shrink */
+  min-height: 0;
 }
 
 .chat-history-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto; /* Enable internal scrolling */
-  border: 1px solid #e1e5e9;
-  border-radius: 12px;
+  flex: 1;
+  overflow-y: auto;
   padding: 16px;
   background-color: #f8f9fa;
-  gap: 16px;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
-  display: flex; /* Ensure flex for chat bubbles */
-  flex-direction: column; /* Stack chat bubbles */
+  border-bottom: 1px solid #e1e5e9;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 /* Chat Bubbles */
@@ -472,327 +159,97 @@ main {
   border-bottom-left-radius: 4px;
 }
 
-.chat-bubble.error {
-  background-color: #f8d7da;
-  color: #721c24;
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-
-.chat-bubble.success {
-  background-color: #d4edda;
-  color: #155724;
-  align-self: flex-start;
-  border-bottom-left-radius: 4px;
-}
-
-.chat-timestamp {
-  font-size: 10px;
-  color: rgba(0,0,0,0.4);
-  position: absolute;
-  bottom: -14px;
-  white-space: nowrap;
-}
-
-.chat-bubble.user .chat-timestamp {
-  color: rgba(255,255,255,0.6);
-  right: 0;
-}
-
-.chat-bubble.prompt .chat-timestamp,
-.chat-bubble.error .chat-timestamp,
-.chat-bubble.success .chat-timestamp {
-  color: rgba(0,0,0,0.4);
-  left: 0;
-}
-
-
-/* Quick Reply Buttons - REMOVED */
-
-
-/* Chat Input Container */
+/* Chat Input */
 .form-input-container {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-top: 0; /* Moved up */
-  flex-shrink: 0;
-  padding-top: 0; /* Moved up */
-  border-top: none; /* Removed separator */
+  padding: 12px 16px;
+  background: #fafafa;
+  border-top: 1px solid #e1e5e9;
 }
 
 .form-input-container .form-input {
-  flex-grow: 1;
+  flex: 1;
   padding: 10px 14px;
-  border-radius: 8px;
   border: 1px solid #ced4da;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+  border-radius: 8px;
 }
 
 .form-input-container .btn-primary {
   padding: 10px 16px;
   border-radius: 8px;
+  background-color: #007bff;
+  color: #fff;
+  border: none;
 }
 
-/* Live Preview Specifics */
-.live-preview-card {
-  flex: 1;
+/* Right Column (Preview + Summary) */
+.preview-column {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: center;
-  padding: 24px;
-  background-color: #f0f2f5;
-  box-shadow: none;
-  border: none;
-  height: 100%; /* Take full height of parent column */
+  gap: var(--main-gap);
 }
 
-.live-preview-card .preview-header {
-  width: 100%;
-  text-align: left;
-  margin-bottom: 8px;
-}
-
-.live-preview-card .preview-header h3 {
-  text-align: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #0f172a;
-  margin-top: 0;
-  margin-bottom: 4px;
-}
-
-.live-preview-card .preview-header p {
-  font-size: 12px;
-  color: #666;
-  margin: 0;
+.live-preview-card {
+  background-color: #fff;
+  border-radius: 12px;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 16px;
+  height: 100%;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
 }
 
 .live-preview-content-wrapper {
+  flex: 1;
   border: 1px solid #e1e5e9;
   border-radius: 12px;
   background-color: #f8f9fa;
-  flex: 1;
-  height: 100%;
-  overflow-y: auto; /* Enable internal scrolling for preview content */
-  overflow-x: hidden;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  /* Removed fixed justify-content here, it will be set by dynamic class */
-  width: 100%;
-  box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
-  min-height: 0; /* Allow content to shrink */
+  overflow-y: auto;
+  padding: 16px;
+  margin-top: 8px;
 }
 
-/* Utility classes for flex justification */
-.justify-start { justify-content: flex-start; }
-.justify-center { justify-content: center; }
-.justify-end { justify-content: flex-end; }
-
-/* Removed .is-zero-state as it will be replaced by dynamic class */
-/* .live-preview-content-wrapper.is-zero-state {
-  justify-content: center;
-} */
-
-.live-preview-card .sparkle-icon {
-  font-size: 48px;
-  margin-bottom: 16px;
-  color: #fcd34d;
-  animation: sparkle 1.5s infinite alternate;
-}
-
-@keyframes sparkle {
-  0% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.1); opacity: 0.8; }
-  100% { transform: scale(1); opacity: 1; }
-}
-
-.live-preview-card .placeholder-text {
-  font-size: 14px;
-  color: #666;
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.live-preview-card .ai-generated-badge {
-  margin-top: 16px;
-  padding: 8px 12px;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #155724;
-  font-weight: 500;
-}
-
-/* Form specific styling within preview */
-.formcraft-embed-container .form-submit-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 15px;
-  background-color: #d4edda;
-  border: 1px solid #c3e6cb;
-  color: #155724;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  margin-top: 16px;
-}
-
-.formcraft-embed-container .form-submit-status svg {
-  margin-right: 8px;
-}
-
-/* Ready to Embed Section */
-.ready-to-embed-card {
-  background-color: #1a202c;
-  color: white;
+.website-summary-card {
+  background-color: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  padding: 24px;
-  margin-top: 24px;
-  width: 100%;
-  text-align: center;
+  border: 1px solid #e1e5e9;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  padding: 16px;
+  height: auto;
 }
 
-.ready-to-embed-card h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-top: 0;
-  margin-bottom: 8px;
-  color: white;
-}
-
-.ready-to-embed-card p {
-  font-size: 14px;
-  color: #a0aec0;
-  margin-bottom: 20px;
-}
-
-.ready-to-embed-card .btn-embed-code {
-  background-color: #4a5568;
-  color: white;
-  border: none;
-  padding: 12px 24px;
+/* Buttons */
+.btn {
+  padding: 10px 18px;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
 
-.ready-to-embed-card .btn-embed-code:hover {
-  background-color: #2d3748;
+.btn-primary:hover {
+  background-color: #0056b3;
 }
 
-.ready-to-embed-card .btn-embed-code svg {
-  width: 18px;
-  height: 18px;
-}
-
-
-/* Responsive adjustments */
+/* Responsive */
 @media (max-width: 1024px) {
-  .container {
-    padding: 0 16px;
-  }
-
-  .header .container {
-    padding: 0;
-  }
-
-  .header .logo {
-    font-size: 12px;
-  }
-
-  .header .logo-icon {
-    width: 10px;
-    height: 10px;
-    font-size: 7px;
-  }
-
-  .card {
-    padding: 20px;
-  }
-
-  .card h2 {
-    font-size: 18px;
-  }
-
-  .btn {
-    padding: 8px 15px;
-    font-size: 13px;
-  }
-
-  .table th, .table td {
-    padding: 8px 10px;
-  }
-
-  main {
-    flex-direction: column;
-    gap: 16px;
-    height: auto; /* Allow height to be flexible on smaller screens */
-  }
-
-  /* Responsive for builder layout */
   .builder-layout {
-    flex-direction: column;
-    height: auto;
+    grid-template-columns: 1fr;
   }
-
-  .builder-column, .preview-column {
-    max-width: none;
-    height: auto;
-  }
-
+  .conversational-builder-card,
   .live-preview-card {
     height: auto;
-    min-height: 300px;
-    padding: 20px;
-  }
-
-  .live-preview-content-wrapper {
-    height: auto;
     min-height: 400px;
-  }
-
-  .chat-history-container {
-    height: 40vh;
-  }
-}
-
-@media (max-width: 768px) {
-  .header .container {
-    padding: 0;
-  }
-  .header .logo {
-    font-size: 10px;
-  }
-  .header .logo-icon {
-    width: 8px;
-    height: 8px;
-    font-size: 6px;
-  }
-  .card {
-    padding: 16px;
-  }
-  .chat-bubble {
-    font-size: 13px;
-    padding: 8px 12px;
-  }
-  /* Quick reply buttons are removed */
-  .form-input-container .form-input {
-    padding: 8px 10px;
-  }
-  .form-input-container .btn-primary {
-    padding: 8px 14px;
   }
 }
