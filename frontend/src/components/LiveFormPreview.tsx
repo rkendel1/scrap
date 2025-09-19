@@ -158,7 +158,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   const renderDesignTokens = () => {
-    if (hideAnalysisSection || (!extractedDesignTokens && !extractedVoiceAnalysis)) return null;
+    if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
 
     const { colorPalette, fontFamilies, headings, primaryColors } = extractedDesignTokens || {};
     const { tone, personalityTraits } = extractedVoiceAnalysis || {};
@@ -173,10 +173,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         maxWidth: '500px',
         margin: '0 auto',
-        textAlign: 'left'
+        textAlign: 'left',
+        marginBottom: '24px' // Add margin bottom to separate from form
       }}>
         <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '20px' }}>
-          Website Analysis Complete!
+          Website Analysis
         </h3>
         <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '14px' }}>
           Here's what we've learned from <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
@@ -285,18 +286,21 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             boxSizing: 'border-box'
           }}
         >
-          {currentFormToRender && !hideAnalysisSection ? ( // Render form if available and not hiding analysis
-            <>
-              {formContent}
-              {isDestinationConfigured && (
-                <div className="form-submit-status">
-                  <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
-                </div>
-              )}
-            </>
-          ) : (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection ? ( // Render analysis if available and not hiding
-            renderDesignTokens()
-          ) : ( // Render placeholder
+          {/* Render Design Tokens if available and not explicitly hidden */}
+          { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
+
+          {/* Render Form Content if available */}
+          { currentFormToRender && formContent }
+
+          {/* Render Destination Configured status if form is present and destination is configured */}
+          { currentFormToRender && isDestinationConfigured && (
+            <div className="form-submit-status" style={{ marginTop: '24px' }}>
+              <CheckCircle size={16} /> Data will be sent to: {getDestinationText()}
+            </div>
+          )}
+
+          {/* Render Placeholder if no form and no analysis is available */}
+          { !currentFormToRender && !(extractedDesignTokens || extractedVoiceAnalysis) && (
             <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -307,12 +311,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           )}
         </div>
       </div>
-      {currentFormToRender && !hideAnalysisSection && (
+      {currentFormToRender && (
         <div className="ai-generated-badge">
           ✅ AI-generated form preview.
         </div>
       )}
-      {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && !hideAnalysisSection && (
+      {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && (
         <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
           ✅ Design tokens extracted. Ready for form generation!
         </div>
