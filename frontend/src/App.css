@@ -605,7 +605,7 @@ main {
   background-color: #f8f9fa;
   flex: 1;
   height: 100%;
-  overflow-y: auto; /* Allow scrolling if content is too tall */
+  /* Removed: overflow-y: auto; */ /* Allow scrolling if content is too tall */
   overflow-x: hidden;
   position: relative;
   display: flex;
