@@ -185,12 +185,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}> {/* Adjusted minmax for wider cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
           {colorPalette && colorPalette.length > 0 && (
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px' }}>Colors:</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {colorPalette.slice(0, 3).map((color: string, index: number) => ( {/* Show 3 colors */}
+                {colorPalette.slice(0, 3).map((color: string, index: number) => ( 
                   <div key={index} style={{ 
                     width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
                     border: '1px solid #eee', display: 'inline-block' 
@@ -205,7 +205,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px' }}>Fonts:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>
-                {fontFamilies.slice(0, 2).join(', ')} {/* Show 2 fonts */}
+                {fontFamilies.slice(0, 2).join(', ')}
                 {fontFamilies.length > 2 && ` +${fontFamilies.length - 2}`}
               </span>
             </div>
@@ -216,7 +216,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
               <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px' }}>Tone:</strong>
               <span style={{ fontSize: '12px', color: '#555' }}>{tone.primary}</span>
               {personalityTraits && personalityTraits.length > 0 && (
-                <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 2).join(', ')})</span> {/* Show 2 personality traits */}
+                <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 2).join(', ')})</span>
               )}
             </div>
           )}
