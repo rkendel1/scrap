@@ -42,7 +42,7 @@ html, body, #root, .App {
 .header .logo {
   display: flex;
   align-items: center;
-  font-size: 16px; /* Reduced font size */
+  font-size: 14px; /* Reduced font size */
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.5px;
@@ -51,13 +51,13 @@ html, body, #root, .App {
 .header .logo-icon {
   background-color: #007bff;
   color: white;
-  width: 16px; /* Reduced size */
-  height: 16px; /* Reduced size */
+  width: 12px; /* Reduced size */
+  height: 12px; /* Reduced size */
   border-radius: 4px; /* Adjusted border-radius for smaller size */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px; /* Reduced font size */
+  font-size: 8px; /* Reduced font size */
   margin-right: 8px;
 }
 
@@ -70,9 +70,9 @@ main {
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
   /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom) */
-  /* New header height: 16px (logo height) + 0px (top) + 0px (bottom) = 16px */
-  /* Total fixed vertical space: 16px (header) + 24px (main top padding) + 24px (main bottom padding) = 64px */
-  height: calc(100vh - 64px); 
+  /* New header height: 12px (logo height) + 0px (top) + 0px (bottom) = 12px */
+  /* Total fixed vertical space: 12px (header) + 24px (main top padding) + 24px (main bottom padding) = 60px */
+  height: calc(100vh - 60px); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -326,7 +326,7 @@ main {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 64px); /* Set static height for main content area */
+  height: calc(100vh - 60px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -686,13 +686,13 @@ main {
   }
 
   .header .logo {
-    font-size: 14px; /* Further decreased font size */
+    font-size: 12px; /* Further decreased font size */
   }
 
   .header .logo-icon {
-    width: 14px; /* Further decreased size */
-    height: 14px; /* Further decreased size */
-    font-size: 9px; /* Further decreased font size */
+    width: 10px; /* Further decreased size */
+    height: 10px; /* Further decreased size */
+    font-size: 7px; /* Further decreased font size */
   }
 
   .card {
@@ -744,12 +744,12 @@ main {
     padding: 0px 0; /* Adjusted padding */
   }
   .header .logo {
-    font-size: 12px; /* Further decreased font size */
+    font-size: 10px; /* Further decreased font size */
   }
   .header .logo-icon {
-    width: 12px; /* Further decreased size */
-    height: 12px; /* Further decreased size */
-    font-size: 8px; /* Further decreased font size */
+    width: 8px; /* Further decreased size */
+    height: 8px; /* Further decreased size */
+    font-size: 6px; /* Further decreased font size */
   }
   .card {
     padding: 16px;
