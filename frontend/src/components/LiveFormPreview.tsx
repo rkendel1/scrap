@@ -268,66 +268,60 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             <div 
               style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
               title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
-            >
-              <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
-              {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
-                <span style={{ fontSize: '10px', color: '#555' }}>
-                  Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
-                </span>
-              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-            </div>
-
-            {/* Card 6: CSS Details (Variables, Raw CSS) */}
-            <div 
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
-            >
-              <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
-              {(cssVariables && Object.keys(cssVariables).length > 0) ? (
-                <span style={{ fontSize: '10px', color: '#555' }}>
-                  {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
-                </span>
-              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-            </div>
-
-            {/* Card 7: Voice Tone & Personality */}
-            <div 
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
-            >
-              <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
-              {(tone && tone.primary) ? (
-                <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
-              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-              {(personalityTraits && personalityTraits.length > 0) && (
-                <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
-                  Personality: {personalityTraits.slice(0, 1).join(', ')}
-                </span>
-              )}
-            </div>
-
-            {/* Card 8: Audience & Messaging */}
-            <div 
-              style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
-            >
-              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
-              {(audienceAnalysis && audienceAnalysis.primary) ? (
-                <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
-              ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-              {(messaging && messaging.length > 0) && (
-                <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
-                  Messages: {messaging.length}
-                </span>
-              )}
-            </div>
+          >
+            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
+            {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#666', fontSize: '12px' }}>
-            <div className="sparkle-icon" style={{ fontSize: '24px', marginBottom: '8px' }}>✨</div>
-            <p style={{ margin: 0 }}>No website analysis data yet. Enter a URL to begin!</p>
+
+          {/* Card 6: CSS Details (Variables, Raw CSS) */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
+          >
+            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
+            {(cssVariables && Object.keys(cssVariables).length > 0) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
-        )}
+
+          {/* Card 7: Voice Tone & Personality */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
+          >
+            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
+            {(tone && tone.primary) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            {(personalityTraits && personalityTraits.length > 0) && (
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                Personality: {personalityTraits.slice(0, 1).join(', ')}
+              </span>
+            )}
+          </div>
+
+          {/* Card 8: Audience & Messaging */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
+          >
+            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
+            {(audienceAnalysis && audienceAnalysis.primary) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            {(messaging && messaging.length > 0) && (
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                Messages: {messaging.length}
+              </span>
+            )}
+          </div>
+        </div>
       </details>
     );
   };
@@ -374,8 +368,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           </>
         )}
 
-        {/* If no form is generated, show the initial placeholder */}
-        {!currentFormToRender && (
+        {/* If no form and no analysis data, show the initial placeholder */}
+        {!currentFormToRender && !hasAnalysisData && (
           <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
             <div className="sparkle-icon">✨</div>
             <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
