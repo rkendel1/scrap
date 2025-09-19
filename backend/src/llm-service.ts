@@ -189,7 +189,7 @@ ${websiteData.messaging.slice(0, 5).join('\n')}
 Requirements:
 1. Create a form with **3-5 fields** appropriate for "${formPurpose}"
 2. Match the website's tone and personality in all copy
-3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', 'fontFamily' to '${fontFamily}', and set 'maxWidth' to a reasonable value like '250px' or '75%' in the 'styling' object.**
+3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', 'fontFamily' to '${fontFamily}', and set 'maxWidth' to '250px' in the 'styling' object.**
 4. Include validation rules where appropriate
 5. Create compelling CTA text that matches the brand voice
 6. Generate a personalized thank you message
@@ -222,7 +222,7 @@ Return a JSON object with this structure:
     "fontFamily": "font family name",
     "borderRadius": "border radius value",
     "buttonStyle": "button styling description",
-    "maxWidth": "e.g., 500px, 75%"
+    "maxWidth": "e.g., 250px"
   }
 }
 `;
@@ -254,7 +254,7 @@ Return a JSON object with this structure:
           fontFamily: parsed.styling?.fontFamily || designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: parsed.styling?.borderRadius || '8px',
           buttonStyle: parsed.styling?.buttonStyle || 'solid',
-          maxWidth: parsed.styling?.maxWidth || '250px' // Default to 250px if not provided
+          maxWidth: '250px' // Enforce 250px regardless of LLM output
         },
         // Removed formLayout
       };
