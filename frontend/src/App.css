@@ -93,8 +93,8 @@ main {
   align-items: stretch;
   gap: 24px;
   background-color: #f0f2f5;
-  /* Set height to 80% of viewport height */
-  height: 80vh; 
+  /* Set height to 80% of viewport height, accounting for header */
+  height: calc(80vh - var(--header-height)); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -106,6 +106,7 @@ main {
   flex: 1;
   height: 100%; /* Take full height of main */
   padding: var(--main-padding-y) 0; /* Re-added vertical padding here */
+  box-sizing: border-box; /* Include padding in the 100% height */
 }
 
 .builder-column {
