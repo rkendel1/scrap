@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS embed_codes (
     id SERIAL PRIMARY KEY,
+    form_id INTEGER REFERENCES forms(id) ON DELETE CASCADE NOT NULL, -- Now includes FK and NOT NULL
     code VARCHAR(255) UNIQUE NOT NULL,
     domain VARCHAR(2048), -- Optional domain restriction
     is_active BOOLEAN DEFAULT TRUE,

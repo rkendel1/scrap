@@ -56,8 +56,3 @@ CREATE OR REPLACE TRIGGER update_forms_updated_at
 BEFORE UPDATE ON forms
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
-
--- Add the foreign key constraint to embed_codes table, referencing forms table
--- This is done separately because embed_codes needs to exist before forms,
--- but forms needs to exist before embed_codes can reference it.
--- This constraint will be added in a later migration file (e.g., 006_add_fk_to_embed_codes.sql)
