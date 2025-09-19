@@ -573,7 +573,7 @@ main {
 .live-preview-content-wrapper {
   border: 1px solid #e1e5e9;
   border-radius: 12px;
-  background-color: #f8f9fa;
+  background-color: #ffffff; /* Changed to white */
   flex: 1;
   height: 100%;
   overflow-y: auto; /* Enable internal scrolling for preview content */
