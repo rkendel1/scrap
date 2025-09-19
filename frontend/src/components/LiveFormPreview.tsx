@@ -156,11 +156,12 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         maxWidth: '750px',
         margin: '0 auto',
         textAlign: 'left',
-        marginTop: '12px',
+        marginTop: 'auto', /* Pushes this div to the bottom */
         fontSize: '10px', /* Reduced font size */
         color: '#555',
         border: '1px solid #e1e5e9',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        flexShrink: 0, /* Prevent it from shrinking */
       }}>
         <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px', fontWeight: '600', textAlign: 'center' }}>
           Website Analysis Summary
@@ -261,20 +262,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
           </div>
 
-          {/* Card 7: Media & Icons */}
-          <div 
-            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-            title={`Images: ${formatArray((images || []).map((i: any) => i.src), 5)}\nIcons: ${formatArray((icons || []).map((i: any) => i.classes), 5)}\nLogo URL: ${logoUrl || 'N/A'}`}
-          >
-            <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Media & Icons:</strong>
-            {((images && images.length > 0) || (icons && icons.length > 0) || logoUrl) ? (
-              <span style={{ fontSize: '10px', color: '#555' }}>
-                Imgs: {images?.length || 0} | Icons: {icons?.length || 0}
-              </span>
-            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
-          </div>
-
-          {/* Card 8: Voice Tone & Personality */}
+          {/* Card 7: Voice Tone & Personality */}
           <div 
             style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
@@ -290,7 +278,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             )}
           </div>
 
-          {/* Card 9: Audience & Messaging */}
+          {/* Card 8: Audience & Messaging */}
           <div 
             style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
             title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
@@ -339,9 +327,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             width: '100%',
             padding: '20px',
             boxSizing: 'border-box',
-            flexGrow: 1,
-            minHeight: 0,
-            overflowY: 'auto'
+            flexGrow: 1, /* This makes it take up available space */
+            minHeight: 0, /* Allow content to shrink */
+            overflowY: 'auto' /* Add scroll to this inner div if form content is too tall */
           }}
         >
           {/* Render Form Content if available */}
