@@ -1288,6 +1288,35 @@ app.get('/api/forms/:id/analytics', authService.authenticateToken, async (req: A
   }
 });
 
+// NEW: Endpoint to update form configuration
+app.patch('/api/forms/:id/config', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const updatedConfig: GeneratedForm = req.body;
+
+    if (isNaN(formId) || !updatedConfig) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID or configuration data' });
+    }
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const updatedForm = await saasService.updateFormConfig(formId, req.user.id, updatedConfig);
+
+    if (updatedForm) {
+      res.json({ success: true, message: 'Form configuration updated successfully', data: updatedForm });
+    } else {
+      res.status(404).json({ success: false, message: 'Form not found or not owned by user' });
+    }
+  } catch (error) {
+    console.error('Update form config error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to update form configuration'
+    });
+  }
+});
+
 // ====== LEGACY ENDPOINTS (for backward compatibility) ======
 
 // Extract and save website data (legacy)

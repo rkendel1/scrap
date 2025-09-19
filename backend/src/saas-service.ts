@@ -911,4 +911,138 @@ export class SaaSService {
       };
     }
   }
+
+  async updateFormAllowedDomains(formId: number, userId: number, allowedDomains: string[]): Promise<boolean> {
+    try {
+      const query = `
+        UPDATE forms
+        SET allowed_domains = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND user_id = $3
+      `;
+      const result = await pool.query(query, [allowedDomains, formId, userId]);
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error('Error updating form allowed domains:', error);
+      throw error;
+    }
+  }
+
+  async getFormAnalytics(formId: number, userId: number): Promise<any | null> {
+    try {
+      // Verify form ownership
+      const formQuery = `SELECT id FROM forms WHERE id = $1 AND user_id = $2`;
+      const formResult = await pool.query(formQuery, [formId, userId]);
+      if (formResult.rows.length === 0) {
+        return null; // Form not found or not owned by user
+      }
+
+      // Fetch overall submission stats
+      const overviewQuery = `
+        SELECT 
+          COUNT(fs.id) AS total_submissions,
+          COUNT(DISTINCT DATE(fs.created_at)) AS active_days,
+          EXTRACT(EPOCH FROM (MAX(fs.created_at) - MIN(fs.created_at))) / NULLIF(COUNT(fs.id) - 1, 0) AS avg_time_between_submissions
+        FROM form_submissions fs
+        WHERE fs.form_id = $1;
+      `;
+      const overviewResult = await pool.query(overviewQuery, [formId]);
+      const overview = overviewResult.rows[0];
+
+      // Fetch embed code performance
+      const embedsQuery = `
+        SELECT 
+          ec.code,
+          ec.domain,
+          ec.view_count,
+          ec.submission_count,
+          CASE 
+            WHEN ec.view_count > 0 THEN ROUND((ec.submission_count::numeric / ec.view_count) * 100, 2)
+            ELSE 0 
+          END AS conversion_rate
+        FROM embed_codes ec
+        WHERE ec.form_id = $1
+        ORDER BY ec.submission_count DESC;
+      `;
+      const embedsResult = await pool.query(embedsQuery, [formId]);
+      const embeds = embedsResult.rows;
+
+      return {
+        overview,
+        embeds
+      };
+    } catch (error) {
+      console.error('Error fetching form analytics:', error);
+      throw error;
+    }
+  }
+
+  async getUserById(userId: number): Promise<any | null> {
+    const query = `
+      SELECT id, email, subscription_tier, subscription_status
+      FROM users
+      WHERE id = $1
+    `;
+    const result = await pool.query(query, [userId]);
+    return result.rows[0] || null;
+  }
+
+  async getUserLiveFormCount(userId: number): Promise<number> {
+    const query = `SELECT COUNT(*) as count FROM forms WHERE user_id = $1 AND is_live = true`;
+    const result = await pool.query(query, [userId]);
+    return parseInt(result.rows[0].count);
+  }
+
+  async updateFormConfig(formId: number, userId: number, updatedConfig: GeneratedForm): Promise<SaaSForm | null> {
+    try {
+      const query = `
+        UPDATE forms
+        SET 
+          form_name = $1,
+          form_description = $2,
+          title = $3,
+          description = $4,
+          form_schema = $5,
+          primary_colors = $6,
+          font_families = $7,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $8 AND user_id = $9
+        RETURNING *, form_schema as generated_form_schema
+      `;
+
+      // Extract top-level fields from updatedConfig for direct columns
+      const formName = updatedConfig.title; // Use generatedForm.title as form_name
+      const formDescription = updatedConfig.description; // Use generatedForm.description as form_description
+      const title = updatedConfig.title;
+      const description = updatedConfig.description;
+      const primaryColors = [updatedConfig.styling.primaryColor]; // Store as array
+      const fontFamilies = [updatedConfig.styling.fontFamily]; // Store as array
+
+      const values = [
+        formName,
+        formDescription,
+        title,
+        description,
+        JSON.stringify([updatedConfig]), // Store the entire GeneratedForm object in form_schema
+        JSON.stringify(primaryColors),
+        JSON.stringify(fontFamilies),
+        formId,
+        userId
+      ];
+
+      const result = await pool.query(query, values);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row = result.rows[0];
+      return {
+        ...row,
+        generated_form: row.generated_form_schema?.[0] || null
+      };
+    } catch (error) {
+      console.error('Error updating form configuration:', error);
+      throw error;
+    }
+  }
 }

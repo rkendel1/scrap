@@ -7,6 +7,7 @@ import { LoginForm, RegisterForm } from './components/AuthForms';
 import { ConnectorManager } from './components/ConnectorManager';
 import { LiveFormPreview } from './components/LiveFormPreview';
 import { FormAnalytics } from './components/FormAnalytics'; // New import
+import { FormEditor } from './components/FormEditor'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -21,7 +22,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics'>('builder'); // Removed 'embed-code'
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor'>('builder'); // Added 'form-editor'
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -171,11 +172,17 @@ function App() {
   };
 
   const handleEditForm = (form: SaaSForm) => {
-    // For now, redirect to connector management as a starting point for editing
-    // A full form editor would be more complex
     setSelectedForm(form);
-    setCurrentView('form-manage');
-    setError('The "Edit" function currently leads to connector management. A full form editor is coming soon!');
+    setCurrentView('form-editor'); // Navigate to the new form editor
+  };
+
+  const handleFormEditorSave = (updatedForm: SaaSForm) => {
+    setForms(prevForms => 
+      prevForms.map(f => f.id === updatedForm.id ? updatedForm : f)
+    );
+    setSelectedForm(updatedForm); // Update selected form with new config
+    setCurrentView('dashboard'); // Go back to dashboard
+    setError(null);
   };
 
   const handleBackToDashboard = () => {
@@ -524,6 +531,12 @@ function App() {
             form={selectedForm} 
             user={user} 
             onBack={handleBackToDashboard} 
+          />
+        ) : currentView === 'form-editor' && user && selectedForm ? (
+          <FormEditor
+            form={selectedForm}
+            onSaveSuccess={handleFormEditorSave}
+            onCancel={handleBackToDashboard}
           />
         ) : currentView === 'legacy' ? (
           <>
