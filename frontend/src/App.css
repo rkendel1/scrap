@@ -32,7 +32,7 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 2px 0; /* Decreased padding */
+  padding: 0px 0; /* Reduced padding to make it half its previous size */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
@@ -42,7 +42,7 @@ html, body, #root, .App {
 .header .logo {
   display: flex;
   align-items: center;
-  font-size: 20px; /* Decreased font size */
+  font-size: 16px; /* Reduced font size */
   font-weight: 700;
   color: #0f172a;
   letter-spacing: -0.5px;
@@ -51,13 +51,13 @@ html, body, #root, .App {
 .header .logo-icon {
   background-color: #007bff;
   color: white;
-  width: 28px; /* Decreased size */
-  height: 28px; /* Decreased size */
-  border-radius: 6px;
+  width: 16px; /* Reduced size */
+  height: 16px; /* Reduced size */
+  border-radius: 4px; /* Adjusted border-radius for smaller size */
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px; /* Decreased font size */
+  font-size: 10px; /* Reduced font size */
   margin-right: 8px;
 }
 
@@ -70,9 +70,9 @@ main {
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
   /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom) */
-  /* New header height: 28px (logo height) + 4px (2px top + 2px bottom padding) = 32px */
-  /* Total fixed vertical space: 32px (header) + 24px (main top padding) + 24px (main bottom padding) = 80px */
-  height: calc(100vh - 80px); 
+  /* New header height: 16px (logo height) + 0px (top) + 0px (bottom) = 16px */
+  /* Total fixed vertical space: 16px (header) + 24px (main top padding) + 24px (main bottom padding) = 64px */
+  height: calc(100vh - 64px); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -326,7 +326,7 @@ main {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 80px); /* Set static height for main content area */
+  height: calc(100vh - 64px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -686,13 +686,13 @@ main {
   }
 
   .header .logo {
-    font-size: 18px; /* Further decreased font size */
+    font-size: 14px; /* Further decreased font size */
   }
 
   .header .logo-icon {
-    width: 24px; /* Further decreased size */
-    height: 24px; /* Further decreased size */
-    font-size: 14px; /* Further decreased font size */
+    width: 14px; /* Further decreased size */
+    height: 14px; /* Further decreased size */
+    font-size: 9px; /* Further decreased font size */
   }
 
   .card {
@@ -741,15 +741,15 @@ main {
 
 @media (max-width: 768px) {
   .header {
-    padding: 4px 0; /* Adjusted padding */
+    padding: 0px 0; /* Adjusted padding */
   }
   .header .logo {
-    font-size: 16px; /* Further decreased font size */
+    font-size: 12px; /* Further decreased font size */
   }
   .header .logo-icon {
-    width: 20px; /* Further decreased size */
-    height: 20px; /* Further decreased size */
-    font-size: 12px; /* Further decreased font size */
+    width: 12px; /* Further decreased size */
+    height: 12px; /* Further decreased size */
+    font-size: 8px; /* Further decreased font size */
   }
   .card {
     padding: 16px;
