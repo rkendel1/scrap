@@ -88,13 +88,13 @@ html, body, #root, .App {
 /* Main Content Area */
 main {
   flex-grow: 1;
-  padding: var(--main-padding-y) 0; /* Vertical padding for main content */
+  padding: 0; /* Removed vertical padding from main, now handled by builder-layout */
   display: flex;
   align-items: stretch;
   gap: 24px;
   background-color: #f0f2f5;
-  /* Calculate height to fill remaining viewport space */
-  height: calc(100vh - var(--header-height) - (var(--main-padding-y) * 2)); 
+  /* Set height to 80% of viewport height */
+  height: 80vh; 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -105,6 +105,7 @@ main {
   gap: 24px;
   flex: 1;
   height: 100%; /* Take full height of main */
+  padding: var(--main-padding-y) 0; /* Re-added vertical padding here */
 }
 
 .builder-column {
