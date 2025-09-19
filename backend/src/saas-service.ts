@@ -890,7 +890,7 @@ export class SaaSService {
       return (result.rowCount ?? 0) > 0;
     } catch (error) {
       console.error('Error saving form connectors:', error);
-      return false;
+      throw error;
     }
   }
 
@@ -940,7 +940,7 @@ export class SaaSService {
       };
 
       // Test the connector
-      const connectorModule = await import(`./connectors/${connectorType}.js`);
+      const connectorModule = await import(`./connectors/${connectorType}`); // Removed .js extension
       const result = await connectorModule.send(mockSubmission, connectorConfig);
 
       console.log('Backend: testConnector result:', result); // DEBUG LOG

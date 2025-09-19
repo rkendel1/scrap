@@ -16,7 +16,7 @@ export async function dispatchToConnectors(
         result = await n8nConnector.send(submission, config as any);
       } else {
         // Handle other connectors with existing pattern
-        const connectorModule = await import(`./${config.type}.js`);
+        const connectorModule = await import(`./${config.type}`); // Removed .js extension
         result = await connectorModule.send(submission, config);
       }
       
