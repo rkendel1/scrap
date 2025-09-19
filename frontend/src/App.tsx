@@ -309,14 +309,15 @@ function App() {
     <div className="App">
       <header className="header">
         <div className="container">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
             <div className="logo">
               <div className="logo-icon">F</div>
               FormCraft AI
             </div>
-            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               {user ? (
                 <>
+                  {/* Authenticated user's main actions */}
                   <button 
                     onClick={() => setCurrentView('builder')} 
                     className="btn btn-secondary btn-header-small"
@@ -329,14 +330,6 @@ function App() {
                   >
                     📊 My Forms
                   </button>
-                  <a 
-                    href="/test-embed.html" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    🧪 Test Embed Page
-                  </a>
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     Welcome, {user.first_name || user.email}
                     {user.subscription_tier === 'paid' && (
@@ -358,20 +351,24 @@ function App() {
                   </button>
                 </>
               ) : (
-                <>
-                  <a 
-                    href="/test-embed.html" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    🧪 Test Embed Page
-                  </a>
+                null // No main actions for guest here, they go to utility
+              )}
+              {/* Utility actions, always on the far right */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: user ? '12px' : 'auto' }}>
+                <a 
+                  href="/test-embed.html" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="btn btn-secondary btn-header-small"
+                >
+                  🧪 Test Embed Page
+                </a>
+                {!user && ( // Only show Sign In/Register if not authenticated
                   <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
                     Sign In / Register
                   </button>
-                </>
-              )}
+                )}
+              </div>
             </div>
           </div>
         </div>
