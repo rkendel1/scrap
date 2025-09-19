@@ -287,6 +287,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     const parsedInput = parseUserInput(inputToProcess);
 
+    // Global command checks (outside switch)
     if (parsedInput.command === 'help') {
       addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
       return;
@@ -298,47 +299,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (currentStep === 'DONE' && (parsedInput.command === 'yes' || parsedInput.command === 'no')) {
       handleRestart(parsedInput.command);
       return;
-    }
-    if (currentStep === 'FORM_GENERATED_OPTIONS' || currentStep === 'DESTINATION_CONFIGURED') {
-      if (parsedInput.command === 'configure destination') {
-        setCurrentStep('ASK_DESTINATION_TYPE');
-        addPrompt(
-          "Okay, where should I send the form submissions? You can choose from:",
-          [
-            { label: 'Email', command: 'email', icon: <Mail size={16} /> },
-            { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
-            { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
-            { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
-            { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
-          ]
-        );
-        return;
-      }
-      if (parsedInput.command === 'make changes') {
-        setCurrentStep('ASK_FORM_CHANGES');
-        addPrompt("What changes would you like to make to the form? Tell me what you want to modify (e.g., 'make the email field optional', 'change the button color to green', 'add a phone number field').");
-        return;
-      }
-      if (parsedInput.command === 'im done') {
-        handleDoneClick();
-        return;
-      }
-      if (parsedInput.command === 'get embed code') {
-        if (createdForm) {
-          onGetEmbedCodeClick(createdForm);
-          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?",
-            [
-              { label: 'Yes, another form!', command: 'yes' },
-              { label: 'No, I\'m good.', command: 'no' },
-            ]
-          );
-          setCurrentStep('DONE');
-        } else {
-          addPrompt("No form has been generated yet. Please start by providing a URL.");
-          setCurrentStep('ASK_URL');
-        }
-        return;
-      }
     }
     if (parsedInput.command === 'create account') {
       onShowAuth('register');
@@ -375,8 +335,38 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'FORM_GENERATED_OPTIONS':
-          // If user provides a destination type directly in this state
-          if (parsedInput.destinationType) {
+          if (parsedInput.command === 'configure destination') {
+            setCurrentStep('ASK_DESTINATION_TYPE');
+            addPrompt(
+              "Okay, where should I send the form submissions? You can choose from:",
+              [
+                { label: 'Email', command: 'email', icon: <Mail size={16} /> },
+                { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
+                { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
+                { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
+                { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
+              ]
+            );
+          } else if (parsedInput.command === 'make changes') {
+            setCurrentStep('ASK_FORM_CHANGES');
+            addPrompt("What changes would you like to make to the form? Tell me what you want to modify (e.g., 'make the email field optional', 'change the button color to green', 'add a phone number field').");
+          } else if (parsedInput.command === 'im done') {
+            handleDoneClick();
+          } else if (parsedInput.command === 'get embed code') {
+            if (createdForm) {
+              onGetEmbedCodeClick(createdForm);
+              addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?",
+                [
+                  { label: 'Yes, another form!', command: 'yes' },
+                  { label: 'No, I\'m good.', command: 'no' },
+                ]
+              );
+              setCurrentStep('DONE');
+            } else {
+              addPrompt("No form has been generated yet. Please start by providing a URL.");
+              setCurrentStep('ASK_URL');
+            }
+          } else if (parsedInput.destinationType) { // This is for direct type input, not command
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
             addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Make Changes to Form'?",
@@ -507,14 +497,18 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     } catch (err: any) {
       console.error('Conversation error:', err);
       addError(err.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleQuickResponseClick = async (response: string) => {
     if (isLoading) return;
-    // No need to setUserInput here, just call handleUserInput directly
+    // Clear userInput immediately to prevent accidental submission of old text
+    setUserInput(''); 
     setError(null);
-    await handleUserInput(response); // Pass response directly to handleUserInput
+    // Directly call handleUserInput with the command string
+    await handleUserInput(response); 
   };
 
   const processUrlInput = async (url: string) => {
