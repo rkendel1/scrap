@@ -91,8 +91,8 @@ export const connectorDefinitions: Record<string, ConnectorDefinition> = {
     ]
   },
 
-  googleSheets: {
-    type: 'googleSheets',
+  googlesheets: { // Changed type to 'googlesheets'
+    type: 'googlesheets',
     label: 'Google Sheets',
     description: 'Add form submissions as rows in Google Sheets',
     icon: '📊',
@@ -150,8 +150,24 @@ export const connectorDefinitions: Record<string, ConnectorDefinition> = {
         description: 'Optional custom headers in JSON format'
       }
     ]
+  },
+  zapier: { // Added Zapier connector definition
+    type: 'zapier',
+    label: 'Zapier Webhook',
+    description: 'Send form submissions to a Zapier Catch Hook',
+    icon: '⚡',
+    isPremium: true, // Zapier is often considered a premium integration
+    fields: [
+      {
+        name: 'webhookUrl',
+        label: 'Zapier Catch Hook URL',
+        type: 'url',
+        required: true,
+        placeholder: 'https://hooks.zapier.com/hooks/catch/...',
+        description: 'The URL of your Zapier Catch Hook'
+      }
+    ]
   }
-  // n8n connector is intentionally omitted from user-facing definitions
 };
 
 export function getConnectorDefinition(type: string): ConnectorDefinition | undefined {

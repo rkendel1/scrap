@@ -109,7 +109,7 @@ export interface SaaSForm {
 export interface FormData {
   url: string;
   purpose: string;
-  destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook' | 'zapier'; // Added Zapier
+  destinationType?: 'email' | 'googlesheets' | 'slack' | 'webhook' | 'zapier'; // Added Zapier, changed to googlesheets
   destinationConfig?: any;
 }
 
