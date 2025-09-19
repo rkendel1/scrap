@@ -148,7 +148,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         : 'None';
 
     return (
-      <div style={{ 
+      <details style={{ 
         backgroundColor: '#ffffff',
         padding: '12px', /* Reduced padding */
         borderRadius: '8px',
@@ -162,15 +162,20 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         border: '1px solid #e1e5e9',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
         flexShrink: 0, /* Prevent it from shrinking */
+        width: '100%', /* Ensure it takes full width */
       }}>
-        <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px', fontWeight: '600', textAlign: 'center' }}>
-          Website Analysis Summary
-        </h4>
-        <p style={{ margin: '0 0 12px 0', fontSize: '9px', color: '#666', textAlign: 'center' }}>
-          From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}> {/* Explicit 4-column grid, reduced gap */}
+        <summary style={{ 
+          fontWeight: '600', 
+          color: '#333', 
+          fontSize: '14px', 
+          cursor: 'pointer',
+          paddingBottom: '10px',
+          textAlign: 'center'
+        }}>
+          Website Analysis Summary {url && `from ${new URL(url).hostname}`}
+        </summary>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', paddingTop: '10px', borderTop: '1px solid #eee' }}> {/* Explicit 4-column grid, reduced gap */}
           {/* Card 1: Colors & Brand Colors */}
           <div 
             style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
@@ -294,7 +299,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             )}
           </div>
         </div>
-      </div>
+      </details>
     );
   };
 

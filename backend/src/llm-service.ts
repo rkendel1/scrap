@@ -187,7 +187,7 @@ Messaging Samples:
 ${websiteData.messaging.slice(0, 5).join('\n')}
 
 Requirements:
-1. Create a form with 3-7 fields appropriate for "${formPurpose}"
+1. Create a form with **3-5 fields** appropriate for "${formPurpose}"
 2. Match the website's tone and personality in all copy
 3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', 'fontFamily' to '${fontFamily}', and consider adding a 'maxWidth' (e.g., '500px', '600px', '75%') in the 'styling' object.**
 4. Include validation rules where appropriate
