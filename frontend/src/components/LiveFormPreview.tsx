@@ -188,7 +188,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}> {/* Explicit 4-column grid, reduced gap */}
           {/* Card 1: Colors & Brand Colors */}
           {(colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0) ? (
-            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Palette: ${colorPalette?.join(', ') || 'N/A'}\nPrimary: ${primaryColors?.join(', ') || 'N/A'}`}
+            >
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
                 {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
@@ -210,7 +213,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
           {/* Card 2: Fonts */}
           {fontFamilies && fontFamilies.length > 0 && (
-            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Font Families: ${fontFamilies.join(', ')}`}
+            >
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Fonts:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
                 {fontFamilies.slice(0, 1).join(', ')}
@@ -221,7 +227,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
           {/* Card 3: Tone & Personality */}
           {tone && tone.primary && (
-            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Primary Tone: ${tone.primary}\nPersonality Traits: ${personalityTraits?.join(', ') || 'N/A'}`}
+            >
               <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Tone:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>{tone.primary}</span>
               {personalityTraits && personalityTraits.length > 0 && (
@@ -234,7 +243,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
           {/* Card 4: Audience */}
           {audienceAnalysis && audienceAnalysis.primary && (
-            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Primary Audience: ${audienceAnalysis.primary}\nComplexity: ${audienceAnalysis.complexity}`}
+            >
               <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
             </div>
