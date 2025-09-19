@@ -465,7 +465,13 @@ function App() {
                               disabled={!user} // Disable if not logged in
                             />
                             <span>•</span>
-                            <span>📅 {new Date(form.created_at).toLocaleDateString()}</span>
+                            <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
+                            {form.updated_at && (
+                              <>
+                                <span>•</span>
+                                <span>Updated: {new Date(form.updated_at).toLocaleDateString()}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
