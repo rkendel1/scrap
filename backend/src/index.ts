@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import path from 'path';
+import path from 'path'; // Import path module
 import fs from 'fs'; // Import fs module
 import { WebsiteExtractor } from './extractor';
 import { DatabaseService } from './database-service';
@@ -58,6 +58,9 @@ app.use(helmet({
   crossOriginResourcePolicy: false, // Disable for embed scripts to work cross-origin
   crossOriginOpenerPolicy: false,   // Disable for embed scripts to work cross-origin
 }));
+
+// Serve static files for embed.js and embed.html from the frontend/public directory
+app.use(express.static(path.join(__dirname, '../frontend/public')));
 
 // Specific CORS for embed.html and embed.js (more permissive)
 // These routes should reflect the origin and not require credentials
