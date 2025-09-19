@@ -3,6 +3,7 @@ import { GeneratedForm } from './llm-service';
 import { EmbedSecurityService, EmbedTokenPayload } from './embed-security-service';
 import { dispatchToConnectors } from './connectors/dispatcher';
 import { ConnectorConfig } from './connectors/types';
+import { customerConfigService } from './customer-config-service'; // Import customerConfigService
 
 // In-memory storage for testing when database is not available
 const mockForms = new Map();
@@ -371,7 +372,7 @@ export class SaaSService {
         const embedQuery = `
           SELECT ec.*, f.is_live, f.user_id, f.id as form_id
           FROM embed_codes ec
-          JOIN forms f ON ec.form_id = f.id
+          JOIN forms f ON f.id = ec.form_id
           WHERE ec.code = $1 AND ec.is_active = true
         `;
         
@@ -420,7 +421,7 @@ export class SaaSService {
 
         await client.query('COMMIT');
 
-        // TODO: Trigger connectors (email, Slack, etc.)
+        // Trigger connectors (now handles n8n dispatch)
         await this.triggerConnectors(embed.form_id, submissionData);
 
         return { success: true, message: 'Form submitted successfully' };
@@ -546,41 +547,32 @@ export class SaaSService {
   private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
     try {
       // Check if form has customer mapping for n8n routing
-      const { customerConfigService } = await import('./customer-config-service');
       const customerId = await customerConfigService.getFormCustomerMapping(formId);
       
       if (customerId) {
-        const customerConfig = await customerConfigService.getCustomerConfig(customerId);
-        if (customerConfig && customerConfig.routing_config.routing_rules) {
-          // Create n8n connector config from customer configuration
-          const routingRules = customerConfig.routing_config.routing_rules;
-          const n8nRule = routingRules.find((rule: any) => rule.action === 'n8n' || rule.action === 'webhook');
-          
-          if (n8nRule) {
-            const n8nConnector = {
-              type: 'n8n',
-              settings: {
-                webhookUrl: n8nRule.target || 'http://n8n:5678/webhook/form-submission',
-                customerId: customerId,
-                workflowId: 'form-data-router'
-              }
-            };
-            
-            // Send to n8n first for customer-specific routing
-            const { dispatchToConnectors } = await import('./connectors/dispatcher');
-            const n8nResults = await dispatchToConnectors(submissionData, [n8nConnector]);
-            
-            // Log n8n result
-            if (n8nResults[0]?.success) {
-              console.log(`✓ n8n customer routing succeeded for customer ${customerId}: ${n8nResults[0].message}`);
-            } else {
-              console.error(`❌ n8n customer routing failed for customer ${customerId}: ${n8nResults[0]?.message}`, n8nResults[0]?.error);
-            }
+        // Construct n8n connector config
+        const n8nConnectorConfig: ConnectorConfig = {
+          type: 'n8n',
+          settings: {
+            webhookUrl: process.env.N8N_WEBHOOK_URL || 'http://n8n:5678/webhook/form-submission', // Use env var or default
+            customerId: customerId,
+            formId: formId, // Pass formId to n8n
+            // authToken: process.env.N8N_INTERNAL_AUTH_TOKEN // Optional: internal token for n8n to authenticate with backend
           }
+        };
+        
+        // Dispatch to n8n
+        const n8nResults = await dispatchToConnectors(submissionData, [n8nConnectorConfig]);
+        
+        if (n8nResults[0]?.success) {
+          console.log(`✓ n8n customer routing succeeded for customer ${customerId}: ${n8nResults[0].message}`);
+        } else {
+          console.error(`❌ n8n customer routing failed for customer ${customerId}: ${n8nResults[0]?.message}`, n8nResults[0]?.error);
         }
+        return; // Exit after dispatching to n8n
       }
 
-      // Continue with existing connector logic
+      // Fallback to existing connector logic if no customer mapping
       // First try to get connectors from the new JSONB column
       const newFormatQuery = `
         SELECT connectors
@@ -941,7 +933,7 @@ export class SaaSService {
 
         await client.query('COMMIT');
 
-        // TODO: Trigger connectors
+        // Trigger connectors
         await this.triggerConnectors(tokenPayload.formId, submissionData);
 
         return { 

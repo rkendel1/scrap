@@ -307,7 +307,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
             addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
-            addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
+            addPrompt("What would you like to do next?", ['Get Embed Code', 'Configure Destination']); // Changed order
           }
           break;
 
@@ -353,7 +353,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
             addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
-            addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
+            addPrompt("What would you like to do next?", ['Get Embed Code', 'Configure Destination']); // Changed order
           }
           break;
 
@@ -466,7 +466,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>What would you like to do next?</div>
       </>,
-      ['Get Embed Code', 'Configure Destination'] // Changed order and options
+      ['Get Embed Code', 'Configure Destination']
     );
   };
 

@@ -17,13 +17,29 @@
     },
     {
       "parameters": {
-        "jsCode": "// Read customer configuration\nconst fs = require('fs');\nconst path = '/home/node/.n8n/customer-configs/routing-config.json';\nlet config = {};\n\ntry {\n  const data = fs.readFileSync(path, 'utf8');\n  config = JSON.parse(data);\n} catch (error) {\n  console.error('Error reading config:', error);\n}\n\n// Get form data from webhook\nconst formData = $input.all()[0].json;\nconst customerId = formData.customer_id || 'customer-001';\n\n// Get customer routing rules\nconst customerConfig = config.customers[customerId];\n\nif (!customerConfig) {\n  throw new Error(`Customer configuration not found for: ${customerId}`);\n}\n\n// Return data with routing instructions\nreturn {\n  formData,\n  customerId,\n  routingRules: customerConfig.routing_rules,\n  customerName: customerConfig.name\n};"
+        "url": "http://backend:3001/api/customer-configs/{{ $json.customer_id }}",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer YOUR_INTERNAL_BACKEND_API_TOKEN"
+        },
+        "options": {}
       },
-      "id": "code-processor",
-      "name": "Process Configuration",
+      "id": "fetch-customer-config",
+      "name": "Fetch Customer Config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get form data from webhook\nconst formData = $input.item.json.formData;\nconst customerId = $input.item.json.customer_id;\nconst formId = $input.item.json.formId;\n\n// Get customer routing rules from previous node (Fetch Customer Config)\nconst customerConfigResponse = $input.item.json.data;\n\nif (!customerConfigResponse || !customerConfigResponse.routing_config || !customerConfigResponse.routing_config.routing_rules) {\n  throw new Error(`Customer configuration or routing rules not found for: ${customerId}`);\n}\n\nconst routingRules = customerConfigResponse.routing_config.routing_rules;\n\nconst outputItems = [];\n\nfor (const rule of routingRules) {\n  let conditionMet = false;\n\n  // Simple condition evaluation (can be expanded for more complex logic)\n  if (rule.condition === 'all_forms') {\n    conditionMet = true;\n  } else if (rule.condition.startsWith('form_type == ')) {\n    // Example: form_type == 'contact'\n    const expectedFormType = rule.condition.split('== ')[1].replace(/['"]/g, '');\n    // Assuming form_data might contain a 'formType' field or similar\n    if (formData.formType && formData.formType === expectedFormType) {\n      conditionMet = true;\n    }\n  } else {\n    // Add more complex condition parsing here (e.g., using a library like 'json-logic-js')\n    console.warn(`Unsupported routing condition: ${rule.condition}`);\n  }\n\n  if (conditionMet) {\n    outputItems.push({\n      json: {\n        formData: formData,\n        customerId: customerId,\n        formId: formId,\n        rule: rule\n      }\n    });\n  }\n}\n\nreturn outputItems;"
+      },
+      "id": "process-routing-rules",
+      "name": "Process Routing Rules",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [500, 300]
+      "position": [700, 300]
     },
     {
       "parameters": {
@@ -36,7 +52,7 @@
           "conditions": [
             {
               "id": "webhook-rule",
-              "leftValue": "={{ $json.routingRules[0].action }}",
+              "leftValue": "={{ $json.rule.action }}",
               "rightValue": "webhook",
               "operator": {
                 "type": "string",
@@ -52,13 +68,13 @@
       "name": "If Webhook",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [700, 200]
+      "position": [900, 200]
     },
     {
       "parameters": {
-        "url": "={{ $json.routingRules[0].target }}",
+        "url": "={{ $json.rule.target }}",
         "options": {
-          "headers": "={{ $json.routingRules[0].headers }}"
+          "headers": "={{ $json.rule.headers }}"
         },
         "sendBody": true,
         "bodyParameters": {
@@ -70,26 +86,73 @@
             {
               "name": "customer_id", 
               "value": "={{ $json.customerId }}"
+            },
+            {
+              "name": "form_id",
+              "value": "={{ $json.formId }}"
             }
           ]
         }
       },
-      "id": "http-webhook",
+      "id": "send-to-webhook",
       "name": "Send to Webhook",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [900, 100]
+      "position": [1100, 100]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "{ \"success\": true, \"message\": \"Form processed successfully\" }"
+        "responseBody": "{ \"success\": true, \"message\": \"Form processed successfully by n8n\" }"
       },
-      "id": "response",
+      "id": "respond-to-webhook",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1100, 300]
+      "position": [1300, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "email-rule",
+              "leftValue": "={{ $json.rule.action }}",
+              "rightValue": "email",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-email",
+      "name": "If Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@formcraft.ai",
+        "toEmail": "={{ $json.rule.target }}",
+        "subject": "={{ $json.rule.template ? $json.rule.template.replace(/{{(\\w+)}}/g, (match, key) => $json.formData[key] || '') : 'New Form Submission' }}",
+        "text": "={{ $json.rule.template ? $json.rule.template.replace(/{{(\\w+)}}/g, (match, key) => $json.formData[key] || '') : JSON.stringify($json.formData, null, 2) }}",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1100, 400]
     }
   ],
   "connections": {
@@ -97,18 +160,36 @@
       "main": [
         [
           {
-            "node": "Process Configuration",
+            "node": "Fetch Customer Config",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Process Configuration": {
+    "Fetch Customer Config": {
+      "main": [
+        [
+          {
+            "node": "Process Routing Rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Routing Rules": {
       "main": [
         [
           {
             "node": "If Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If Email",
             "type": "main",
             "index": 0
           }
@@ -134,6 +215,35 @@
       ]
     },
     "Send to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
       "main": [
         [
           {
