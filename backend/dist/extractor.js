@@ -41,15 +41,50 @@ const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const csstree = __importStar(require("css-tree"));
 class WebsiteExtractor {
+    constructor() {
+        this.MAX_RETRIES = 3;
+        this.INITIAL_RETRY_DELAY_MS = 1000; // 1 second
+    }
+    /**
+     * Helper function to make an Axios request with retries and exponential backoff.
+     * It will not retry on 403 Forbidden or 401 Unauthorized errors.
+     */
+    async makeRequestWithRetries(requestFn, url, retriesLeft = this.MAX_RETRIES, delay = this.INITIAL_RETRY_DELAY_MS) {
+        try {
+            return await requestFn();
+        }
+        catch (error) {
+            if (axios_1.default.isAxiosError(error)) {
+                const status = error.response?.status;
+                // Do NOT retry on 403 Forbidden or 401 Unauthorized
+                if (status === 403 || status === 401) {
+                    throw new Error(`Failed to extract website data: The website (${url}) blocked the request (${status} Forbidden/Unauthorized). Please try a different URL.`);
+                }
+                // Retry on network errors (status undefined), 429 Too Many Requests, or 5xx server errors
+                if (retriesLeft > 0 && (status === undefined || status === 429 || (status >= 500 && status < 600))) {
+                    console.warn(`Request to ${url} failed with status ${status || 'network error'}. Retrying in ${delay / 1000}s... (${retriesLeft} retries left)`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return this.makeRequestWithRetries(requestFn, url, retriesLeft - 1, delay * 2); // Exponential backoff
+                }
+            }
+            // If not an Axios error, or not a retriable status, or no retries left, re-throw
+            throw error;
+        }
+    }
+    /**
+     * Extracts design tokens, voice analysis, and other metadata from a given URL.
+     * Note: Some websites employ anti-bot measures (e.g., Cloudflare) that may block scraping requests,
+     * resulting in a 403 Forbidden error. In such cases, try a different URL.
+     */
     async extractWebsiteData(url) {
         try {
-            // Fetch the HTML content
-            const response = await axios_1.default.get(url, {
+            // Fetch the HTML content with retries
+            const response = await this.makeRequestWithRetries(() => axios_1.default.get(url, {
                 headers: {
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 },
                 timeout: 10000
-            });
+            }), url);
             const $ = cheerio.load(response.data);
             // Extract basic metadata
             const title = $('title').text() || '';
@@ -75,8 +110,12 @@ class WebsiteExtractor {
             };
         }
         catch (error) {
+            // Re-throw specific 403/401 errors from makeRequestWithRetries
+            if (error instanceof Error && error.message.includes('blocked the request')) {
+                throw error;
+            }
             console.error('Website extraction error:', error);
-            throw new Error(`Failed to extract website data: ${error}`);
+            throw new Error(`Failed to extract website data: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
     async extractStyles($, baseUrl) {
@@ -107,11 +146,12 @@ class WebsiteExtractor {
     }
     async fetchStylesheet(url) {
         try {
-            const response = await axios_1.default.get(url, { timeout: 5000 });
+            // Fetch stylesheet with retries
+            const response = await this.makeRequestWithRetries(() => axios_1.default.get(url, { timeout: 5000 }), url);
             return response.data;
         }
         catch (error) {
-            console.warn(`Failed to fetch stylesheet: ${url}`);
+            console.warn(`Failed to fetch stylesheet: ${url}. Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
             return '';
         }
     }

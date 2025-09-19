@@ -76,6 +76,18 @@ export interface ExtractedData {
     extractedAt: string;
 }
 export declare class WebsiteExtractor {
+    private readonly MAX_RETRIES;
+    private readonly INITIAL_RETRY_DELAY_MS;
+    /**
+     * Helper function to make an Axios request with retries and exponential backoff.
+     * It will not retry on 403 Forbidden or 401 Unauthorized errors.
+     */
+    private makeRequestWithRetries;
+    /**
+     * Extracts design tokens, voice analysis, and other metadata from a given URL.
+     * Note: Some websites employ anti-bot measures (e.g., Cloudflare) that may block scraping requests,
+     * resulting in a 403 Forbidden error. In such cases, try a different URL.
+     */
     extractWebsiteData(url: string): Promise<ExtractedData>;
     private extractStyles;
     private fetchStylesheet;
