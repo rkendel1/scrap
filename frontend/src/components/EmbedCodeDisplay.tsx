@@ -3,12 +3,11 @@ import { SaaSForm, User } from '../types/api';
 
 interface EmbedCodeDisplayProps {
   form: SaaSForm;
-  user: User;
+  user: User | null; // Allow user to be null
   onBack: () => void;
 }
 
 export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, onBack }) => {
-  // Removed embedToken and expiresIn states as they are no longer used for the script tag
   const [allowedDomains, setAllowedDomains] = useState<string[]>(form.allowed_domains || []);
   const [newDomain, setNewDomain] = useState('');
   const [loading, setLoading] = useState(true);
@@ -17,6 +16,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  const authToken = localStorage.getItem('authToken'); // Get token here
 
   // Fetch initial domains
   useEffect(() => {
@@ -26,29 +26,42 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
       setSuccessMessage(null);
       console.log('EmbedCodeDisplay: Initializing fetchEmbedData for form', form.id);
       try {
-        // Fetch form again to get latest allowed_domains and is_live status
-        const formResponse = await fetch(`${API_BASE}/api/forms/${form.id}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('authToken')}` }
-        });
-        const formResult = await formResponse.json();
-        if (formResult.success) {
-          const fetchedForm = formResult.data;
-          setAllowedDomains(fetchedForm.allowed_domains || []);
+        // Only attempt to fetch if authenticated
+        if (authToken) {
+          const formResponse = await fetch(`${API_BASE}/api/forms/${form.id}`, {
+            headers: { 'Authorization': `Bearer ${authToken}` }
+          });
+          const formResult = await formResponse.json();
+          if (formResult.success) {
+            const fetchedForm = formResult.data;
+            setAllowedDomains(fetchedForm.allowed_domains || []);
+          } else {
+            // If fetch fails, it might be due to auth, but we still want to display the public embed code
+            console.warn('Failed to fetch form details for embed display (possibly unauthenticated):', formResult.message);
+            // Don't set a global error here, as the public embed code is still valid
+          }
         } else {
-          throw new Error(formResult.message || 'Failed to fetch form details');
+          console.log('EmbedCodeDisplay: Not authenticated, skipping fetching form details for domain management.');
+          // If not authenticated, we can't manage domains, but can still display the embed code.
+          // The initial `form.allowed_domains` will be used.
         }
       } catch (err: any) {
         console.error('EmbedCodeDisplay: Error in fetchEmbedData:', err);
-        setError(err.message || 'Failed to load embed data.');
+        // Only set error if it's a critical failure, not just unauthenticated
+        // setError(err.message || 'Failed to load embed data.');
       } finally {
         setLoading(false);
       }
     };
 
     fetchEmbedData();
-  }, [form.id, user.id, user.subscription_status]);
+  }, [form.id, authToken, user?.id, user?.subscription_status]); // Safely access user properties
 
   const handleAddDomain = async () => {
+    if (!authToken) {
+      setError('You must be logged in to manage allowed domains.');
+      return;
+    }
     if (!newDomain.trim()) return;
     const domainToAdd = newDomain.trim().toLowerCase();
     if (allowedDomains.includes(domainToAdd)) {
@@ -62,11 +75,19 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
   };
 
   const handleRemoveDomain = async (domainToRemove: string) => {
+    if (!authToken) {
+      setError('You must be logged in to manage allowed domains.');
+      return;
+    }
     const updatedDomains = allowedDomains.filter(d => d !== domainToRemove);
     await updateAllowedDomains(updatedDomains);
   };
 
   const updateAllowedDomains = async (domains: string[]) => {
+    if (!authToken) {
+      setError('You must be logged in to manage allowed domains.');
+      return false; // Indicate failure
+    }
     setDomainSaving(true);
     setError(null);
     setSuccessMessage(null);
@@ -76,7 +97,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${authToken}`
         },
         body: JSON.stringify({ allowedDomains: domains })
       });
@@ -85,12 +106,14 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         setAllowedDomains(domains);
         setSuccessMessage('Allowed domains updated successfully!');
         console.log('EmbedCodeDisplay: Allowed domains updated successfully.');
+        return true;
       } else {
         throw new Error(result.message || 'Failed to update domains');
       }
     } catch (err: any) {
       console.error('EmbedCodeDisplay: Error updating allowed domains:', err);
       setError(err.message || 'Failed to update allowed domains.');
+      return false;
     } finally {
       setDomainSaving(false);
     }
@@ -103,8 +126,8 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
 
   const iframeEmbedCode = `<iframe src="${API_BASE}/embed.html?code=${form.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`;
 
-  // The button to regenerate token is removed as there's no token in the script tag anymore.
-  // The logic for `canGenerateToken` is also simplified as it's not directly tied to the script tag.
+  // Disable domain management if not logged in
+  const isDomainManagementDisabled = !user || !authToken || domainSaving;
 
   if (loading) {
     return (
@@ -159,7 +182,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
             This form is not live. Please activate it in the dashboard for the embed code to function.
           </p>
         )}
-        {user.subscription_status !== 'active' && (
+        {user && user.subscription_status !== 'active' && (
           <p className="error-message" style={{ marginTop: '8px' }}>
             Your subscription is not active. Please reactivate it for the embed code to function.
           </p>
@@ -185,9 +208,9 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                 handleAddDomain();
               }
             }}
-            disabled={domainSaving}
+            disabled={isDomainManagementDisabled}
           />
-          <button onClick={handleAddDomain} disabled={domainSaving} className="btn btn-primary">
+          <button onClick={handleAddDomain} disabled={isDomainManagementDisabled} className="btn btn-primary">
             {domainSaving ? 'Adding...' : 'Add Domain'}
           </button>
         </div>
@@ -221,7 +244,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                     lineHeight: '1',
                     padding: 0
                   }}
-                  disabled={domainSaving}
+                  disabled={isDomainManagementDisabled}
                 >
                   ×
                 </button>
@@ -229,6 +252,11 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
             ))
           )}
         </div>
+        {!user && (
+          <p className="error-message" style={{ marginTop: '8px' }}>
+            You must be logged in to manage allowed domains.
+          </p>
+        )}
       </div>
 
       <details style={{ marginBottom: '24px', border: '1px solid #e1e5e9', borderRadius: '8px', padding: '16px', backgroundColor: '#f8f9fa' }}>
