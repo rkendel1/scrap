@@ -149,6 +149,7 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
           {hasAnalysisData && (tone && tone.primary) ? (
             <span className="text-gray-700">{tone.primary}</span>
           ) : <span className="text-gray-500">authoritative</span>}
+          {/* Removed the conditional Personality line for zero state to match screenshot exactly */}
           {hasAnalysisData && (personalityTraits && personalityTraits.length > 0) && (
             <span className="text-gray-700 block mt-1">
               Personality: {personalityTraits.slice(0, 1).join(', ')}
