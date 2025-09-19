@@ -124,22 +124,7 @@
                     </p>
                 </div>
 
-                ${formData.showBranding ? `
-                    <div style="
-                        margin-top: 12px;
-                        padding-top: 12px;
-                        border-top: 1px solid #e1e5e9;
-                        text-align: center;
-                    ">
-                        <a href="https://formcraft.ai" target="_blank" rel="noopener noreferrer" style="
-                            font-size: 11px;
-                            color: #666;
-                            text-decoration: none;
-                        ">
-                            Powered by FormCraft AI
-                        </a>
-                    </div>
-                ` : ''}
+                
             </div>
         `;
 
