@@ -81,28 +81,29 @@
                 max-width: ${styling.maxWidth || '250px'};
                 width: 100%;
                 margin: 0 auto;
+                color: ${styling.textColor || '#333'};
             ">
                 <div style="margin-bottom: 16px;">
-                    <h3 style="margin: 0 0 6px 0; color: #333; font-size: 18px;">
+                    <h3 style="margin: 0 0 6px 0; color: ${styling.textColor || '#333'}; font-size: 18px;">
                         ${escapeHtml(form.title || formData.title)}
                     </h3>
                     ${form.description || formData.description ? `
-                        <p style="margin: 0; color: #666; font-size: 13px;">
+                        <p style="margin: 0; color: ${styling.textColor || '#666'}; font-size: 13px;">
                             ${escapeHtml(form.description || formData.description)}
                         </p>
                     ` : ''}
                 </div>
 
                 <form id="formcraft-form-${embedCode}">
-                    ${renderFields(form.fields || [])}
+                    ${renderFields(form.fields || [], styling)}
                     
                     <div id="form-message-${embedCode}" style="margin-bottom: 12px; display: none;"></div>
                     
                     <button type="submit" id="submit-btn-${embedCode}" style="
-                        background-color: ${styling.primaryColor || '#007bff'};
-                        color: white;
+                        background-color: ${styling.buttonBackgroundColor || styling.primaryColor || '#007bff'};
+                        color: ${styling.buttonTextColor || 'white'};
                         padding: 10px 20px;
-                        border: none;
+                        border: ${styling.buttonBorder || 'none'};
                         border-radius: ${styling.borderRadius || '4px'};
                         font-size: 15px;
                         font-weight: 500;
@@ -119,7 +120,7 @@
                     <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 16px; font-weight: bold; margin-bottom: 6px;">
                         ✓ Thank You!
                     </div>
-                    <p style="margin: 0; color: #666; font-size: 13px;">
+                    <p style="margin: 0; color: ${styling.textColor || '#666'}; font-size: 13px;">
                         ${escapeHtml(form.thankYouMessage || 'Thank you for your submission!')}
                     </p>
                 </div>
@@ -140,7 +141,7 @@
         }
     }
 
-    function renderFields(fields) {
+    function renderFields(fields, styling) {
         return fields.map(field => {
             const fieldId = `field-${field.name}-${embedCode}`;
             const baseStyles = `
@@ -152,6 +153,7 @@
                 margin-bottom: 6px;
                 font-family: inherit;
                 box-sizing: border-box;
+                color: ${styling.textColor || '#333'};
             `;
 
             let inputHTML = '';
@@ -194,7 +196,7 @@
                         margin-bottom: 3px;
                         font-size: 13px;
                         font-weight: 500;
-                        color: #333;
+                        color: ${styling.textColor || '#333'};
                     ">
                         ${escapeHtml(field.label)}
                         ${field.required ? '<span style="color: #dc3545; margin-left: 2px;">*</span>' : ''}

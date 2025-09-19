@@ -76,7 +76,8 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
       borderRadius: form.styling.borderRadius || '4px',
       fontSize: '14px',
       fontFamily: form.styling.fontFamily || 'inherit',
-      marginBottom: '6px'
+      marginBottom: '6px',
+      color: form.styling.textColor || '#333', // Use textColor
     };
 
     switch (field.type) {
@@ -120,7 +121,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         return (
           <div style={{ marginBottom: '6px' }}>
             {field.options?.map((option, index) => (
-              <label key={index} style={{ display: 'block', marginBottom: '3px' }}>
+              <label key={index} style={{ display: 'block', marginBottom: '3px', color: form.styling.textColor || '#333' }}>
                 <input
                   type="checkbox"
                   name={field.name}
@@ -146,7 +147,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         return (
           <div style={{ marginBottom: '6px' }}>
             {field.options?.map((option, index) => (
-              <label key={index} style={{ display: 'block', marginBottom: '3px' }}>
+              <label key={index} style={{ display: 'block', marginBottom: '3px', color: form.styling.textColor || '#333' }}>
                 <input
                   type="radio"
                   name={field.name}
@@ -199,7 +200,8 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
         width: '100%',
         margin: '0 auto',
         maxHeight: '100%',
-        overflowY: 'auto'
+        overflowY: 'auto',
+        color: form.styling.textColor || '#333', // Use textColor
       }}>
         <div style={{ 
           color: form.styling.primaryColor || '#28a745',
@@ -210,7 +212,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           ✓ Thank You!
         </div>
         <p 
-          style={{ margin: 0, color: '#666', fontSize: '13px' }}
+          style={{ margin: 0, color: form.styling.textColor || '#666', fontSize: '13px' }} // Use textColor
           dangerouslySetInnerHTML={{ __html: autoLinkText(form.thankYouMessage) }}
           onClick={handleLinkClick}
         />
@@ -229,12 +231,13 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
       width: '100%',
       margin: '0 auto',
       maxHeight: '100%',
-      overflowY: 'auto'
+      overflowY: 'auto',
+      color: form.styling.textColor || '#333', // Use textColor
     }}>
       <div style={{ marginBottom: '16px' }}>
         <h3 style={{ 
           margin: '0 0 6px 0',
-          color: '#333',
+          color: form.styling.textColor || '#333', // Use textColor
           fontSize: '18px'
         }}>
           {form.title}
@@ -243,7 +246,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           <p 
             style={{ 
               margin: 0,
-              color: '#666',
+              color: form.styling.textColor || '#666', // Use textColor
               fontSize: '13px'
             }}
             dangerouslySetInnerHTML={{ __html: autoLinkText(form.description) }}
@@ -262,7 +265,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
                 marginBottom: '3px',
                 fontSize: '13px',
                 fontWeight: '500',
-                color: '#333'
+                color: form.styling.textColor || '#333' // Use textColor
               }}
             >
               {field.label}
@@ -291,10 +294,10 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           type="submit"
           disabled={isSubmitting}
           style={{
-            backgroundColor: form.styling.primaryColor || '#007bff',
-            color: 'white',
+            backgroundColor: form.styling.buttonBackgroundColor || form.styling.primaryColor || '#007bff', // Use buttonBackgroundColor
+            color: form.styling.buttonTextColor || 'white', // Use buttonTextColor
             padding: '10px 20px',
-            border: 'none',
+            border: form.styling.buttonBorder || 'none', // Use buttonBorder
             borderRadius: form.styling.borderRadius || '4px',
             fontSize: '15px',
             fontWeight: '500',

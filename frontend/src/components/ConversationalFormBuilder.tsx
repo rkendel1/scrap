@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
-import { Mail, Sheet, Slack, Link, Zap, Copy, Check } from 'lucide-react'; // Import Lucide icons, including Copy and Check
+import { Mail, Sheet, Slack, Link, Zap, Copy, Check, Edit } from 'lucide-react'; // Import Lucide icons, including Copy, Check, and Edit
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
@@ -31,7 +31,7 @@ type ConversationStep =
   | 'PROCESSING_URL'
   | 'ASK_PURPOSE'
   | 'PROCESSING_PURPOSE'
-  | 'FORM_GENERATED_REVIEW' // New state
+  | 'FORM_GENERATED_OPTIONS' // New state for options after generation
   | 'ASK_DESTINATION_TYPE'
   | 'CONFIRM_DEFAULT_EMAIL' // New intermediate state
   | 'ASK_DESTINATION_CONFIG'
@@ -39,6 +39,8 @@ type ConversationStep =
   | 'DESTINATION_CONFIGURED' // New state
   | 'ASK_GO_LIVE' // New state
   | 'PROCESSING_GO_LIVE' // New state
+  | 'ASK_FORM_CHANGES' // New state for user to request changes
+  | 'PROCESSING_FORM_CHANGES' // New state for AI to process changes
   | 'DONE';
 
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
@@ -158,7 +160,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email' | 'im done';
+      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email' | 'im done' | 'make changes';
       configInput?: string;
     } = {};
 
@@ -198,6 +200,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
     if (lowerInput.includes('i\'m done') || lowerInput.includes('im done')) {
       parsed.command = 'im done';
+      return parsed;
+    }
+    if (lowerInput.includes('make changes') || lowerInput.includes('change form')) {
+      parsed.command = 'make changes';
       return parsed;
     }
 
@@ -277,12 +283,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       handleRestart(parsedInput.command);
       return;
     }
-    if (currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED') {
+    if (currentStep === 'FORM_GENERATED_OPTIONS' || currentStep === 'DESTINATION_CONFIGURED') {
       if (parsedInput.command === 'configure destination') {
         setCurrentStep('ASK_DESTINATION_TYPE');
         addPrompt(
           "Okay, where should I send the form submissions? You can choose from: Email, Google Sheets, Slack, Webhook, or Zapier."
         );
+        return;
+      }
+      if (parsedInput.command === 'make changes') {
+        setCurrentStep('ASK_FORM_CHANGES');
+        addPrompt("What changes would you like to make to the form? Tell me what you want to modify (e.g., 'make the email field optional', 'change the button color to green', 'add a phone number field').");
         return;
       }
       if (parsedInput.command === 'im done') {
@@ -335,12 +346,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           }
           break;
 
-        case 'FORM_GENERATED_REVIEW':
+        case 'FORM_GENERATED_OPTIONS':
           // If user provides a destination type directly in this state
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
+            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Make Changes to Form'?");
           }
           break;
 
@@ -407,6 +418,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             setCurrentStep('DONE');
           } else {
             addPrompt("Please respond with 'Yes' or 'No'.");
+          }
+          break;
+
+        case 'ASK_FORM_CHANGES':
+          if (input) {
+            await processFormChanges(input);
+          } else {
+            addPrompt("Please tell me what changes you'd like to make to the form.");
           }
           break;
 
@@ -527,7 +546,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const embedCode = newForm.embed_code;
     const isGuestForm = !user; // Check if it's a guest form
 
-    setCurrentStep('FORM_GENERATED_REVIEW'); // New state
+    setCurrentStep('FORM_GENERATED_OPTIONS'); // New state
     setIsGeneratingForm(false); // Reset generating state
     addPrompt(
       <>
@@ -558,7 +577,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           </a>
         </div>
         <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#333' }}>
-          Would you like to configure where submissions are sent, or are you done for now?
+          What would you like to do next?
         </p>
       </>
     );
@@ -747,6 +766,70 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
   };
 
+  const processFormChanges = async (userChanges: string) => {
+    setCurrentStep('PROCESSING_FORM_CHANGES');
+    setIsGeneratingForm(true); // Indicate form generation is in progress
+
+    if (!createdForm?.id || !generatedForm || !extractedDesignTokens || !extractedVoiceAnalysis) {
+      addError('Something went wrong. I lost the form data or website analysis. Please start over.');
+      setCurrentStep('ASK_URL');
+      setIsGeneratingForm(false);
+      return;
+    }
+
+    const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
+    if (localStorage.getItem('authToken')) {
+      authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
+    } else {
+      addPrompt("You need to be logged in to make changes to a form. Please create an account.");
+      onShowAuth('register');
+      setCurrentStep('ASK_FORM_CHANGES'); // Stay in this step
+      setIsGeneratingForm(false);
+      return;
+    }
+
+    try {
+      const adaptPayload = {
+        formId: createdForm.id,
+        updatedConfig: generatedForm, // Pass the current generated form
+        websiteData: {
+          voiceAnalysis: extractedVoiceAnalysis,
+          designTokens: extractedDesignTokens,
+        },
+        userChanges: userChanges,
+      };
+
+      const response = await fetch(`/api/forms/${createdForm.id}/adapt-form`, { // New endpoint for adaptation
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(adaptPayload),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const updatedGeneratedForm = result.data.generatedForm;
+        const updatedSaaSForm = result.data.form;
+        setGeneratedForm(updatedGeneratedForm);
+        setCreatedForm(updatedSaaSForm);
+        addSuccess("Great! I've applied your changes to the form. You can see the updated preview on the right.");
+        addPrompt("What would you like to do next?");
+        setCurrentStep('FORM_GENERATED_OPTIONS'); // Go back to options
+      } else {
+        addError(result.message || 'Failed to apply changes to the form. Please try again.');
+        addPrompt("What changes would you like to make to the form? (e.g., 'make the email field optional', 'change the button color to green')");
+        setCurrentStep('ASK_FORM_CHANGES'); // Stay in this step
+      }
+    } catch (err: any) {
+      console.error('Form adaptation error:', err);
+      addError(err.message || 'An unexpected error occurred while trying to modify the form.');
+      addPrompt("What changes would you like to make to the form? (e.g., 'make the email field optional', 'change the button color to green')");
+      setCurrentStep('ASK_FORM_CHANGES'); // Stay in this step
+    } finally {
+      setIsGeneratingForm(false); // Reset generating state
+    }
+  };
+
   const handleRestart = (command: 'yes' | 'no') => {
     if (command === 'yes') {
       setConversationHistory([
@@ -796,6 +879,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     handleQuickResponseClick('configure destination');
   };
 
+  const handleMakeChangesClick = () => {
+    handleQuickResponseClick('make changes');
+  };
+
   const handleDoneClick = () => {
     handleQuickResponseClick('im done');
   };
@@ -833,9 +920,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     let buttons: { label: string; command: string; icon?: JSX.Element }[] = [];
 
     switch (currentStep) {
-      case 'FORM_GENERATED_REVIEW':
+      case 'FORM_GENERATED_OPTIONS':
         buttons = [
           { label: 'Configure Destination', command: 'configure destination' },
+          { label: 'Make Changes to Form', command: 'make changes', icon: <Edit size={16} /> },
           { label: "I'm Done", command: 'im done' },
         ];
         break;
@@ -927,6 +1015,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             currentStep === 'PROCESSING_PURPOSE' ? 'Generating...' :
             currentStep === 'PROCESSING_DESTINATION' ? 'Saving...' :
             currentStep === 'PROCESSING_GO_LIVE' ? 'Going Live...' :
+            currentStep === 'PROCESSING_FORM_CHANGES' ? 'Applying Changes...' : // New loading state
             'Sending...'
           ) : (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

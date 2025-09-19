@@ -28,7 +28,11 @@ const testFormData = {
       primaryColor: '#007bff',
       backgroundColor: '#ffffff',
       fontFamily: 'system-ui',
-      borderRadius: '8px'
+      borderRadius: '8px',
+      textColor: '#333333',
+      buttonTextColor: '#ffffff',
+      buttonBackgroundColor: '#007bff',
+      buttonBorder: '1px solid #ccc',
     }
   }],
   primary_colors: ['#007bff'],
@@ -223,7 +227,11 @@ export class SaaSService {
             primaryColor: formData.primary_colors?.[0] || '#007bff',
             backgroundColor: '#ffffff',
             fontFamily: formData.font_families?.[0] || 'system-ui',
-            borderRadius: '8px'
+            borderRadius: '8px',
+            textColor: '#333333',
+            buttonTextColor: '#ffffff',
+            buttonBackgroundColor: formData.primary_colors?.[0] || '#007bff',
+            buttonBorder: '1px solid #ccc',
           },
           embedCode,
           showBranding: true
@@ -248,7 +256,11 @@ export class SaaSService {
           primaryColor: row.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
           fontFamily: row.font_families?.[0] || 'system-ui',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          buttonBackgroundColor: row.primary_colors?.[0] || '#007bff',
+          buttonBorder: '1px solid #ccc',
         },
         embedCode,
         showBranding: true // Could be based on subscription tier
@@ -275,7 +287,11 @@ export class SaaSService {
           primaryColor: formData.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
           fontFamily: formData.font_families?.[0] || 'system-ui',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          buttonBackgroundColor: formData.primary_colors?.[0] || '#007bff',
+          buttonBorder: '1px solid #ccc',
         },
         embedCode,
         showBranding: true
@@ -701,7 +717,11 @@ export class SaaSService {
           primaryColor: row.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
           fontFamily: row.font_families?.[0] || 'system-ui',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          textColor: '#333333',
+          buttonTextColor: '#ffffff',
+          buttonBackgroundColor: row.primary_colors?.[0] || '#007bff',
+          buttonBorder: '1px solid #ccc',
         },
         embedCode,
         showBranding: true // Could be based on subscription tier
@@ -839,9 +859,6 @@ export class SaaSService {
     }
   }
 
-  /**
-   * Get connectors configured for a specific form (new JSONB format)
-   */
   async getFormConnectors(formId: number, userId: number): Promise<any[] | null> {
     try {
       const query = `
@@ -863,9 +880,6 @@ export class SaaSService {
     }
   }
 
-  /**
-   * Save connectors for a specific form (new JSONB format)
-   */
   async saveFormConnectors(formId: number, connectors: any[], userId: number): Promise<boolean> {
     try {
       // Validate connector configurations before saving

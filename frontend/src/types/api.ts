@@ -75,10 +75,12 @@ export interface GeneratedForm {
     backgroundColor: string;
     fontFamily: string;
     borderRadius: string;
-    buttonStyle: string;
     maxWidth?: string;
+    textColor?: string; // New: General text color for the form
+    buttonTextColor?: string; // New: Text color for the CTA button
+    buttonBackgroundColor?: string; // New: Background color for the CTA button
+    buttonBorder?: string; // New: Border for the CTA button
   };
-  // Removed formLayout
 }
 
 export interface SaaSForm {
@@ -107,7 +109,6 @@ export interface SaaSForm {
 export interface FormData {
   url: string;
   purpose: string;
-  // Removed formLayout from FormData
   destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook' | 'zapier'; // Added Zapier
   destinationConfig?: any;
 }

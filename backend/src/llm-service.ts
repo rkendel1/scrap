@@ -23,13 +23,15 @@ export interface GeneratedForm {
   thankYouMessage: string;
   styling: {
     primaryColor: string;
-    backgroundColor: string;
+    backgroundColor: string; 
     fontFamily: string;
     borderRadius: string;
-    buttonStyle: string;
     maxWidth?: string;
+    textColor?: string; // New: General text color for the form
+    buttonTextColor?: string; // New: Text color for the CTA button
+    buttonBackgroundColor?: string; // New: Background color for the CTA button
+    buttonBorder?: string; // New: Border for the CTA button
   };
-  // Removed formLayout
 }
 
 export class LLMService {
@@ -105,28 +107,37 @@ export class LLMService {
     websiteData: {
       voiceAnalysis: VoiceAnalysis;
       designTokens: any;
-      primaryColors: string[];
-      fontFamilies: string[];
-    }
+    },
+    userChanges: string
   ): Promise<GeneratedForm> {
+    if (!this.isEnabled || !this.openai) {
+      console.log('📝 OpenAI not available - returning original form for adaptation');
+      return formData;
+    }
+
     const prompt = `
-Adapt this form to better match the website's design and tone:
+Adapt this form to better match the website's design and tone, incorporating the user's requested changes.
 
 Current Form:
 ${JSON.stringify(formData, null, 2)}
 
 Website Analysis:
 - Voice/Tone: ${JSON.stringify(websiteData.voiceAnalysis)}
-- Primary Colors: ${websiteData.primaryColors.join(', ')}
-- Font Families: ${websiteData.fontFamilies.join(', ')}
+- Design Tokens:
+  - Primary Colors: ${websiteData.designTokens.primaryColors?.slice(0, 3).join(', ')}
+  - Font Families: ${websiteData.designTokens.fontFamilies?.slice(0, 3).join(', ')}
+  - Extracted Background Color (lightest available): ${websiteData.designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff'}
+
+User's Requested Changes: "${userChanges}"
 
 Please modify the form to:
-1. Match the website's tone and voice in all copy
-2. Use the website's color palette and typography
-3. Adapt field labels and messaging to match the brand voice
-4. Ensure the form feels native to the website
+1. Incorporate the user's requested changes.
+2. Maintain consistency with the website's tone and voice in all copy.
+3. Use the website's color palette and typography, ensuring high contrast.
+4. Ensure buttons have a visible background, contrasting text, and a subtle border if needed for clarity.
+5. Keep the form designed for inline embedding with a max-width of 250px.
 
-Return the adapted form as JSON with the same structure.
+Return the adapted form as JSON with the exact same structure as the Current Form.
 `;
 
     try {
@@ -138,7 +149,7 @@ Return the adapted form as JSON with the same structure.
         messages: [
           {
             role: "system",
-            content: "You are a brand-aware form designer. Adapt forms to match specific website aesthetics and brand voice perfectly."
+            content: "You are a brand-aware form designer and UX specialist. Adapt forms to match specific website aesthetics and brand voice perfectly, incorporating user feedback."
           },
           {
             role: "user",
@@ -165,6 +176,8 @@ Return the adapted form as JSON with the same structure.
     const primaryColor = websiteData.designTokens.primaryColors?.[0] || '#007bff';
     const fontFamily = websiteData.designTokens.fontFamilies?.[0] || 'system-ui';
     const backgroundColor = websiteData.designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+    const textColor = this.isLightColor(backgroundColor) ? '#333333' : '#ffffff'; // Default contrasting text color
+    const buttonTextColor = this.isLightColor(primaryColor) ? '#333333' : '#ffffff'; // Default contrasting button text color
 
     return `
 Generate a high-converting form for this website based on the following analysis:
@@ -190,10 +203,15 @@ Requirements:
 1. Create a form with **3-5 fields** appropriate for "${formPurpose}"
 2. Match the website's tone and personality in all copy
 3. **Crucially, use the provided design tokens for the form's styling. Specifically, set 'primaryColor' to '${primaryColor}', 'backgroundColor' to '${backgroundColor}', 'fontFamily' to '${fontFamily}', and set 'maxWidth' to '250px' in the 'styling' object.**
-4. Include validation rules where appropriate
-5. Create compelling CTA text that matches the brand voice
-6. Generate a personalized thank you message
-7. **The form should be designed for inline embedding.**
+4. **Ensure high contrast for all text elements:**
+   - Set 'textColor' to a color that contrasts well with 'backgroundColor'.
+   - Set 'buttonTextColor' to a color that contrasts well with 'buttonBackgroundColor' (which should be 'primaryColor').
+5. **Ensure buttons are clearly visible and interactive:**
+   - Set 'buttonBackgroundColor' to '${primaryColor}'.
+   - Add 'buttonBorder' (e.g., '1px solid #ccc') if the button's background color is very similar to the form's background or the button text color.
+6. Include validation rules where appropriate
+7. Generate a personalized thank you message
+8. **The form should be designed for inline embedding.**
 
 Return a JSON object with this structure:
 {
@@ -221,8 +239,11 @@ Return a JSON object with this structure:
     "backgroundColor": "hex color", 
     "fontFamily": "font family name",
     "borderRadius": "border radius value",
-    "buttonStyle": "button styling description",
-    "maxWidth": "e.g., 250px"
+    "maxWidth": "e.g., 250px",
+    "textColor": "hex color for general text",
+    "buttonTextColor": "hex color for button text",
+    "buttonBackgroundColor": "hex color for button background",
+    "buttonBorder": "e.g., 1px solid #ccc"
   }
 }
 `;
@@ -241,6 +262,12 @@ Return a JSON object with this structure:
       const jsonString: string = jsonMatch[0]!; 
       const parsed = JSON.parse(jsonString);
       
+      // Determine default colors for robust fallbacks
+      const defaultPrimaryColor = designTokens.primaryColors?.[0] || '#007bff';
+      const defaultBackgroundColor = designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+      const defaultTextColor = this.isLightColor(defaultBackgroundColor) ? '#333333' : '#ffffff';
+      const defaultButtonTextColor = this.isLightColor(defaultPrimaryColor) ? '#333333' : '#ffffff';
+
       // Validate and set defaults
       return {
         title: parsed.title || 'Contact Form',
@@ -249,19 +276,26 @@ Return a JSON object with this structure:
         ctaText: parsed.ctaText || 'Submit',
         thankYouMessage: parsed.thankYouMessage || 'Thank you for your submission!',
         styling: {
-          primaryColor: parsed.styling?.primaryColor || designTokens.primaryColors?.[0] || '#007bff',
-          backgroundColor: parsed.styling?.backgroundColor || designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
+          primaryColor: parsed.styling?.primaryColor || defaultPrimaryColor,
+          backgroundColor: parsed.styling?.backgroundColor || defaultBackgroundColor,
           fontFamily: parsed.styling?.fontFamily || designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: parsed.styling?.borderRadius || '8px',
-          buttonStyle: parsed.styling?.buttonStyle || 'solid',
-          maxWidth: '250px' // Enforce 250px regardless of LLM output
+          maxWidth: '250px', // Enforce 250px regardless of LLM output
+          textColor: parsed.styling?.textColor || defaultTextColor,
+          buttonTextColor: parsed.styling?.buttonTextColor || defaultButtonTextColor,
+          buttonBackgroundColor: parsed.styling?.buttonBackgroundColor || defaultPrimaryColor,
+          buttonBorder: parsed.styling?.buttonBorder || '1px solid #ccc', // Default visible border
         },
-        // Removed formLayout
       };
     } catch (error) {
       console.error('Error parsing form response:', error);
       
-      // Return fallback form
+      // Return fallback form with enforced styling
+      const fallbackPrimaryColor = designTokens.primaryColors?.[0] || '#007bff';
+      const fallbackBackgroundColor = designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+      const fallbackTextColor = this.isLightColor(fallbackBackgroundColor) ? '#333333' : '#ffffff';
+      const fallbackButtonTextColor = this.isLightColor(fallbackPrimaryColor) ? '#333333' : '#ffffff';
+
       return {
         title: 'Contact Form',
         description: 'Get in touch with us',
@@ -273,14 +307,16 @@ Return a JSON object with this structure:
         ctaText: 'Send Message',
         thankYouMessage: 'Thank you for your message! We\'ll get back to you soon.',
         styling: {
-          primaryColor: designTokens.primaryColors?.[0] || '#007bff',
-          backgroundColor: designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff',
+          primaryColor: fallbackPrimaryColor,
+          backgroundColor: fallbackBackgroundColor,
           fontFamily: designTokens.fontFamilies?.[0] || 'system-ui',
           borderRadius: '8px',
-          buttonStyle: 'solid',
-          maxWidth: '250px' // Default to 250px for fallback
+          maxWidth: '250px', // Default to 250px for fallback
+          textColor: fallbackTextColor,
+          buttonTextColor: fallbackButtonTextColor,
+          buttonBackgroundColor: fallbackPrimaryColor,
+          buttonBorder: '1px solid #ccc', // Default visible border for fallback
         },
-        // Removed formLayout for fallback
       };
     }
   }
@@ -321,6 +357,7 @@ Generate variations by:
 3. Adjusting CTA button text
 4. Varying the thank you message
 5. Keep the same fields but improve copy
+6. Maintain the styling, ensuring high contrast for all elements.
 
 Return an array of ${count} JSON objects with the same structure as the original.
 `;
@@ -396,6 +433,8 @@ Return an array of ${count} JSON objects with the same structure as the original
     const primaryColor = websiteData.designTokens.primaryColors?.[0] || '#007bff';
     const fontFamily = websiteData.designTokens.fontFamilies?.[0] || 'system-ui, -apple-system, sans-serif';
     const backgroundColor = websiteData.designTokens.colorPalette?.find((color: string) => this.isLightColor(color)) || '#ffffff';
+    const textColor = this.isLightColor(backgroundColor) ? '#333333' : '#ffffff';
+    const buttonTextColor = this.isLightColor(primaryColor) ? '#333333' : '#ffffff';
 
     return {
       title: `${formPurpose.charAt(0).toUpperCase() + formPurpose.slice(1)} Form`,
@@ -408,10 +447,12 @@ Return an array of ${count} JSON objects with the same structure as the original
         backgroundColor: backgroundColor,
         fontFamily: fontFamily,
         borderRadius: '8px',
-        buttonStyle: 'solid',
-        maxWidth: '250px' // Default to 250px for mock
+        maxWidth: '250px', // Default to 250px for mock
+        textColor: textColor,
+        buttonTextColor: buttonTextColor,
+        buttonBackgroundColor: primaryColor,
+        buttonBorder: '1px solid #ccc', // Default visible border for mock
       },
-      // Removed formLayout for mock
     };
   }
 
