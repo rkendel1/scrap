@@ -505,7 +505,8 @@ export class SaaSService {
       RETURNING id
     `;
     
-    const result = await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
+    await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
+    
     return result.rows.length > 0;
   }
 
@@ -724,121 +725,72 @@ export class SaaSService {
   }
 
   /**
-   * Generate a secure embed token for a form
+   * NEW: Get form configuration for public embed.js script.
+   * This replaces the JWT-based getFormByEmbedToken for initial embed loading.
    */
-  async generateSecureEmbedToken(formId: number, userId: number): Promise<string | null> {
-    try {
-      // Get form data and user subscription
-      const formQuery = `
-        SELECT f.id, f.user_id, f.allowed_domains, f.is_live, u.subscription_tier, u.subscription_status
-        FROM forms f
-        JOIN users u ON f.user_id = u.id
-        WHERE f.id = $1 AND f.user_id = $2
-      `;
-      
-      const result = await pool.query(formQuery, [formId, userId]);
-      
-      if (result.rows.length === 0) {
-        throw new Error('Form not found or not owned by user.');
-      }
-      
-      const { allowed_domains, subscription_tier, subscription_status, is_live } = result.rows[0];
-      
-      // Check if form is live
-      if (!is_live) {
-        throw new Error('Form must be live to generate a secure embed token.');
-      }
-
-      // Check if user's subscription is active
-      if (subscription_status !== 'active') {
-        throw new Error('Your subscription is not active. Please reactivate it to generate a secure embed token.');
-      }
-      
-      const allowedDomains = allowed_domains || [];
-      
-      return this.embedSecurity.generateEmbedToken(formId, userId, subscription_tier, allowedDomains);
-    } catch (error) {
-      console.error('Error generating secure embed token:', error);
-      throw error; // Re-throw to be caught by API endpoint
-    }
-  }
-
-  /**
-   * Update allowed domains for a form
-   */
-  async updateFormAllowedDomains(formId: number, userId: number, allowedDomains: string[]): Promise<boolean> {
+  async getFormConfigForPublicEmbed(embedCode: string, hostname: string): Promise<any | null> {
     try {
       const query = `
-        UPDATE forms
-        SET allowed_domains = $1
-        WHERE id = $2 AND user_id = $3
+        SELECT 
+          f.*,
+          f.form_schema as generated_form_schema,
+          ec.is_active as embed_active,
+          ec.view_count,
+          ec.submission_count
+        FROM forms f
+        JOIN embed_codes ec ON f.id = ec.form_id
+        WHERE ec.code = $1 AND ec.is_active = true AND f.is_live = true
       `;
       
-      const result = await pool.query(query, [allowedDomains, formId, userId]);
+      const result = await pool.query(query, [embedCode]);
       
-      return (result.rowCount ?? 0) > 0;
-    } catch (error) {
-      console.error('Error updating allowed domains:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Validate embed token and return form data
-   */
-  async getFormByEmbedToken(token: string, hostname: string): Promise<any | null> {
-    try {
-      const tokenPayload = this.embedSecurity.verifyEmbedToken(token);
-      
-      if (!tokenPayload) {
-        return null; // Invalid token
-      }
-      
-      // Check domain restrictions
-      if (!this.embedSecurity.isDomainAllowed(hostname, tokenPayload.allowedDomains)) {
-        return null; // Domain not allowed
-      }
-      
-      // Check if user subscription is still active
-      const subscription = await this.embedSecurity.getUserSubscriptionStatus(tokenPayload.userId);
-      if (!subscription.active) {
-        return null; // Subscription inactive
-      }
-      
-      // Get form data
-      const formData = await this.getFormById(tokenPayload.formId);
-      
-      if (!formData) {
+      if (result.rows.length === 0) {
+        console.log(`FormCraft: Form not found, inactive, or not live for embedCode: ${embedCode}`);
         return null;
       }
       
-      // Convert to the expected format for embed
+      const row = result.rows[0];
+      
+      // Check domain restrictions
+      const allowedDomains = row.allowed_domains || [];
+      if (!this.embedSecurity.isDomainAllowed(hostname, allowedDomains)) {
+        console.log(`FormCraft: Domain ${hostname} not allowed for embedCode: ${embedCode}`);
+        return null; // Domain not allowed
+      }
+
+      // Update view count
+      await pool.query(`
+        UPDATE embed_codes 
+        SET view_count = view_count + 1, last_accessed = CURRENT_TIMESTAMP 
+        WHERE code = $1
+      `, [embedCode]);
+      
       return {
-        id: formData.id,
-        title: formData.title,
-        description: formData.description,
-        generated_form: formData.generated_form,
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        generated_form: row.generated_form_schema?.[0] || null,
         styling: {
-          primaryColor: '#007bff',
+          primaryColor: row.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
-          fontFamily: 'system-ui',
+          fontFamily: row.font_families?.[0] || 'system-ui',
           borderRadius: '8px'
         },
-        form_name: formData.form_name,
-        form_description: formData.form_description,
-        created_at: formData.created_at
+        embedCode,
+        showBranding: true // Could be based on subscription tier
       };
     } catch (error) {
-      console.error('Error validating embed token:', error);
+      console.error('FormCraft: Error fetching public embed config:', error);
       return null;
     }
   }
 
   /**
-   * Submit form with security validation
+   * NEW: Submit form using public embed code.
+   * This replaces the JWT-based submitFormSecure.
    */
-  async submitFormSecure(
-    token: string,
+  async submitPublicForm(
+    embedCode: string,
     submissionData: any,
     metadata: {
       submittedFromUrl?: string;
@@ -848,56 +800,55 @@ export class SaaSService {
     }
   ): Promise<{ success: boolean; message: string; remaining?: number }> {
     try {
-      const tokenPayload = this.embedSecurity.verifyEmbedToken(token);
-      
-      if (!tokenPayload) {
-        return { success: false, message: 'Invalid or expired embed token' };
-      }
-      
-      // Check domain restrictions
-      if (metadata.hostname && !this.embedSecurity.isDomainAllowed(metadata.hostname, tokenPayload.allowedDomains)) {
-        return { success: false, message: 'Domain not authorized for this form' };
-      }
-      
-      // Check rate limits
-      const rateLimit = await this.embedSecurity.checkRateLimit(
-        tokenPayload.formId,
-        metadata.ipAddress || '0.0.0.0',
-        metadata.hostname || 'unknown'
-      );
-      
-      if (!rateLimit.allowed) {
-        return { success: false, message: 'Rate limit exceeded. Please try again later.' };
-      }
-      
-      // Check if user subscription is still active
-      const subscription = await this.embedSecurity.getUserSubscriptionStatus(tokenPayload.userId);
-      if (!subscription.active) {
-        return { success: false, message: 'Form is no longer active. Please contact the form owner.' };
-      }
-      
-      // Submit the form using existing method (but with formId from token)
       const client = await pool.connect();
       
       try {
         await client.query('BEGIN');
 
-        // Get form info
-        const formQuery = `
-          SELECT f.*, ec.id as embed_code_id
-          FROM forms f
-          LEFT JOIN embed_codes ec ON f.id = ec.form_id
-          WHERE f.id = $1 AND f.is_live = true
+        // Get embed code and form info
+        const embedQuery = `
+          SELECT ec.*, f.is_live, f.user_id, f.id as form_id, f.allowed_domains, u.subscription_tier
+          FROM embed_codes ec
+          JOIN forms f ON f.id = ec.form_id
+          JOIN users u ON f.user_id = u.id
+          WHERE ec.code = $1 AND ec.is_active = true
         `;
         
-        const formResult = await client.query(formQuery, [tokenPayload.formId]);
+        const embedResult = await client.query(embedQuery, [embedCode]);
         
-        if (formResult.rows.length === 0) {
-          return { success: false, message: 'Form not found or not active' };
+        if (embedResult.rows.length === 0) {
+          return { success: false, message: 'Invalid or inactive embed code' };
         }
 
-        const form = formResult.rows[0];
+        const embed = embedResult.rows[0];
         
+        if (!embed.is_live) {
+          return { success: false, message: 'Form is not currently live' };
+        }
+
+        // Check domain restrictions
+        const allowedDomains = embed.allowed_domains || [];
+        if (metadata.hostname && !this.embedSecurity.isDomainAllowed(metadata.hostname, allowedDomains)) {
+          return { success: false, message: 'Domain not authorized for this form' };
+        }
+
+        // Check rate limits
+        const rateLimit = await this.embedSecurity.checkRateLimit(
+          embed.form_id,
+          metadata.ipAddress || '0.0.0.0',
+          metadata.hostname || 'unknown'
+        );
+        
+        if (!rateLimit.allowed) {
+          return { success: false, message: 'Rate limit exceeded. Please try again later.' };
+        }
+        
+        // Check if user subscription is still active (from embed.user_id)
+        const subscription = await this.embedSecurity.getUserSubscriptionStatus(embed.user_id);
+        if (!subscription.active) {
+          return { success: false, message: 'Form owner\'s subscription is not active. Please contact the form owner.' };
+        }
+
         // Create submission record
         const submissionQuery = `
           INSERT INTO form_submissions (
@@ -908,8 +859,8 @@ export class SaaSService {
         `;
         
         await client.query(submissionQuery, [
-          tokenPayload.formId,
-          form.embed_code_id,
+          embed.form_id,
+          embed.id,
           JSON.stringify(submissionData),
           metadata.submittedFromUrl,
           metadata.ipAddress,
@@ -917,24 +868,22 @@ export class SaaSService {
         ]);
 
         // Update counters
-        if (form.embed_code_id) {
-          await client.query(`
-            UPDATE embed_codes 
-            SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
-            WHERE id = $1
-          `, [form.embed_code_id]);
-        }
+        await client.query(`
+          UPDATE embed_codes 
+          SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
+          WHERE id = $1
+        `, [embed.id]);
 
-        await pool.query(`
+        await client.query(`
           UPDATE forms 
           SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
           WHERE id = $1
-        `, [tokenPayload.formId]);
+        `, [embed.form_id]);
 
         await client.query('COMMIT');
 
         // Trigger connectors
-        await this.triggerConnectors(tokenPayload.formId, submissionData);
+        await this.triggerConnectors(embed.form_id, submissionData);
 
         return { 
           success: true, 
@@ -949,7 +898,7 @@ export class SaaSService {
       }
       
     } catch (error) {
-      console.error('Secure form submission error:', error);
+      console.error('Public form submission error:', error);
       return { success: false, message: 'Failed to submit form. Please try again.' };
     }
   }

@@ -8,24 +8,22 @@ interface EmbedCodeDisplayProps {
 }
 
 export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, onBack }) => {
-  const [embedToken, setEmbedToken] = useState<string | null>(null);
-  const [expiresIn, setExpiresIn] = useState<string | null>(null);
+  // Removed embedToken and expiresIn states as they are no longer used for the script tag
   const [allowedDomains, setAllowedDomains] = useState<string[]>(form.allowed_domains || []);
   const [newDomain, setNewDomain] = useState('');
   const [loading, setLoading] = useState(true);
-  const [tokenLoading, setTokenLoading] = useState(false);
   const [domainSaving, setDomainSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
 
-  // Fetch initial token and domains
+  // Fetch initial domains
   useEffect(() => {
     const fetchEmbedData = async () => {
       setLoading(true);
       setError(null);
-      setSuccessMessage(null); // Clear success message on load
+      setSuccessMessage(null);
       console.log('EmbedCodeDisplay: Initializing fetchEmbedData for form', form.id);
       try {
         // Fetch form again to get latest allowed_domains and is_live status
@@ -36,26 +34,6 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         if (formResult.success) {
           const fetchedForm = formResult.data;
           setAllowedDomains(fetchedForm.allowed_domains || []);
-
-          // Check if form is live and user subscription is active before attempting to generate token
-          if (!fetchedForm.is_live) {
-            setError('This form is not live. Please activate it in the dashboard to generate a secure embed code.');
-            setEmbedToken(null);
-            setExpiresIn(null);
-            console.log('EmbedCodeDisplay: Form is not live.');
-            return;
-          }
-          if (user.subscription_status !== 'active') {
-            setError('Your subscription is not active. Please reactivate it to generate a secure embed code.');
-            setEmbedToken(null);
-            setExpiresIn(null);
-            console.log('EmbedCodeDisplay: User subscription is not active.');
-            return;
-          }
-
-          // Generate a new token on load if conditions are met
-          console.log('EmbedCodeDisplay: Conditions met, generating new token on load.');
-          await generateNewToken(fetchedForm.id, user.id);
         } else {
           throw new Error(formResult.message || 'Failed to fetch form details');
         }
@@ -69,42 +47,6 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
 
     fetchEmbedData();
   }, [form.id, user.id, user.subscription_status]);
-
-  const generateNewToken = async (formId: number, userId: number) => {
-    setTokenLoading(true);
-    setError(null);
-    setSuccessMessage(null);
-    console.log('EmbedCodeDisplay: Attempting to generate new token for form', formId);
-    try {
-      const response = await fetch(`${API_BASE}/api/forms/${formId}/generate-token`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      });
-      
-      console.log('EmbedCodeDisplay: Raw response from generate-token:', response);
-      const result = await response.json();
-      console.log('EmbedCodeDisplay: Parsed result from generate-token:', result);
-
-      if (result.success) {
-        setEmbedToken(result.token);
-        setExpiresIn(result.expiresIn);
-        setSuccessMessage('New embed token generated successfully!');
-        console.log('EmbedCodeDisplay: Token generated successfully.');
-      } else {
-        throw new Error(result.message || 'Failed to generate token');
-      }
-    } catch (err: any) {
-      console.error('EmbedCodeDisplay: Error generating new token:', err);
-      setError(err.message || 'Failed to generate new token. Ensure the form is live and your subscription is active.');
-      setEmbedToken(null); // Clear token on error
-      setExpiresIn(null);
-    } finally {
-      setTokenLoading(false);
-    }
-  };
 
   const handleAddDomain = async () => {
     if (!newDomain.trim()) return;
@@ -154,15 +96,15 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
     }
   };
 
-  const scriptEmbedCode = embedToken
-    ? `<script src="${API_BASE}/embed.js?id=${form.id}&key=${embedToken}"></script>`
-    : '<!-- Generate a token to see the secure embed code. -->';
+  // New simplified script embed code
+  const scriptEmbedCode = form.embed_code
+    ? `<script src="${API_BASE}/embed.js" data-form="${form.embed_code}"></script>`
+    : '<!-- Form embed code not available. -->';
 
   const iframeEmbedCode = `<iframe src="${API_BASE}/embed.html?code=${form.embed_code}" width="100%" height="500" frameborder="0" style="border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"></iframe>`;
 
-  const canGenerateToken = form.is_live && user.subscription_status === 'active';
-  console.log('EmbedCodeDisplay: canGenerateToken status:', canGenerateToken, ' (form.is_live:', form.is_live, ', user.subscription_status:', user.subscription_status, ')');
-
+  // The button to regenerate token is removed as there's no token in the script tag anymore.
+  // The logic for `canGenerateToken` is also simplified as it's not directly tied to the script tag.
 
   if (loading) {
     return (
@@ -198,9 +140,9 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
       )}
 
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ marginBottom: '16px' }}>Secure JavaScript Embed (Recommended)</h3>
+        <h3 style={{ marginBottom: '16px' }}>JavaScript Embed (Recommended)</h3>
         <p style={{ color: '#666', marginBottom: '12px' }}>
-          This method uses a secure, time-limited token and domain restrictions to prevent unauthorized use of your form.
+          This method loads your form dynamically and applies domain restrictions.
         </p>
         <div className="code-block" style={{ marginBottom: '16px' }}>
           {scriptEmbedCode}
@@ -208,22 +150,18 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
         <button
           onClick={() => navigator.clipboard.writeText(scriptEmbedCode)}
           className="btn btn-secondary"
-          style={{ marginRight: '8px' }}
-          disabled={!embedToken}
+          disabled={!form.embed_code}
         >
           Copy Code
         </button>
-        <button
-          onClick={() => generateNewToken(form.id, user.id)}
-          disabled={tokenLoading || !canGenerateToken}
-          className="btn btn-primary"
-        >
-          {tokenLoading ? 'Generating...' : 'Regenerate Token'}
-        </button>
-        {expiresIn && <p style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>Token expires in {expiresIn}</p>}
-        {!canGenerateToken && !error && (
+        {!form.is_live && (
           <p className="error-message" style={{ marginTop: '8px' }}>
-            Form must be live and your subscription active to generate a secure embed token.
+            This form is not live. Please activate it in the dashboard for the embed code to function.
+          </p>
+        )}
+        {user.subscription_status !== 'active' && (
+          <p className="error-message" style={{ marginTop: '8px' }}>
+            Your subscription is not active. Please reactivate it for the embed code to function.
           </p>
         )}
       </div>
@@ -247,9 +185,9 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                 handleAddDomain();
               }
             }}
-            disabled={domainSaving || !canGenerateToken}
+            disabled={domainSaving}
           />
-          <button onClick={handleAddDomain} disabled={domainSaving || !canGenerateToken} className="btn btn-primary">
+          <button onClick={handleAddDomain} disabled={domainSaving} className="btn btn-primary">
             {domainSaving ? 'Adding...' : 'Add Domain'}
           </button>
         </div>
@@ -283,7 +221,7 @@ export const EmbedCodeDisplay: React.FC<EmbedCodeDisplayProps> = ({ form, user, 
                     lineHeight: '1',
                     padding: 0
                   }}
-                  disabled={domainSaving || !canGenerateToken}
+                  disabled={domainSaving}
                 >
                   ×
                 </button>

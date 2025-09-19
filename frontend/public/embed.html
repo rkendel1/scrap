@@ -38,6 +38,7 @@
             // Get embed code from URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             const embedCode = urlParams.get('code');
+            const currentHostname = window.location.hostname;
             
             if (!embedCode) {
                 document.getElementById('formcraft-embed-container').innerHTML = 
@@ -48,8 +49,8 @@
             // Configuration
             const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
 
-            // Fetch form data from API
-            fetch(`${API_BASE}/api/forms/embed/${embedCode}`)
+            // Fetch form data from new public endpoint
+            fetch(`${API_BASE}/api/forms/embed-config/${embedCode}?hostname=${encodeURIComponent(currentHostname)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (!data.success) {
@@ -220,8 +221,8 @@
                     data[key] = value;
                 }
 
-                // Submit to API
-                fetch(`${API_BASE}/api/forms/submit/${embedCode}`, {
+                // Submit to the new public API endpoint
+                fetch(`${API_BASE}/api/forms/submit-public/${embedCode}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

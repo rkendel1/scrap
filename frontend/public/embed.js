@@ -8,10 +8,10 @@
     })();
 
     // Get the embed code from the data attribute
-    const embedCode = currentScript.getAttribute('data-embed-code') || currentScript.getAttribute('data-form-id');
+    const embedCode = currentScript.getAttribute('data-form');
     
     if (!embedCode) {
-        console.error('FormCraft: No embed code provided. Add data-embed-code attribute to the script tag.');
+        console.error('FormCraft: No embed code provided. Add data-form attribute to the script tag.');
         return;
     }
 
@@ -19,6 +19,7 @@
     const API_BASE = currentScript.getAttribute('data-api-base') || 
                     (window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai');
     const containerId = 'formcraft-embed-' + embedCode;
+    const currentHostname = window.location.hostname;
 
     // Create container element
     const container = document.createElement('div');
@@ -31,8 +32,8 @@
     // Show loading state
     container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">Loading form...</div>';
 
-    // Fetch form data
-    fetch(`${API_BASE}/api/forms/embed/${embedCode}`)
+    // Fetch form data from the new public endpoint
+    fetch(`${API_BASE}/api/forms/embed-config/${embedCode}?hostname=${encodeURIComponent(currentHostname)}`)
         .then(response => response.json())
         .then(data => {
             if (!data.success) {
@@ -227,8 +228,8 @@
             data[key] = value;
         }
 
-        // Submit to API
-        fetch(`${API_BASE}/api/forms/submit/${embedCode}`, {
+        // Submit to the new public API endpoint
+        fetch(`${API_BASE}/api/forms/submit-public/${embedCode}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

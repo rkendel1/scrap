@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken'; // Still needed for other JWTs, but not for embed.js
 import pool from './database';
 
 export interface EmbedTokenPayload {
@@ -11,38 +11,10 @@ export interface EmbedTokenPayload {
 
 export class EmbedSecurityService {
   private readonly JWT_SECRET = process.env.EMBED_JWT_SECRET || process.env.JWT_SECRET || 'embed-secret-change-in-production';
-  private readonly TOKEN_EXPIRES_IN = '12h'; // Changed from '1h' to '12h'
+  // Removed TOKEN_EXPIRES_IN as it's no longer relevant for the public embed script
 
-  /**
-   * Generate a signed JWT token for form embedding
-   */
-  generateEmbedToken(formId: number, userId: number, subscriptionTier: 'free' | 'paid', allowedDomains: string[]): string {
-    const payload: EmbedTokenPayload = {
-      formId,
-      userId,
-      subscriptionTier,
-      allowedDomains,
-    };
-
-    return jwt.sign(payload, this.JWT_SECRET, { 
-      expiresIn: this.TOKEN_EXPIRES_IN,
-      issuer: 'formcraft.ai',
-      subject: `form:${formId}`
-    });
-  }
-
-  /**
-   * Verify and decode an embed token
-   */
-  verifyEmbedToken(token: string): EmbedTokenPayload | null {
-    try {
-      const decoded = jwt.verify(token, this.JWT_SECRET) as EmbedTokenPayload;
-      return decoded;
-    } catch (error) {
-      console.error('Invalid embed token:', error);
-      return null;
-    }
-  }
+  // Removed generateEmbedToken method
+  // Removed verifyEmbedToken method
 
   /**
    * Check if a domain is allowed to embed the form

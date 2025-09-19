@@ -689,33 +689,8 @@ app.patch('/api/forms/:id/toggle-live', authService.authenticateToken, async (re
   }
 });
 
-// NEW: Generate secure embed token for a form
-app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const formId = parseInt(req.params.id);
-    if (isNaN(formId)) {
-      return res.status(400).json({ success: false, message: 'Invalid form ID' });
-    }
-
-    if (!req.user) {
-      return res.status(401).json({ success: false, message: 'Authentication required' });
-    }
-
-    const token = await saasService.generateSecureEmbedToken(formId, req.user.id);
-    
-    res.json({
-      success: true,
-      token: token,
-      expiresIn: '1h' // Hardcoded for now, should come from service
-    });
-  } catch (error) {
-    console.error('Generate secure embed token error:', error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Failed to generate secure embed token'
-    });
-  }
-});
+// REMOVED: Generate secure embed token for a form (no longer needed for script tag)
+// app.post('/api/forms/:id/generate-token', authService.authenticateToken, async (req: AuthRequest, res) => { /* ... */ });
 
 // NEW: Update allowed domains for a form
 app.put('/api/forms/:id/allowed-domains', authService.authenticateToken, async (req: AuthRequest, res) => {
@@ -747,19 +722,23 @@ app.put('/api/forms/:id/allowed-domains', authService.authenticateToken, async (
   }
 });
 
-// NEW: Get form data by secure embed token (for embed.js)
-app.post('/api/forms/embed-secure', async (req, res) => {
+// NEW: Get form data by embed code (for embed.js)
+app.get('/api/forms/embed-config/:embedCode', async (req, res) => {
   try {
-    const { token, hostname } = req.body;
+    const { embedCode } = req.params;
+    const hostname = req.query.hostname as string || req.headers.origin || req.headers.referer;
 
-    if (!token || !hostname) {
-      return res.status(400).json({ success: false, message: 'Token and hostname are required' });
+    if (!embedCode) {
+      return res.status(400).json({ success: false, message: 'Embed code is required' });
+    }
+    if (!hostname) {
+      return res.status(400).json({ success: false, message: 'Hostname is required for domain validation' });
     }
 
-    const formData = await saasService.getFormByEmbedToken(token, hostname);
+    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname);
 
     if (!formData) {
-      return res.status(403).json({ success: false, message: 'Unauthorized or invalid embed request' });
+      return res.status(403).json({ success: false, message: 'Unauthorized, form not active, or domain not allowed' });
     }
 
     res.json({
@@ -767,7 +746,7 @@ app.post('/api/forms/embed-secure', async (req, res) => {
       data: formData
     });
   } catch (error) {
-    console.error('Secure embed form data fetch error:', error);
+    console.error('Public embed form data fetch error:', error);
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Failed to fetch form data securely'
@@ -775,37 +754,41 @@ app.post('/api/forms/embed-secure', async (req, res) => {
   }
 });
 
-// NEW: Submit form securely with token validation (for embed.js)
-app.post('/api/forms/submit-secure', async (req, res) => {
-  try {
-    const { token, data: submissionData, hostname } = req.body;
+// REMOVED: Submit form securely with token validation (no longer needed for script tag)
+// app.post('/api/forms/submit-secure', async (req, res) => { /* ... */ });
 
-    if (!token || !submissionData || !hostname) {
-      return res.status(400).json({ success: false, message: 'Token, submission data, and hostname are required' });
-    }
+// NEW: Submit form publicly with embed code validation
+app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
+  try {
+    const { embedCode } = req.params;
+    const submissionData = req.body;
 
     const metadata = {
       submittedFromUrl: req.headers.referer,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent'],
-      hostname: hostname
+      hostname: req.headers.origin || req.headers.referer // Use origin or referer for hostname
     };
 
-    const result = await saasService.submitFormSecure(token, submissionData, metadata);
+    if (!embedCode || !submissionData || !metadata.hostname) {
+      return res.status(400).json({ success: false, message: 'Embed code, submission data, and hostname are required' });
+    }
+
+    const result = await saasService.submitPublicForm(embedCode, submissionData, metadata);
 
     if (!result.success && result.message?.includes('Rate limit exceeded')) {
       return res.status(429).json(result);
     }
-    if (!result.success && result.message?.includes('Unauthorized') || result.message?.includes('invalid') || result.message?.includes('active')) {
+    if (!result.success && (result.message?.includes('Unauthorized') || result.message?.includes('active') || result.message?.includes('allowed'))) {
       return res.status(403).json(result);
     }
 
     res.json(result);
   } catch (error) {
-    console.error('Secure form submission error:', error);
+    console.error('Public form submission error:', error);
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to submit form securely'
+      message: error instanceof Error ? error.message : 'Failed to submit form publicly'
     });
   }
 });
@@ -954,17 +937,6 @@ app.get('/test-embed.html', (req, res) => {
 
 // Serve embed.js script
 app.get('/embed.js', (req, res) => {
-  const { id: formIdParam, key: token } = req.query;
-  
-  if (!formIdParam || !token) {
-    res.setHeader('Content-Type', 'application/javascript');
-    res.status(400).send(`
-      console.error('FormCraft: Missing required parameters. Usage: <script src="/embed.js?id=FORM_ID&key=FORM_KEY"></script>');
-      document.write('<div style="padding: 20px; border: 1px solid #f5c6cb; background: #f8d7da; color: #dc3545; border-radius: 8px;">Error: Missing form ID or key</div>');
-    `);
-    return;
-  }
-  
   res.setHeader('Content-Type', 'application/javascript');
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Don't cache secure tokens
   res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for embed script
@@ -977,21 +949,23 @@ app.get('/embed.js', (req, res) => {
       'use strict';
       
       // Secure embed configuration
-      const FORM_TOKEN = '${token}';
-      const FORM_ID = '${formIdParam}';
-      const API_BASE = '${process.env.NODE_ENV === 'production' ? 'https://formcraft.ai' : 'http://localhost:3001'}';
-      
-      // Get current hostname for domain validation
-      const currentHostname = window.location.hostname;
-      
-      // Get the script tag that loaded this file
       const currentScript = document.currentScript || (function() {
         const scripts = document.getElementsByTagName('script');
         return scripts[scripts.length - 1];
       })();
+
+      const embedCode = currentScript.getAttribute('data-form');
       
-      const containerId = 'formcraft-embed-' + FORM_ID;
-      
+      if (!embedCode) {
+          console.error('FormCraft: No embed code provided. Add data-form attribute to the script tag.');
+          return;
+      }
+
+      const API_BASE = currentScript.getAttribute('data-api-base') || 
+                      (window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai');
+      const containerId = 'formcraft-embed-' + embedCode;
+      const currentHostname = window.location.hostname;
+
       // Create container element
       const container = document.createElement('div');
       container.id = containerId;
@@ -999,37 +973,28 @@ app.get('/embed.js', (req, res) => {
       
       // Insert container after the script tag
       currentScript.parentNode.insertBefore(container, currentScript.nextSibling);
-      
+
       // Show loading state
       container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">Loading form...</div>';
-      
-      // Fetch form data with secure token
-      fetch(API_BASE + '/api/forms/embed-secure', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          token: FORM_TOKEN,
-          hostname: currentHostname
-        })
-      })
-        .then(response => response.json())
-        .then(data => {
-          if (!data.success) {
-            throw new Error(data.message || 'Failed to load form');
-          }
-          renderForm(data.data, container);
-        })
-        .catch(error => {
-          console.error('FormCraft: Error loading form:', error);
-          container.innerHTML = \`
-            <div style="padding: 20px; text-align: center; color: #dc3545; border: 1px solid #f5c6cb; border-radius: 8px; background: #f8d7da;">
-              <strong>Error loading form:</strong><br>
-              \${error.message}
-            </div>
-          \`;
-        });
+
+      // Fetch form data from the new public endpoint
+      fetch(\`${API_BASE}/api/forms/embed-config/\${embedCode}?hostname=\${encodeURIComponent(currentHostname)}\`)
+          .then(response => response.json())
+          .then(data => {
+              if (!data.success) {
+                  throw new Error(data.message || 'Failed to load form');
+              }
+              renderForm(data.data, container);
+          })
+          .catch(error => {
+              console.error('FormCraft: Error loading form:', error);
+              container.innerHTML = \`
+                  <div style="padding: 20px; text-align: center; color: #dc3545; border: 1px solid #f5c6cb; border-radius: 8px; background: #f8d7da;">
+                      <strong>Error loading form:</strong><br>
+                      \${error.message}
+                  </div>
+              \`;
+          });
       
       function renderForm(formData, container) {
         const form = formData.generated_form;
@@ -1062,12 +1027,12 @@ app.get('/embed.js', (req, res) => {
               \` : ''}
             </div>
             
-            <form id="formcraft-form-\${FORM_ID}">
+            <form id="formcraft-form-\${embedCode}">
               \${renderFields(form.fields || [])}
               
-              <div id="form-message-\${FORM_ID}" style="margin-bottom: 16px; display: none;"></div>
+              <div id="form-message-\${embedCode}" style="margin-bottom: 16px; display: none;"></div>
               
-              <button type="submit" id="submit-btn-\${FORM_ID}" style="
+              <button type="submit" id="submit-btn-\${embedCode}" style="
                 background-color: \${styling.primaryColor || '#007bff'};
                 color: white;
                 padding: 12px 24px;
@@ -1088,11 +1053,11 @@ app.get('/embed.js', (req, res) => {
         container.innerHTML = formHTML;
         
         // Add form submission handler
-        const formElement = document.getElementById(\`formcraft-form-\${FORM_ID}\`);
+        const formElement = document.getElementById(\`formcraft-form-\${embedCode}\`);
         if (formElement) {
           formElement.addEventListener('submit', function(e) {
             e.preventDefault();
-            handleFormSubmission(formData, FORM_ID);
+            handleFormSubmission(formData, embedCode);
           });
         }
       }
@@ -1170,10 +1135,10 @@ app.get('/embed.js', (req, res) => {
         }).join('');
       }
       
-      function handleFormSubmission(formData, formId) {
-        const formElement = document.getElementById(\`formcraft-form-\${formId}\`);
-        const submitBtn = document.getElementById(\`submit-btn-\${formId}\`);
-        const messageDiv = document.getElementById(\`form-message-\${formId}\`);
+      function handleFormSubmission(formData, embedCode) {
+        const formElement = document.getElementById(\`formcraft-form-\${embedCode}\`);
+        const submitBtn = document.getElementById(\`submit-btn-\${embedCode}\`);
+        const messageDiv = document.getElementById(\`form-message-\${embedCode}\`);
         
         if (!formElement || !submitBtn) return;
         
@@ -1189,13 +1154,12 @@ app.get('/embed.js', (req, res) => {
         }
         
         // Submit with secure token
-        fetch(API_BASE + '/api/forms/submit-secure', {
+        fetch(API_BASE + \`/api/forms/submit-public/\${embedCode}\`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            token: FORM_TOKEN,
             data: data,
             hostname: currentHostname
           })
@@ -1237,14 +1201,19 @@ app.get('/embed.js', (req, res) => {
 app.get('/api/forms/embed/:embedCode', async (req, res) => {
   try {
     const { embedCode } = req.params;
+    const hostname = req.query.hostname as string || req.headers.origin || req.headers.referer;
+
     if (!embedCode) {
       return res.status(400).json({ success: false, message: 'Embed code is required' });
     }
+    if (!hostname) {
+      return res.status(400).json({ success: false, message: 'Hostname is required for domain validation' });
+    }
 
-    const formData = await saasService.getFormByEmbedCode(embedCode);
+    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname);
 
     if (!formData) {
-      return res.status(404).json({ success: false, message: 'Form not found or not active' });
+      return res.status(403).json({ success: false, message: 'Unauthorized, form not active, or domain not allowed' });
     }
 
     res.json({
@@ -1261,29 +1230,8 @@ app.get('/api/forms/embed/:embedCode', async (req, res) => {
   }
 });
 
-// Submit form (public endpoint)
-app.post('/api/forms/submit/:embedCode', async (req, res) => {
-  try {
-    const { embedCode } = req.params;
-    const submissionData = req.body;
-
-    const metadata = {
-      submittedFromUrl: req.headers.referer,
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    };
-
-    const result = await saasService.submitForm(embedCode, submissionData, metadata);
-    
-    res.json(result);
-  } catch (error) {
-    console.error('Form submission error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Failed to submit form'
-    });
-  }
-});
+// REMOVED: Submit form (public endpoint) - replaced by submitPublicForm
+// app.post('/api/forms/submit/:embedCode', async (req, res) => { /* ... */ });
 
 // Get available connectors
 app.get('/api/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
@@ -1626,7 +1574,6 @@ app.listen(PORT, () => {
   console.log(`🚀 Website Design Token Extraction API running on port ${PORT}`);
   console.log(`📖 API documentation: http://localhost:${PORT}/api/docs`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;

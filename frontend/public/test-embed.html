@@ -128,12 +128,12 @@
 <body>
     <div class="container">
         <h1>Test Your FormCraft AI Embed Code</h1>
-        <p>Paste your secure JavaScript embed code below to test how your form appears on a live website.</p>
+        <p>Paste your JavaScript embed code below to test how your form appears on a live website.</p>
 
         <div class="instructions">
             <strong>How to use:</strong>
             <ol>
-                <li>Go to your FormCraft AI dashboard, activate your form, and get the "Secure JavaScript Embed" code.</li>
+                <li>Go to your FormCraft AI dashboard, activate your form, and get the "JavaScript Embed" code.</li>
                 <li>Paste the entire <code>&lt;script&gt;...&lt;/script&gt;</code> tag into the text area below.</li>
                 <li>Click "Embed Form" to see your form rendered on this page.</li>
                 <li>You can also test the legacy iframe code if needed.</li>
@@ -146,7 +146,7 @@
 
         <div class="code-input-area">
             <label for="embedCodeInput">Paste your embed code here:</label>
-            <textarea id="embedCodeInput" placeholder="e.g., <script src=&quot;http://localhost:3001/embed.js?id=...&key=...&quot;></script>"></textarea>
+            <textarea id="embedCodeInput" placeholder="e.g., <script src=&quot;http://localhost:3001/embed.js&quot; data-form=&quot;your_embed_code&quot;></script>"></textarea>
             <button onclick="embedForm()">Embed Form</button>
             <div id="errorMessage" class="error-message" style="display: none;"></div>
         </div>
