@@ -14,6 +14,7 @@ import { SaaSService } from './saas-service';
 import { customerConfigService } from './customer-config-service';
 import pool from './database';
 import { VoiceAnalysis } from './extractor'; // Import VoiceAnalysis
+import { GeneratedForm } from './llm-service'; // Import GeneratedForm
 
 // Load environment variables
 dotenv.config();
@@ -474,6 +475,8 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
       return res.status(404).json({ error: 'Extracted website data not found' });
     }
 
+    console.log('Backend: /api/forms/generate called.');
+    console.log('Backend: req.user:', req.user ? `User ID: ${req.user.id}, Email: ${req.user.email}` : 'Guest user');
     console.log(`Generating form for record ID: ${extractedRecordId}`);
 
     // Reconstruct VoiceAnalysis from FormRecord for LLMService
@@ -570,6 +573,7 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req: AuthReques
         extractedAt: extractedDataRecord.extracted_at.toISOString()
       }
     );
+    console.log('Backend: Form created with user_id:', form.user_id);
 
     res.json({
       success: true,
@@ -1312,7 +1316,7 @@ app.patch('/api/forms/:id/config', authService.authenticateToken, async (req: Au
     console.error('Update form config error:', error);
     res.status(500).json({
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to update form configuration'
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

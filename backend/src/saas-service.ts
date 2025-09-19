@@ -114,6 +114,7 @@ export class SaaSService {
     generatedForm: GeneratedForm,
     extractedData: any
   ): Promise<SaaSForm> {
+    console.log('SaaSService: createForm called with userId:', userId); // DEBUG LOG
     const embedCode = this.generateEmbedCode();
     
     // A form is considered "non-expiring" when it's associated with a registered user (userId is not null)
@@ -175,6 +176,7 @@ export class SaaSService {
 
     const result = await pool.query(query, values);
     const formRecord = result.rows[0];
+    console.log('SaaSService: Form record from DB (user_id):', formRecord.user_id); // DEBUG LOG
 
     // Create embed code record
     await this.createEmbedCode(formRecord.id, embedCode);
@@ -1084,6 +1086,71 @@ export class SaaSService {
     } catch (error) {
       console.error('Error updating form configuration:', error);
       throw error;
+    }
+  }
+
+  private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
+    try {
+      // First, check if this form is mapped to a customer for n8n routing
+      const customerId = await customerConfigService.getFormCustomerMapping(formId);
+      
+      if (customerId) {
+        console.log(`Triggering n8n for form ${formId} via customer ${customerId} mapping.`);
+        // Fetch the customer's routing config
+        const customerConfig = await customerConfigService.getCustomerConfig(customerId);
+        if (customerConfig && customerConfig.routing_config && customerConfig.routing_config.routing_rules) {
+          // Find the n8n rule, or use a default if available
+          const n8nRule = customerConfig.routing_config.routing_rules.find((rule: any) => rule.action === 'n8n');
+          
+          if (n8nRule) {
+            // Dispatch to the n8n connector with the specific webhook URL
+            const { n8nConnector } = await import('./connectors/n8n');
+            const n8nConfig = {
+              type: 'n8n',
+              settings: {
+                webhookUrl: n8nRule.target, // Use target from the rule
+                customerId: customerId,
+                workflowId: n8nRule.workflow_id, // Optional workflow ID from rule
+                authToken: n8nRule.auth_token // Optional auth token from rule
+              }
+            };
+            await n8nConnector.send(submissionData, n8nConfig);
+            console.log(`Dispatched to n8n webhook: ${n8nRule.target}`);
+            return; // Exit, as n8n handles further routing
+          } else {
+            console.warn(`No 'n8n' routing rule found for customer ${customerId}. Falling back to form_connectors.`);
+          }
+        } else {
+          console.warn(`Customer config or routing rules not found for ${customerId}. Falling back to form_connectors.`);
+        }
+      }
+
+      // If no customer mapping or no n8n rule in customer config, use form_connectors
+      const query = `
+        SELECT c.type, fc.config
+        FROM form_connectors fc
+        JOIN connectors c ON fc.connector_id = c.id
+        WHERE fc.form_id = $1 AND fc.is_active = true
+      `;
+      const result = await pool.query(query, [formId]);
+      const connectorConfigs: ConnectorConfig[] = result.rows.map(row => ({
+        type: row.type,
+        settings: row.config
+      }));
+
+      if (connectorConfigs.length > 0) {
+        console.log(`Dispatching to ${connectorConfigs.length} form_connectors for form ${formId}.`);
+        const dispatchResults = await dispatchToConnectors(submissionData, connectorConfigs);
+        dispatchResults.forEach(res => {
+          if (!res.success) {
+            console.error(`Connector dispatch failed: ${res.message}`, res.error);
+          }
+        });
+      } else {
+        console.log(`No active form_connectors configured for form ${formId}.`);
+      }
+    } catch (error) {
+      console.error(`Error triggering connectors for form ${formId}:`, error);
     }
   }
 }
