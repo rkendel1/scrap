@@ -24,6 +24,7 @@ type ConversationEntry = {
   type: 'prompt' | 'user' | 'error' | 'success';
   content: string | JSX.Element;
   timestamp?: Date;
+  buttons?: { label: string; command: string; icon?: JSX.Element }[]; // Added buttons property
 };
 
 type ConversationStep =
@@ -135,8 +136,26 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, { ...entry, timestamp: new Date() }]);
   };
 
-  const addPrompt = (content: string | JSX.Element) => {
-    addEntry({ type: 'prompt', content });
+  const addPrompt = (content: string | JSX.Element, buttons?: { label: string; command: string; icon?: JSX.Element }[]) => {
+    const fullContent = buttons ? (
+      <>
+        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#333' }}>{content}</p>
+        <div className="chat-ad-buttons">
+          {buttons.map((button, index) => (
+            <button
+              key={index}
+              onClick={() => handleQuickResponseClick(button.command)}
+              className="btn chat-ad-btn"
+              disabled={isLoading}
+            >
+              {button.icon && <span className="mr-1">{button.icon}</span>}
+              {button.label}
+            </button>
+          ))}
+        </div>
+      </>
+    ) : content;
+    addEntry({ type: 'prompt', content: fullContent, buttons });
     setIsLoading(false);
   };
 
@@ -287,7 +306,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (parsedInput.command === 'configure destination') {
         setCurrentStep('ASK_DESTINATION_TYPE');
         addPrompt(
-          "Okay, where should I send the form submissions? You can choose from: Email, Google Sheets, Slack, Webhook, or Zapier."
+          "Okay, where should I send the form submissions? You can choose from:",
+          [
+            { label: 'Email', command: 'email', icon: <Mail size={16} /> },
+            { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
+            { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
+            { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
+            { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
+          ]
         );
         return;
       }
@@ -303,7 +329,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (parsedInput.command === 'get embed code') {
         if (createdForm) {
           onGetEmbedCodeClick(createdForm);
-          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?");
+          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?",
+            [
+              { label: 'Yes, another form!', command: 'yes' },
+              { label: 'No, I\'m good.', command: 'no' },
+            ]
+          );
           setCurrentStep('DONE');
         } else {
           addPrompt("No form has been generated yet. Please start by providing a URL.");
@@ -351,7 +382,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Make Changes to Form'?");
+            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Make Changes to Form'?",
+              [
+                { label: 'Configure Destination', command: 'configure destination' },
+                { label: 'Make Changes to Form', command: 'make changes', icon: <Edit size={16} /> },
+                { label: "I'm Done", command: 'im done' },
+              ]
+            );
           }
           break;
 
@@ -363,7 +400,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationConfigInput(parsedInput.configInput);
           }
           else {
-            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".');
+            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".',
+              [
+                { label: 'Email', command: 'email', icon: <Mail size={16} /> },
+                { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
+                { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
+                { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
+                { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
+              ]
+            );
           }
           break;
 
@@ -379,7 +424,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             addPrompt("Okay, please provide the recipient email address (e.g., \"sales@yourcompany.com\").");
             setCurrentStep('ASK_DESTINATION_CONFIG');
           } else {
-            addPrompt("Please respond with 'Yes' or 'No'.");
+            addPrompt("Please respond with 'Yes' or 'No'.",
+              [
+                { label: 'Yes', command: 'yes' },
+                { label: 'No', command: 'no' },
+              ]
+            );
           }
           break;
 
@@ -406,7 +456,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'DESTINATION_CONFIGURED':
-          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?");
+          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?",
+            [
+              { label: 'Yes', command: 'yes' },
+              { label: 'No', command: 'no' },
+            ]
+          );
           setCurrentStep('ASK_GO_LIVE');
           break;
 
@@ -414,10 +469,20 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.command === 'yes') {
             await processGoLive();
           } else if (parsedInput.command === 'no') {
-            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?");
+            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?",
+              [
+                { label: 'Yes, another form!', command: 'yes' },
+                { label: 'No, I\'m good.', command: 'no' },
+              ]
+            );
             setCurrentStep('DONE');
           } else {
-            addPrompt("Please respond with 'Yes' or 'No'.");
+            addPrompt("Please respond with 'Yes' or 'No'.",
+              [
+                { label: 'Yes', command: 'yes' },
+                { label: 'No', command: 'no' },
+              ]
+            );
           }
           break;
 
@@ -430,7 +495,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'DONE':
-          addPrompt('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
+          addPrompt('I\'m done for now. Would you like to create another form? Type "yes" or "no".',
+            [
+              { label: 'Yes, another form!', command: 'yes' },
+              { label: 'No, I\'m good.', command: 'no' },
+            ]
+          );
           break;
 
         default:
@@ -579,7 +649,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         <p style={{ margin: '12px 0 0 0', fontSize: '14px', color: '#333' }}>
           What would you like to do next?
         </p>
-      </>
+      </>,
+      [
+        { label: 'Configure Destination', command: 'configure destination' },
+        { label: 'Make Changes to Form', command: 'make changes', icon: <Edit size={16} /> },
+        { label: "I'm Done", command: 'im done' },
+      ]
     );
   };
 
@@ -588,7 +663,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier'];
 
     if (!availableTypes.includes(normalizedType)) {
-      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.');
+      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.',
+        [
+          { label: 'Email', command: 'email', icon: <Mail size={16} /> },
+          { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
+          { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
+          { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
+          { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
+        ]
+      );
       setCurrentStep('ASK_DESTINATION_TYPE'); // Stay on this step
       return;
     }
@@ -601,7 +684,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         addPrompt(
           <>
             Okay, I'll send submissions to your registered email: <strong>{user.email}</strong>. Is that correct?
-          </>
+          </>,
+          [
+            { label: 'Yes', command: 'yes' },
+            { label: 'No', command: 'no' },
+          ]
         );
         setCurrentStep('CONFIRM_DEFAULT_EMAIL');
         return;
@@ -716,7 +803,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsDestinationConfigured(true); // Set destination configured status
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
-      "Your form is ready! Would you like to make this form live now?"
+      "Your form is ready! Would you like to make this form live now?",
+      [
+        { label: 'Yes', command: 'yes' },
+        { label: 'No', command: 'no' },
+      ]
     );
     setCurrentStep('ASK_GO_LIVE'); // Transition to new step
     onFormGenerated(createdForm);
@@ -751,17 +842,32 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (result.success) {
         setCreatedForm(prev => prev ? { ...prev, is_live: true } : null);
         addSuccess("Great! Your form is now live and ready to collect submissions.");
-        addPrompt("Would you like to create another form?");
+        addPrompt("Would you like to create another form?",
+          [
+            { label: 'Yes, another form!', command: 'yes' },
+            { label: 'No, I\'m good.', command: 'no' },
+          ]
+        );
         setCurrentStep('DONE');
       } else {
         addError(result.message || "Failed to make the form live. Please try again or check your subscription status.");
-        addPrompt("Would you like to create another form?");
+        addPrompt("Would you like to create another form?",
+          [
+            { label: 'Yes, another form!', command: 'yes' },
+            { label: 'No, I\'m good.', command: 'no' },
+          ]
+        );
         setCurrentStep('DONE');
       }
     } catch (err: any) {
       console.error('Go live error:', err);
       addError(err.message || 'An unexpected error occurred while trying to make the form live.');
-      addPrompt("Would you like to create another form?");
+      addPrompt("Would you like to create another form?",
+        [
+          { label: 'Yes, another form!', command: 'yes' },
+          { label: 'No, I\'m good.', command: 'no' },
+        ]
+      );
       setCurrentStep('DONE');
     }
   };
@@ -813,7 +919,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         setGeneratedForm(updatedGeneratedForm);
         setCreatedForm(updatedSaaSForm);
         addSuccess("Great! I've applied your changes to the form. You can see the updated preview on the right.");
-        addPrompt("What would you like to do next?");
+        addPrompt("What would you like to do next?",
+          [
+            { label: 'Configure Destination', command: 'configure destination' },
+            { label: 'Make Changes to Form', command: 'make changes', icon: <Edit size={16} /> },
+            { label: "I'm Done", command: 'im done' },
+          ]
+        );
         setCurrentStep('FORM_GENERATED_OPTIONS'); // Go back to options
       } else {
         addError(result.message || 'Failed to apply changes to the form. Please try again.');
@@ -850,7 +962,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
     } else if (command === 'no') {
-      addPrompt("Alright! Feel free to come back anytime. Goodbye!", null);
+      addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
     }
   };
@@ -916,60 +1028,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
   };
 
-  const renderQuickReplyButtons = () => {
-    let buttons: { label: string; command: string; icon?: JSX.Element }[] = [];
-
-    switch (currentStep) {
-      case 'FORM_GENERATED_OPTIONS':
-        buttons = [
-          { label: 'Configure Destination', command: 'configure destination' },
-          { label: 'Make Changes to Form', command: 'make changes', icon: <Edit size={16} /> },
-          { label: "I'm Done", command: 'im done' },
-        ];
-        break;
-      case 'ASK_DESTINATION_TYPE':
-        buttons = [
-          { label: 'Email', command: 'email', icon: <Mail size={16} /> },
-          { label: 'Google Sheets', command: 'google sheets', icon: <Sheet size={16} /> },
-          { label: 'Slack', command: 'slack', icon: <Slack size={16} /> },
-          { label: 'Webhook', command: 'webhook', icon: <Link size={16} /> },
-          { label: 'Zapier', command: 'zapier', icon: <Zap size={16} /> },
-        ];
-        break;
-      case 'CONFIRM_DEFAULT_EMAIL':
-      case 'ASK_GO_LIVE':
-        buttons = [
-          { label: 'Yes', command: 'yes' },
-          { label: 'No', command: 'no' },
-        ];
-        break;
-      case 'DONE':
-        buttons = [
-          { label: 'Yes, another form!', command: 'yes' },
-          { label: 'No, I\'m good.', command: 'no' },
-        ];
-        break;
-      default:
-        return null;
-    }
-
-    return (
-      <div className="quick-reply-buttons">
-        {buttons.map((button, index) => (
-          <button
-            key={index}
-            onClick={() => handleQuickResponseClick(button.command)}
-            className="btn btn-secondary quick-reply-btn"
-            disabled={isLoading}
-          >
-            {button.icon && <span className="mr-1">{button.icon}</span>}
-            {button.label}
-          </button>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="conversational-builder-card">
       <div className="chat-history-container">
@@ -993,8 +1051,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           ))}
         </div>
       </div>
-
-      {renderQuickReplyButtons()} {/* Render quick reply buttons here */}
 
       <form onSubmit={handleUserInput} className="form-input-container">
         <input
