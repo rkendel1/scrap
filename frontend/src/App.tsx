@@ -300,15 +300,13 @@ function App() {
                 <>
                   <button 
                     onClick={() => setCurrentView('builder')} 
-                    className="btn btn-secondary"
-                    style={{ fontSize: '14px' }}
+                    className="btn btn-secondary btn-header-small"
                   >
                     ✨ New Form
                   </button>
                   <button 
                     onClick={() => setCurrentView('dashboard')} 
-                    className="btn btn-secondary"
-                    style={{ fontSize: '14px' }}
+                    className="btn btn-secondary btn-header-small"
                   >
                     📊 My Forms
                   </button>
@@ -316,8 +314,7 @@ function App() {
                     href="/test-embed.html" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="btn btn-secondary"
-                    style={{ fontSize: '14px' }}
+                    className="btn btn-secondary btn-header-small"
                   >
                     🧪 Test Embed Page
                   </a>
@@ -337,7 +334,7 @@ function App() {
                       </span>
                     )}
                   </span>
-                  <button onClick={handleLogout} className="btn btn-secondary">
+                  <button onClick={handleLogout} className="btn btn-secondary btn-header-small">
                     Sign Out
                   </button>
                 </>
@@ -347,12 +344,11 @@ function App() {
                     href="/test-embed.html" 
                     target="_blank" 
                     rel="noopener noreferrer" 
-                    className="btn btn-secondary"
-                    style={{ fontSize: '14px' }}
+                    className="btn btn-secondary btn-header-small"
                   >
                     🧪 Test Embed Page
                   </a>
-                  <button onClick={() => setShowAuth(true)} className="btn btn-secondary">
+                  <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
                     Sign In / Register
                   </button>
                 </>

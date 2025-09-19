@@ -66,6 +66,13 @@ html, body, #root, .App {
   margin-right: 8px;
 }
 
+/* New class for smaller header buttons */
+.btn-header-small {
+  padding: 6px 12px; /* Smaller padding */
+  font-size: 12px;   /* Smaller font size */
+  border-radius: 6px; /* Slightly smaller border-radius */
+}
+
 /* Main Content Area */
 main {
   flex-grow: 1;
