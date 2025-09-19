@@ -146,13 +146,9 @@ export class AuthService {
     const user = await this.getUserById(userId);
     if (!user) return false;
 
-    if (user.subscription_tier === 'paid') {
-      return true; // Unlimited forms for paid users
-    }
-
-    // Free users limited to 1 live form
-    const formCount = await getUserFormCount(userId);
-    return formCount < 1;
+    // Allow all users to create forms.
+    // The restriction on *live* forms for free users is handled in SaaSService.toggleFormLive.
+    return true; 
   }
 
   private generateRandomToken(): string {

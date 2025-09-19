@@ -319,28 +319,69 @@ export class SaaSService {
     };
   }
 
-  async toggleFormLive(formId: number, userId: number): Promise<boolean> {
-    // Check user's subscription tier and form limits
-    const user = await this.getUserById(userId);
-    if (!user) return false;
+  async toggleFormLive(formId: number, userId: number): Promise<{ isLive: boolean; message?: string }> {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    if (user.subscription_tier === 'free') {
-      // Check if user already has a live form
-      const liveFormCount = await this.getUserLiveFormCount(userId);
-      if (liveFormCount >= 1) {
-        throw new Error('Free tier users are limited to 1 live form. Upgrade to Pro for unlimited forms.');
+      const user = await this.getUserById(userId);
+      if (!user) {
+        throw new Error('User not found.');
       }
-    }
 
-    const query = `
-      UPDATE forms 
-      SET is_live = NOT is_live, updated_at = CURRENT_TIMESTAMP 
-      WHERE id = $1 AND user_id = $2
-      RETURNING is_live
-    `;
-    
-    const result = await pool.query(query, [formId, userId]);
-    return result.rows[0]?.is_live || false;
+      // Get the current status of the form being toggled
+      const currentFormResult = await client.query(
+        `SELECT is_live FROM forms WHERE id = $1 AND user_id = $2`,
+        [formId, userId]
+      );
+      if (currentFormResult.rows.length === 0) {
+        throw new Error('Form not found or not owned by user.');
+      }
+      const currentIsLiveStatus = currentFormResult.rows[0].is_live;
+      const newIsLiveStatus = !currentIsLiveStatus; // What we want to set it to
+
+      let message = `Form ${newIsLiveStatus ? 'activated' : 'deactivated'}.`;
+
+      if (user.subscription_tier === 'free') {
+        if (newIsLiveStatus === true) { // User is trying to activate a form
+          // Find any other currently live form for this free user
+          const otherLiveFormResult = await client.query(
+            `SELECT id, form_name FROM forms WHERE user_id = $1 AND is_live = true AND id != $2`,
+            [userId, formId]
+          );
+
+          if (otherLiveFormResult.rows.length > 0) {
+            const otherLiveForm = otherLiveFormResult.rows[0];
+            // Deactivate the other live form
+            await client.query(
+              `UPDATE forms SET is_live = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+              [otherLiveForm.id]
+            );
+            message += ` Your previous live form "${otherLiveForm.form_name}" has been deactivated.`;
+          }
+        }
+        // If newIsLiveStatus is false (deactivating), no special action needed for other forms.
+      } else if (user.subscription_tier === 'paid') {
+        // Paid users have no restrictions on number of live forms
+        // No additional logic needed here.
+      }
+
+      // Now, toggle the requested form's status
+      const updateFormResult = await client.query(
+        `UPDATE forms SET is_live = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING is_live`,
+        [newIsLiveStatus, formId, userId]
+      );
+
+      await client.query('COMMIT');
+
+      return { isLive: updateFormResult.rows[0].is_live, message };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Error toggling form live status:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async createEmbedCode(formId: number, code: string, domain?: string): Promise<EmbedCode> {

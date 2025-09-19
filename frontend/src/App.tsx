@@ -8,6 +8,7 @@ import { ConnectorManager } from './components/ConnectorManager';
 import { LiveFormPreview } from './components/LiveFormPreview';
 import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { FormEditor } from './components/FormEditor'; // New import
+import { ToggleSwitch } from './components/ToggleSwitch'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -268,15 +269,23 @@ function App() {
           'Content-Type': 'application/json'
         }
       });
-      const result: ApiResponse<any> = await response.json();
+      const result: ApiResponse<{ isLive: boolean; message?: string }> = await response.json();
 
       if (result.success) {
         setForms(prevForms => 
-          prevForms.map(form => 
-            form.id === formId ? { ...form, is_live: result.isLive } : form
-          )
+          prevForms.map(form => {
+            if (form.id === formId) {
+              return { ...form, is_live: result.data!.isLive };
+            }
+            // If a free user activated a new form, other forms might have been deactivated
+            // We need to update their status too.
+            if (user?.subscription_tier === 'free' && result.data!.isLive && form.is_live) {
+              return { ...form, is_live: false };
+            }
+            return form;
+          })
         );
-        setError(null); // Clear any previous errors
+        setError(result.data?.message || null); // Display message from backend
       } else {
         setError(result.message || 'Failed to toggle form status.');
       }
@@ -446,22 +455,20 @@ function App() {
                           <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
                             {form.form_description}
                           </p>
-                          <div style={{ fontSize: '12px', color: '#888' }}>
+                          <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <span>📊 {form.submissions_count} submissions</span>
-                            <span style={{ margin: '0 12px' }}>•</span>
-                            <span>{form.is_live ? '🟢 Live' : '🔴 Draft'}</span>
-                            <span style={{ margin: '0 12px' }}>•</span>
+                            <span>•</span>
+                            <ToggleSwitch
+                              isOn={form.is_live}
+                              onToggle={() => handleToggleFormLive(form.id)}
+                              label={form.is_live ? 'Live' : 'Draft'}
+                              disabled={!user} // Disable if not logged in
+                            />
+                            <span>•</span>
                             <span>📅 {new Date(form.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button 
-                            onClick={() => handleToggleFormLive(form.id)}
-                            className={`btn ${form.is_live ? 'btn-danger' : 'btn-primary'}`}
-                            style={{ fontSize: '12px' }}
-                          >
-                            {form.is_live ? '🔴 Deactivate' : '🟢 Activate'}
-                          </button>
                           <button 
                             onClick={() => handleManageForm(form)} // Pass full form object
                             className="btn btn-secondary" 
