@@ -76,10 +76,16 @@ services:
       - ./frontend/vite.config.ts:/app/vite.config.ts
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - ./frontend/index.html:/app/index.html
+      - frontend_node_modules:/app/node_modules # New volume for node_modules
     depends_on:
       backend: # <--- ENSURE DEPENDS_ON BACKEND IS HEALTHY
         condition: service_healthy
-    command: npm run dev -- --host 0.0.0.0
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0" # Run npm install before dev
+    healthcheck: # Add healthcheck for frontend
+      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # n8n Workflow Automation
   n8n:
@@ -120,3 +126,4 @@ volumes:
   postgres_data:
   n8n_data:
   backend_node_modules:
+  frontend_node_modules: # New named volume for frontend node_modules
