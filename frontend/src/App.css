@@ -74,10 +74,12 @@ main {
   align-items: flex-start;
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
-  /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom) */
-  /* New header height: 10px (container top padding) + 12px (logo height) + 10px (container bottom padding) = 32px */
-  /* Total fixed vertical space: 32px (header) + 24px (main top padding) + 24px (main bottom padding) = 80px */
-  height: calc(100vh - 80px); 
+  /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom + additional_reduction) */
+  /* Header height: 10px (container top padding) + 12px (logo height) + 10px (container bottom padding) = 32px */
+  /* Main vertical padding: 24px (top) + 24px (bottom) = 48px */
+  /* Total fixed vertical space: 32px (header) + 48px (main padding) = 80px */
+  /* To make it shorter, let's add another 100px to the fixed space. */
+  height: calc(100vh - 180px); /* Reduced by 100px from previous calc(100vh - 80px) */
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -331,7 +333,7 @@ main {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 80px); /* Set static height for main content area */
+  height: calc(100vh - 180px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -744,7 +746,7 @@ main {
   }
 
   .chat-history-container {
-    height: 50vh; /* Adjust chat height for smaller screens */
+    height: 40vh; /* Adjust chat height for smaller screens */
   }
 }
 
