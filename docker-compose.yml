@@ -30,23 +30,18 @@ services:
       - ./.env         # shared root env
       - ./backend/.env # optional backend-specific overrides
     environment:
-      DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:5432/${DB_NAME:-scrap_db}
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-scrap_db}
-      DB_USER: ${DB_USER:-scrap_user}
-      DB_PASSWORD: ${DB_PASSWORD:-scrap_password}
-      PORT: 3001
-      NODE_ENV: development
-      FRONTEND_URL: http://localhost:5173
+      # DATABASE_URL is constructed here as it depends on DB_HOST, DB_PORT, etc.
+      DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:${DB_PORT:-5432}/${DB_NAME:-scrap_db}
+      # Removed redundant DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, PORT, NODE_ENV, FRONTEND_URL
+      # These are now sourced from ./.env or backend/.env via env_file
     ports:
-      - "3001:3001"
+      - "${PORT:-3001}:${PORT:-3001}" # Use PORT from .env
     volumes:
       - ./backend/src:/app/src
       - ./backend/package.json:/app/package.json
       - ./backend/tsconfig.json:/app/tsconfig.json
       - ./frontend/public:/app/frontend/public
-      - backend_node_modules:/app/node_modules # <--- ADDED THIS LINE
+      - backend_node_modules:/app/node_modules
     depends_on:
       db:
         condition: service_healthy
@@ -61,7 +56,11 @@ services:
       - ./.env          # shared root env
       - ./frontend/.env # optional frontend-specific overrides
     environment:
-      VITE_API_BASE_URL: http://localhost:3001 # Corrected to use host's exposed port
+      # Removed redundant VITE_API_BASE_URL, it's now sourced from ./.env or frontend/.env
+      # The VITE_API_BASE_URL should be explicitly set in frontend/.env or .env
+      # If it's in .env, it will be picked up.
+      # If it's in frontend/.env, it will override.
+      # No need to explicitly set it here if it's in an env_file.
     ports:
       - "5173:5173"
     volumes:
@@ -78,11 +77,13 @@ services:
   # n8n Workflow Automation
   n8n:
     image: n8nio/n8n:latest
+    env_file:
+      - ./.env # shared root env
     environment:
       - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - NODE_ENV=development
+      - NODE_ENV=${NODE_ENV:-development} # Use NODE_ENV from .env
       - WEBHOOK_URL=http://localhost:5678/
       - GENERIC_TIMEZONE=UTC
       - N8N_LOG_LEVEL=info
@@ -92,10 +93,10 @@ services:
       - N8N_DISABLE_PRODUCTION_MAIN_PROCESS=true
       - DATABASE_TYPE=postgresdb
       - DATABASE_HOST=db
-      - DATABASE_PORT=5432
-      - DATABASE_NAME=${DB_NAME:-scrap_db}
-      - DATABASE_USER=${DB_USER:-scrap_user}
-      - DATABASE_PASSWORD=${DB_PASSWORD:-scrap_password}
+      - DATABASE_PORT=${DB_PORT:-5432} # Use DB_PORT from .env
+      - DATABASE_NAME=${DB_NAME:-scrap_db} # Use DB_NAME from .env
+      - DATABASE_USER=${DB_USER:-scrap_user} # Use DB_USER from .env
+      - DATABASE_PASSWORD=${DB_PASSWORD:-scrap_password} # Use DB_PASSWORD from .env
       - DATABASE_SCHEMA=n8n
     ports:
       - "5678:5678"
@@ -111,4 +112,4 @@ services:
 volumes:
   postgres_data:
   n8n_data:
-  backend_node_modules: # <--- ADDED THIS NAMED VOLUME
+  backend_node_modules:
