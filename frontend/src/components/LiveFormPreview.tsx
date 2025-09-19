@@ -56,8 +56,8 @@ interface LiveFormPreviewProps {
   generatedForm?: GeneratedForm | null; // Optional for editor mode
   createdForm?: SaaSForm | null; // Optional for editor mode
   user?: any;
-  extractedDesignTokens?: any | null; // Keep for context, but not rendered here
-  extractedVoiceAnalysis?: any | null; // Keep for context, but not rendered here
+  extractedDesignTokens?: any | null;
+  extractedVoiceAnalysis?: any | null;
   onGetEmbedCodeClick?: (form: SaaSForm) => void; // Optional for editor mode
   isDestinationConfigured?: boolean; // Optional for editor mode
   className?: string;
@@ -75,8 +75,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   generatedForm,
   createdForm,
   user,
-  extractedDesignTokens, // No longer rendered here
-  extractedVoiceAnalysis, // No longer rendered here
+  extractedDesignTokens,
+  extractedVoiceAnalysis,
   onGetEmbedCodeClick,
   isDestinationConfigured,
   className,
@@ -126,6 +126,178 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     }
   };
 
+  const renderDesignTokens = () => {
+    if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
+
+    const { 
+      colorPalette, primaryColors, colorUsage, fontFamilies, headings, textSamples,
+      margins, paddings, spacingScale, layoutStructure, gridSystem, breakpoints,
+      buttons, formFields, cards, navigation, images, cssVariables, rawCSS, formSchema,
+      logoUrl, brandColors, icons, messaging
+    } = extractedDesignTokens || {};
+    const { tone, personalityTraits, audienceAnalysis } = extractedVoiceAnalysis || {};
+
+    const formatArray = (arr: any[], limit = 3) => 
+      Array.isArray(arr) && arr.length > 0 
+        ? arr.slice(0, limit).join(', ') + (arr.length > limit ? ` +${arr.length - limit} more` : '')
+        : 'None';
+
+    const formatObject = (obj: Record<string, any>, limit = 2) => 
+      obj && Object.keys(obj).length > 0
+        ? Object.entries(obj).slice(0, limit).map(([key, val]) => `${key}: ${val}`).join(', ') + (Object.keys(obj).length > limit ? ` +${Object.keys(obj).length - limit} more` : '')
+        : 'None';
+
+    return (
+      <div style={{ 
+        backgroundColor: '#ffffff',
+        padding: '12px', /* Reduced padding */
+        borderRadius: '8px',
+        fontFamily: 'system-ui',
+        maxWidth: '750px',
+        margin: '0 auto',
+        textAlign: 'left',
+        marginTop: 'auto', /* Pushes this div to the bottom */
+        fontSize: '10px', /* Reduced font size */
+        color: '#555',
+        border: '1px solid #e1e5e9',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+        flexShrink: 0, /* Prevent it from shrinking */
+      }}>
+        <h4 style={{ margin: '0 0 10px 0', color: '#333', fontSize: '14px', fontWeight: '600', textAlign: 'center' }}>
+          Website Analysis Summary
+        </h4>
+        <p style={{ margin: '0 0 12px 0', fontSize: '9px', color: '#666', textAlign: 'center' }}>
+          From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}> {/* Explicit 4-column grid, reduced gap */}
+          {/* Card 1: Colors & Brand Colors */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
+          >
+            <strong style={{ color: '#007bff', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Colors & Brand:</strong>
+            {((colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0)) ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px' }}>
+                {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
+                  <div key={`brand-${index}`} style={{ 
+                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
+                    border: '1px solid #ccc', display: 'inline-block' 
+                  }}></div>
+                ))}
+                {colorPalette && colorPalette.slice(0, 2).map((color: string, index: number) => ( 
+                  <div key={`palette-${index}`} style={{ 
+                    width: '12px', height: '12px', borderRadius: '2px', backgroundColor: color, 
+                    border: '1px solid #eee', display: 'inline-block' 
+                  }}></div>
+                ))}
+                {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '9px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
+              </div>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 2: Typography */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
+          >
+            <strong style={{ color: '#28a745', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Typography:</strong>
+            {(fontFamilies && fontFamilies.length > 0) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                {fontFamilies.slice(0, 1).join(', ')}
+                {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 3: Spacing */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
+          >
+            <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Spacing:</strong>
+            {((margins && margins.length > 0) || (paddings && paddings.length > 0)) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 4: Layout Structure */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
+          >
+            <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Layout Structure:</strong>
+            {(layoutStructure && Object.keys(layoutStructure).length > 0) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                Header: {layoutStructure.hasHeader ? 'Yes' : 'No'} | Sections: {layoutStructure.sections || 'N/A'}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 5: UI Components (Buttons, Forms, Cards, Navigation) */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nCards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
+          >
+            <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '3px', fontSize: '10px' }}>UI Components:</strong>
+            {((buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (cards && cards.length > 0) || (navigation && navigation.length > 0)) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                Btns: {buttons?.length || 0} | Forms: {formFields?.length || 0} | Cards: {cards?.length || 0}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 6: CSS Details (Variables, Raw CSS) */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
+          >
+            <strong style={{ color: '#6c757d', display: 'block', marginBottom: '3px', fontSize: '10px' }}>CSS Details:</strong>
+            {(cssVariables && Object.keys(cssVariables).length > 0) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>
+                {Object.keys(cssVariables).length} vars | Raw: {rawCSS ? 'Yes' : 'No'}
+              </span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+          </div>
+
+          {/* Card 7: Voice Tone & Personality */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
+          >
+            <strong style={{ color: '#ffc107', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Voice Tone:</strong>
+            {(tone && tone.primary) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>{tone.primary}</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            {(personalityTraits && personalityTraits.length > 0) && (
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                Personality: {personalityTraits.slice(0, 1).join(', ')}
+              </span>
+            )}
+          </div>
+
+          {/* Card 8: Audience & Messaging */}
+          <div 
+            style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+            title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
+          >
+            <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Audience & Messaging:</strong>
+            {(audienceAnalysis && audienceAnalysis.primary) ? (
+              <span style={{ fontSize: '10px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
+            ) : <span style={{ fontSize: '10px', color: '#888' }}>None</span>}
+            {(messaging && messaging.length > 0) && (
+              <span style={{ fontSize: '10px', color: '#555', display: 'block', marginTop: '3px' }}>
+                Messages: {messaging.length}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const scriptEmbedCode = createdForm?.embed_code
     ? `<script src="${API_BASE}/embed.js" data-form="${createdForm.embed_code}"></script>`
     : '<!-- Form embed code not available. -->';
@@ -137,10 +309,17 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   // Determine if the zero state is active (no form generated yet)
   const isZeroState = !currentFormToRender;
-  // Removed hasAnalysisData as it's no longer relevant for this component's rendering logic
+  const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
 
-  // The wrapper will always justify-center in zero state, and justify-start when form is present
-  const wrapperJustifyClass = isZeroState ? 'justify-center' : 'justify-start';
+  // Determine the appropriate justify-content class for the wrapper
+  let wrapperJustifyClass = '';
+  if (isZeroState && hasAnalysisData) {
+    wrapperJustifyClass = 'justify-end'; // Push analysis to bottom in zero state
+  } else if (isZeroState && !hasAnalysisData) {
+    wrapperJustifyClass = 'justify-center'; // Center placeholder in zero state
+  } else {
+    wrapperJustifyClass = 'justify-start'; // Default for when form is present (form + analysis below)
+  }
 
   return (
     <div className={`live-preview-card ${className || ''}`}>
@@ -149,18 +328,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
       
       <div className={`live-preview-content-wrapper ${wrapperJustifyClass}`}>
-        {/* Case 1: No form (initial state or URL analyzed but no form generated) */}
-        {isZeroState && (
-          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
-            <div className="sparkle-icon">✨</div>
-            <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
-            <p className="placeholder-text">
-              Start by entering a website URL in the chat to the left to generate your form!
-            </p>
-          </div>
-        )}
-
-        {/* Case 2: Form is generated */}
+        {/* If a form is generated, show the form and destination status */}
         {currentFormToRender && (
           <>
             {formContent}
@@ -171,7 +339,40 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             )}
           </>
         )}
+
+        {/* If no form is generated, but analysis data is present, show analysis summary */}
+        {!currentFormToRender && hasAnalysisData && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexShrink: 0,
+            flexDirection: 'column',
+            width: '100%',
+            padding: '20px',
+            boxSizing: 'border-box',
+            flexGrow: 1,
+            minHeight: 0,
+            overflowY: 'auto'
+          }}>
+            {renderDesignTokens()} {/* Render analysis summary here */}
+          </div>
+        )}
+
+        {/* If no form and no analysis data, show the initial placeholder */}
+        {!currentFormToRender && !hasAnalysisData && (
+          <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
+            <div className="sparkle-icon">✨</div>
+            <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
+            <p className="placeholder-text">
+              Start by entering a website URL in the chat to the left to generate your form!
+            </p>
+          </div>
+        )}
       </div>
+
+      {/* Render Design Tokens if a form IS generated and not explicitly hidden */}
+      {currentFormToRender && hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
     </div>
   );
 };
