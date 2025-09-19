@@ -233,7 +233,8 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                     </div>
                     <div className="text-xs text-gray-600">{def.description}</div>
                   </div>
-                </button>
+                </div> {/* Added missing closing div here */}
+              </button>
             ))}
           </div>
           
