@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs'; // Import fs module
 import { WebsiteExtractor } from './extractor';
 import { DatabaseService } from './database-service';
 import { AuthService, AuthRequest } from './auth-service';
@@ -927,274 +928,33 @@ app.get('/embed.html', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow framing
   res.removeHeader('X-Frame-Options'); // Remove default frame blocking
-  res.sendFile('/app/frontend/public/embed.html'); // Use absolute path
+  res.sendFile(path.join(__dirname, '../../frontend/public/embed.html')); // Use absolute path
 });
 
 // NEW: Serve test-embed.html from backend
 app.get('/test-embed.html', (req, res) => {
-  res.sendFile('/app/frontend/public/test-embed.html'); // Use absolute path
+  res.sendFile(path.join(__dirname, '../../frontend/public/test-embed.html')); // Use absolute path
 });
 
 // Serve embed.js script
 app.get('/embed.js', (req, res) => {
-  res.setHeader('Content-Type', 'application/javascript');
-  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate'); // Don't cache secure tokens
-  res.setHeader('Access-Control-Allow-Origin', '*'); // Allow all origins for embed script
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  // Inject the secure token into the embed script
-  const embedScript = `
-    (function() {
-      'use strict';
-      
-      // Secure embed configuration
-      const currentScript = document.currentScript || (function() {
-        const scripts = document.getElementsByTagName('script');
-        return scripts[scripts.length - 1];
-      })();
-
-      const embedCode = currentScript.getAttribute('data-form');
-      
-      if (!embedCode) {
-          console.error('FormCraft: No embed code provided. Add data-form attribute to the script tag.');
-          return;
-      }
-
-      const API_BASE = currentScript.getAttribute('data-api-base') || 
-                      (window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai');
-      const containerId = 'formcraft-embed-' + embedCode;
-      const currentHostname = window.location.hostname;
-
-      // Create container element
-      const container = document.createElement('div');
-      container.id = containerId;
-      container.style.cssText = 'margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif;';
-      
-      // Insert container after the script tag
-      currentScript.parentNode.insertBefore(container, currentScript.nextSibling);
-
-      // Show loading state
-      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">Loading form...</div>';
-
-      // Fetch form data from the new public endpoint
-      fetch(\`${API_BASE}/api/forms/embed-config/\${embedCode}?hostname=\${encodeURIComponent(currentHostname)}\`)
-          .then(response => response.json())
-          .then(data => {
-              if (!data.success) {
-                  throw new Error(data.message || 'Failed to load form');
-              }
-              renderForm(data.data, container);
-          })
-          .catch(error => {
-              console.error('FormCraft: Error loading form:', error);
-              container.innerHTML = \`
-                  <div style="padding: 20px; text-align: center; color: #dc3545; border: 1px solid #f5c6cb; border-radius: 8px; background: #f8d7da;">
-                      <strong>Error loading form:</strong><br>
-                      \${error.message}
-                  </div>
-              \`;
-          });
-      
-      function renderForm(formData, container) {
-        const form = formData.generated_form;
-        if (!form) {
-          container.innerHTML = '<div style="padding: 20px; text-align: center; color: #dc3545;">Form configuration not found</div>';
-          return;
-        }
-        
-        const styling = formData.styling || {};
-        
-        const formHTML = \`
-          <div style="
-            background-color: \${styling.backgroundColor || '#fff'};
-            padding: 24px;
-            border-radius: \${styling.borderRadius || '8px'};
-            font-family: \${styling.fontFamily || 'system-ui'};
-            border: 1px solid #e1e5e9;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            max-width: 500px;
-            margin: 0 auto;
-          ">
-            <div style="margin-bottom: 24px;">
-              <h3 style="margin: 0 0 8px 0; color: #333; font-size: 20px;">
-                \${escapeHtml(form.title || formData.title)}
-              </h3>
-              \${form.description || formData.description ? \`
-                <p style="margin: 0; color: #666; font-size: 14px;">
-                  \${escapeHtml(form.description || formData.description)}
-                </p>
-              \` : ''}
-            </div>
-            
-            <form id="formcraft-form-\${embedCode}">
-              \${renderFields(form.fields || [])}
-              
-              <div id="form-message-\${embedCode}" style="margin-bottom: 16px; display: none;"></div>
-              
-              <button type="submit" id="submit-btn-\${embedCode}" style="
-                background-color: \${styling.primaryColor || '#007bff'};
-                color: white;
-                padding: 12px 24px;
-                border: none;
-                border-radius: \${styling.borderRadius || '4px'};
-                font-size: 16px;
-                font-weight: 500;
-                cursor: pointer;
-                width: 100%;
-                transition: all 0.2s ease;
-              " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                \${form.ctaText || 'Submit'}
-              </button>
-            </form>
-          </div>
-        \`;
-        
-        container.innerHTML = formHTML;
-        
-        // Add form submission handler
-        const formElement = document.getElementById(\`formcraft-form-\${embedCode}\`);
-        if (formElement) {
-          formElement.addEventListener('submit', function(e) {
-            e.preventDefault();
-            handleFormSubmission(formData, embedCode);
-          });
-        }
-      }
-      
-      function renderFields(fields) {
-        const baseStyle = 'width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-bottom: 16px; box-sizing: border-box;';
-        
-        return fields.map(field => {
-          switch (field.type) {
-            case 'textarea':
-              return \`
-                <div style="margin-bottom: 16px;">
-                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
-                  <textarea 
-                    name="\${field.name}" 
-                    placeholder="\${escapeHtml(field.placeholder || '')}" 
-                    \${field.required ? 'required' : ''}
-                    style="\${baseStyle} min-height: 100px; resize: vertical;"
-                  ></textarea>
-                </div>
-              \`;
-            case 'select':
-              const options = field.options ? field.options.map(option => 
-                \`<option value="\${escapeHtml(option)}">\${escapeHtml(option)}</option>\`
-              ).join('') : '';
-              return \`
-                <div style="margin-bottom: 16px;">
-                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
-                  <select name="\${field.name}" \${field.required ? 'required' : ''} style="\${baseStyle}">
-                      <option value="">\${escapeHtml(field.placeholder || 'Select an option')}</option>
-                      \${options}
-                  </select>
-                </div>
-              \`;
-            case 'checkbox':
-              const checkboxes = field.options ? field.options.map(option => \`
-                <label style="display: block; margin-bottom: 4px;">
-                  <input type="checkbox" name="\${field.name}" value="\${escapeHtml(option)}" style="margin-right: 8px;" />
-                  \${escapeHtml(option)}
-                </label>
-              \`).join('') : '';
-              return \`
-                <div style="margin-bottom: 16px;">
-                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
-                  \${checkboxes}
-                </div>
-              \`;
-            case 'radio':
-              const radios = field.options ? field.options.map(option => \`
-                <label style="display: block; margin-bottom: 4px;">
-                  <input type="radio" name="\${field.name}" value="\${escapeHtml(option)}" \${field.required ? 'required' : ''} style="margin-right: 8px;" />
-                  \${escapeHtml(option)}
-                </label>
-              \`).join('') : '';
-              return \`
-                <div style="margin-bottom: 16px;">
-                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
-                  \${radios}
-                </div>
-              \`;
-            default:
-              return \`
-                <div style="margin-bottom: 16px;">
-                  \${field.label ? \`<label style="display: block; margin-bottom: 4px; font-weight: 500; color: #333;">\${escapeHtml(field.label)}\${field.required ? ' *' : ''}</label>\` : ''}
-                  <input 
-                    type="\${field.type || 'text'}" 
-                    name="\${field.name}" 
-                    placeholder="\${escapeHtml(field.placeholder || '')}" 
-                    \${field.required ? 'required' : ''}
-                    style="\${baseStyle}"
-                  />
-                </div>
-              \`;
-          }
-        }).join('');
-      }
-      
-      function handleFormSubmission(formData, embedCode) {
-        const formElement = document.getElementById(\`formcraft-form-\${embedCode}\`);
-        const submitBtn = document.getElementById(\`submit-btn-\${embedCode}\`);
-        const messageDiv = document.getElementById(\`form-message-\${embedCode}\`);
-        
-        if (!formElement || !submitBtn) return;
-        
-        // Disable submit button
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Submitting...';
-        
-        // Collect form data
-        const formDataObj = new FormData(formElement);
-        const data = {};
-        for (let [key, value] of formDataObj.entries()) {
-          data[key] = value;
-        }
-        
-        // Submit with secure token
-        fetch(API_BASE + \`/api/forms/submit-public/\${embedCode}\`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            data: data,
-            hostname: currentHostname
-          })
-        })
-          .then(response => response.json())
-          .then(result => {
-            if (result.success) {
-              messageDiv.style.cssText = 'margin-bottom: 16px; padding: 12px; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; border-radius: 4px; display: block;';
-              messageDiv.textContent = formData.generated_form?.thankYouMessage || 'Thank you for your submission!';
-              formElement.style.display = 'none';
-            } else {
-              throw new Error(result.message || 'Submission failed');
-            }
-          })
-          .catch(error => {
-            console.error('FormCraft: Submission error:', error);
-            messageDiv.style.cssText = 'margin-bottom: 16px; padding: 12px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #dc3545; border-radius: 4px; display: block;';
-            messageDiv.textContent = error.message || 'Failed to submit form. Please try again.';
-            
-            // Re-enable submit button
-            submitBtn.disabled = false;
-            submitBtn.textContent = formData.generated_form?.ctaText || 'Submit';
-          });
-      }
-      
-      function escapeHtml(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-      }
-    })();
-  `;
-  
-  res.send(embedScript);
+  const embedJsPath = path.join(__dirname, '../../frontend/public/embed.js'); // Correct path to static file
+  fs.readFile(embedJsPath, 'utf8', (err, data) => {
+    if (err) {
+      console.error('Error reading embed.js file:', err);
+      return res.status(500).send('Error loading embed script.');
+    }
+    res.setHeader('Content-Type', 'application/javascript');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    // It's generally not recommended to remove X-Content-Type-Options,
+    // but if it's causing issues with specific browsers/configurations,
+    // it can be removed here. For now, let's keep it as is, as the
+    // Content-Type header is explicitly set.
+    res.send(data);
+  });
 });
 
 // Get form data for legacy iframe embed (public endpoint)
