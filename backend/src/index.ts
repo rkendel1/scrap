@@ -54,6 +54,8 @@ app.use(helmet({
     },
   },
   frameguard: false, // Disable frame guard to allow embedding
+  crossOriginResourcePolicy: false, // Disable for embed scripts to work cross-origin
+  crossOriginOpenerPolicy: false,   // Disable for embed scripts to work cross-origin
 }));
 
 // Specific CORS for embed.html and embed.js (more permissive)
@@ -941,7 +943,7 @@ app.get('/embed.js', (req, res) => {
   const embedJsPath = path.join(__dirname, '../../frontend/public/embed.js'); // Correct path to static file
   fs.readFile(embedJsPath, 'utf8', (err, data) => {
     if (err) {
-      console.error('Error reading embed.js file:', err);
+      console.error('Error reading embed.js file:', err); // Detailed error logging
       return res.status(500).send('Error loading embed script.');
     }
     res.setHeader('Content-Type', 'application/javascript');
