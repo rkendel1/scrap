@@ -156,7 +156,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         maxWidth: '750px',
         margin: '0 auto',
         textAlign: 'left',
-        marginTop: 'auto', /* Pushes this div to the bottom */
+        // Removed: marginTop: 'auto', /* Pushes this div to the bottom */
         fontSize: '10px', /* Reduced font size */
         color: '#555',
         border: '1px solid #e1e5e9',
@@ -342,21 +342,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
         {/* If no form is generated, but analysis data is present, show analysis summary */}
         {!currentFormToRender && hasAnalysisData && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexShrink: 0,
-            flexDirection: 'column',
-            width: '100%',
-            padding: '20px',
-            boxSizing: 'border-box',
-            flexGrow: 1,
-            minHeight: 0,
-            overflowY: 'auto'
-          }}>
-            {renderDesignTokens()} {/* Render analysis summary here */}
-          </div>
+          renderDesignTokens()
         )}
 
         {/* If no form and no analysis data, show the initial placeholder */}
