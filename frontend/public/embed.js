@@ -21,6 +21,10 @@
     const containerId = 'formcraft-embed-' + embedCode;
     const currentHostname = window.location.hostname;
 
+    // Extract testMode from the script's own URL
+    const scriptUrl = new URL(currentScript.src);
+    const isTestMode = scriptUrl.searchParams.get('testMode') === 'true';
+
     // Create container element
     const container = document.createElement('div');
     container.id = containerId;
@@ -32,8 +36,14 @@
     // Show loading state
     container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">Loading form...</div>';
 
+    // Construct API URL with hostname and testMode
+    let apiUrl = `${API_BASE}/api/forms/embed-config/${embedCode}?hostname=${encodeURIComponent(currentHostname)}`;
+    if (isTestMode) {
+        apiUrl += '&testMode=true';
+    }
+
     // Fetch form data from the new public endpoint
-    fetch(`${API_BASE}/api/forms/embed-config/${embedCode}?hostname=${encodeURIComponent(currentHostname)}`)
+    fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
             if (!data.success) {
