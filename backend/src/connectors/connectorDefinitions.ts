@@ -117,47 +117,41 @@ export const connectorDefinitions: Record<string, ConnectorDefinition> = {
     ]
   },
 
-  n8n: {
-    type: 'n8n',
-    label: 'n8n Workflow Automation',
-    description: 'Route form submissions through n8n workflows for advanced automation and customer-specific routing',
-    icon: '🔄',
+  webhook: { // Added generic webhook as a user-facing option
+    type: 'webhook',
+    label: 'Generic Webhook',
+    description: 'Send form submissions to any custom webhook URL',
+    icon: '🔗',
     isPremium: false,
     fields: [
       {
-        name: 'webhookUrl',
-        label: 'n8n Webhook URL',
+        name: 'url',
+        label: 'Webhook URL',
         type: 'url',
         required: true,
-        placeholder: 'http://localhost:5678/webhook/form-submission',
-        description: 'n8n webhook endpoint URL'
+        placeholder: 'https://api.yourdomain.com/webhook',
+        description: 'The URL where the form data will be sent'
       },
       {
-        name: 'customerId',
-        label: 'Customer ID',
-        type: 'text',
+        name: 'method',
+        label: 'HTTP Method',
+        type: 'select',
         required: false,
-        placeholder: 'customer-001',
-        description: 'Customer identifier for routing configuration'
+        options: ['POST', 'GET', 'PUT', 'PATCH'],
+        placeholder: 'POST',
+        description: 'HTTP method to use for the webhook request (defaults to POST)'
       },
       {
-        name: 'workflowId',
-        label: 'Workflow ID',
-        type: 'text',
+        name: 'headers',
+        label: 'Custom Headers (JSON)',
+        type: 'textarea',
         required: false,
-        placeholder: 'form-data-router',
-        description: 'Specific n8n workflow to trigger (optional)'
-      },
-      {
-        name: 'authToken',
-        label: 'Authorization Token',
-        type: 'password',
-        required: false,
-        placeholder: 'Bearer token...',
-        description: 'Optional authentication token for secure webhook access'
+        placeholder: '{"Authorization": "Bearer your_token", "X-Custom-Header": "value"}',
+        description: 'Optional custom headers in JSON format'
       }
     ]
   }
+  // n8n connector is intentionally omitted from user-facing definitions
 };
 
 export function getConnectorDefinition(type: string): ConnectorDefinition | undefined {
@@ -165,7 +159,8 @@ export function getConnectorDefinition(type: string): ConnectorDefinition | unde
 }
 
 export function getAllConnectorDefinitions(): ConnectorDefinition[] {
-  return Object.values(connectorDefinitions);
+  // Filter out internal connectors like 'n8n' if it were in the map
+  return Object.values(connectorDefinitions).filter(def => def.type !== 'n8n');
 }
 
 export function validateConnectorConfig(type: string, settings: Record<string, any>): { valid: boolean; errors: string[] } {

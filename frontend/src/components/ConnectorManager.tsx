@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ConnectorConfig } from './ConnectorConfig';
+import { ConnectorConfig as ConnectorConfigComponent } from './ConnectorConfig'; // Renamed to avoid conflict
 import { ConnectorTestButton } from './ConnectorTestButton';
+import { Plus, X } from 'lucide-react'; // Import icons
 
 interface ConnectorDefinition {
   type: string;
@@ -29,15 +30,19 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
   const [connectors, setConnectors] = useState<ConnectorConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showAddConnector, setShowAddConnector] = useState(false);
+  const [addingNewConnector, setAddingNewConnector] = useState(false); // State for wizard flow
   const [selectedConnectorType, setSelectedConnectorType] = useState<string>('');
   const [validationErrors, setValidationErrors] = useState<Record<number, string[]>>({});
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
+
 
   // Fetch connector definitions and current connectors
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setGlobalError(null);
         
         // Fetch definitions
         const definitionsResponse = await fetch('/api/connector-definitions', {
@@ -49,6 +54,8 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         if (definitionsResponse.ok) {
           const definitionsResult = await definitionsResponse.json();
           setDefinitions(definitionsResult.data);
+        } else {
+          throw new Error(definitionsResponse.statusText);
         }
 
         // Fetch current connectors
@@ -61,9 +68,12 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         if (connectorsResponse.ok) {
           const connectorsResult = await connectorsResponse.json();
           setConnectors(connectorsResult.data || []);
+        } else {
+          throw new Error(connectorsResponse.statusText);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Failed to fetch connector data:', error);
+        setGlobalError(`Failed to load connectors: ${error.message || 'Unknown error'}`);
       } finally {
         setLoading(false);
       }
@@ -75,6 +85,8 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
   // Save connectors to backend
   const saveConnectors = async () => {
     setSaving(true);
+    setGlobalError(null);
+    setGlobalSuccess(null);
     
     try {
       const response = await fetch(`/api/forms/${formId}/connectors`, {
@@ -88,32 +100,31 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
 
       if (response.ok) {
         onSave?.(connectors);
-        // Show success message
-        alert('Connectors saved successfully!');
+        setGlobalSuccess('Connectors saved successfully!');
+        setAddingNewConnector(false); // Exit wizard mode after saving
+        setSelectedConnectorType('');
       } else {
         const error = await response.json();
-        alert(`Failed to save connectors: ${error.message}`);
+        setGlobalError(`Failed to save connectors: ${error.message}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save connectors:', error);
-      alert('Failed to save connectors. Please try again.');
+      setGlobalError(`Failed to save connectors: ${error.message || 'Unknown error'}`);
     } finally {
       setSaving(false);
     }
   };
 
-  // Add new connector
-  const addConnector = () => {
-    if (!selectedConnectorType) return;
-    
+  // Add new connector (wizard step 2: type selected)
+  const handleSelectConnectorType = (type: string) => {
+    setSelectedConnectorType(type);
+    // Automatically add a new connector to the list for configuration
     const newConnector: ConnectorConfig = {
-      type: selectedConnectorType,
+      type: type,
       settings: {}
     };
-    
     setConnectors([...connectors, newConnector]);
-    setShowAddConnector(false);
-    setSelectedConnectorType('');
+    setAddingNewConnector(false); // Exit the type selection phase
   };
 
   // Remove connector
@@ -125,6 +136,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
     const newValidationErrors = { ...validationErrors };
     delete newValidationErrors[index];
     setValidationErrors(newValidationErrors);
+    setGlobalSuccess(null); // Clear success message on change
   };
 
   // Update connector config
@@ -132,6 +144,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
     const newConnectors = [...connectors];
     newConnectors[index] = config;
     setConnectors(newConnectors);
+    setGlobalSuccess(null); // Clear success message on change
   };
 
   // Handle validation
@@ -161,27 +174,38 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
 
   return (
     <div className="space-y-6">
+      {globalError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800 flex items-center">
+          <X size={20} className="mr-2" /> {globalError}
+        </div>
+      )}
+      {globalSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-green-800 flex items-center">
+          <Plus size={20} className="mr-2" /> {globalSuccess}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Form Connectors</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Form Destinations</h2>
           <p className="text-sm text-gray-600">
             Configure where form submissions should be sent
           </p>
         </div>
         
-        <div className="flex space-x-3">
-          {availableTypes.length > 0 && (
-            <button
-              onClick={() => setShowAddConnector(true)}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <span className="mr-1">+</span>
-              Add Connector
-            </button>
-          )}
-          
-          {connectors.length > 0 && (
+        {connectors.length > 0 && !addingNewConnector && (
+          <div className="flex space-x-3">
+            {availableTypes.length > 0 && (
+              <button
+                onClick={() => setAddingNewConnector(true)}
+                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <Plus size={16} className="mr-1" />
+                Add New Destination
+              </button>
+            )}
+            
             <button
               onClick={saveConnectors}
               disabled={saving || hasValidationErrors}
@@ -197,87 +221,78 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                   Saving...
                 </>
               ) : (
-                <>💾 Save Connectors</>
+                <>💾 Save Destinations</>
               )}
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Add Connector Modal */}
-      {showAddConnector && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Add New Connector</h3>
+      {/* Wizard Step 1: Choose first destination / Add new destination */}
+      {(connectors.length === 0 || addingNewConnector) && availableTypes.length > 0 && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            {connectors.length === 0 ? 'Choose your first destination' : 'Select a new destination'}
+          </h3>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             {availableTypes.map((def) => (
               <button
                 key={def.type}
-                onClick={() => setSelectedConnectorType(def.type)}
-                className={`p-3 border rounded-lg text-left hover:bg-white hover:shadow-sm transition-all ${
+                onClick={() => handleSelectConnectorType(def.type)}
+                className={`p-4 border rounded-lg text-left hover:bg-white hover:shadow-sm transition-all flex items-center space-x-3 ${
                   selectedConnectorType === def.type
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 bg-white'
                 }`}
               >
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{def.icon}</span>
-                  <div>
-                    <div className="font-medium text-sm text-gray-900">
-                      {def.label}
-                      {def.isPremium && (
-                        <span className="ml-1 px-1 py-0.5 text-xs bg-purple-100 text-purple-800 rounded">
-                          Pro
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-xs text-gray-600">{def.description}</div>
+                <span className="text-2xl">{def.icon}</span>
+                <div>
+                  <div className="font-medium text-base text-gray-900">
+                    {def.label}
+                    {def.isPremium && (
+                      <span className="ml-1 px-1.5 py-0.5 text-xs bg-purple-100 text-purple-800 rounded-full">
+                        Pro
+                      </span>
+                    )}
                   </div>
-                </div> {/* Added missing closing div here */}
+                  <div className="text-sm text-gray-600">{def.description}</div>
+                </div>
               </button>
             ))}
           </div>
           
-          <div className="flex justify-end space-x-2">
-            <button
-              onClick={() => {
-                setShowAddConnector(false);
-                setSelectedConnectorType('');
-              }}
-              className="px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={addConnector}
-              disabled={!selectedConnectorType}
-              className={`px-3 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                selectedConnectorType
-                  ? 'text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
-                  : 'text-gray-500 bg-gray-300 cursor-not-allowed'
-              }`}
-            >
-              Add Connector
-            </button>
-          </div>
+          {(connectors.length > 0 && addingNewConnector) && (
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={() => {
+                  setAddingNewConnector(false);
+                  setSelectedConnectorType('');
+                }}
+                className="px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Configured Connectors */}
-      {connectors.length === 0 ? (
+      {connectors.length === 0 && !addingNewConnector ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
           <div className="text-4xl mb-4">🔌</div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No connectors configured</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No destinations configured</h3>
           <p className="text-gray-600 mb-4">
-            Add connectors to automatically send form submissions to external services
+            Add your first destination to automatically send form submissions to external services.
           </p>
           {availableTypes.length > 0 && (
             <button
-              onClick={() => setShowAddConnector(true)}
+              onClick={() => setAddingNewConnector(true)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <span className="mr-1">+</span>
-              Add Your First Connector
+              <Plus size={16} className="mr-1" />
+              Add Your First Destination
             </button>
           )}
         </div>
@@ -295,15 +310,15 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                   <button
                     onClick={() => removeConnector(index)}
                     className="text-red-600 hover:text-red-800 focus:outline-none"
-                    title="Remove connector"
+                    title="Remove destination"
                   >
-                    🗑️
+                    <X size={20} />
                   </button>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   <div className="lg:col-span-2">
-                    <ConnectorConfig
+                    <ConnectorConfigComponent
                       connectorType={connector.type}
                       initialConfig={connector}
                       onChange={(config) => updateConnector(index, config)}
@@ -312,7 +327,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                   </div>
                   
                   <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-3">Test Connector</h4>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Test Destination</h4>
                     <ConnectorTestButton
                       formId={formId}
                       connectorType={connector.type}
@@ -338,7 +353,31 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
         </div>
       )}
 
-      {/* Save Status */}
+      {/* Save button at the bottom if there are connectors and not in adding mode */}
+      {connectors.length > 0 && !addingNewConnector && (
+        <div className="flex justify-end">
+          <button
+            onClick={saveConnectors}
+            disabled={saving || hasValidationErrors}
+            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+              saving || hasValidationErrors
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500'
+            }`}
+          >
+            {saving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>💾 Save Destinations</>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Global Validation Summary */}
       {hasValidationErrors && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
           <div className="flex">
@@ -350,7 +389,7 @@ export const ConnectorManager: React.FC<ConnectorManagerProps> = ({
                 Configuration Issues
               </h3>
               <p className="mt-1 text-sm text-yellow-700">
-                Please fix the configuration errors above before saving your connectors.
+                Please fix the configuration errors above before saving your destinations.
               </p>
             </div>
           </div>
