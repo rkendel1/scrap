@@ -9,6 +9,7 @@ import { LiveFormPreview } from './components/LiveFormPreview';
 import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { FormEditor } from './components/FormEditor'; // New import
 import { ToggleSwitch } from './components/ToggleSwitch'; // New import
+import { FormThumbnail } from './components/FormThumbnail'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -449,21 +450,31 @@ function App() {
                       marginBottom: '16px',
                       boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
                     }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                        <div>
-                          <h4 style={{ margin: '0 0 8px 0', fontSize: '18px', color: '#1a202c' }}>{form.form_name}</h4>
-                          <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
-                            {form.form_description}
-                          </p>
-                          <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span>📊 {form.submissions_count} submissions</span>
-                            <span>•</span>
+                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                        {/* Thumbnail on the left */}
+                        <FormThumbnail form={form} />
+
+                        {/* Form details on the right */}
+                        <div style={{ flexGrow: 1 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                            <h4 style={{ margin: '0', fontSize: '18px', color: '#1a202c' }}>{form.form_name}</h4>
                             <ToggleSwitch
                               isOn={form.is_live}
                               onToggle={() => handleToggleFormLive(form.id)}
                               label={form.is_live ? 'Live' : 'Draft'}
                               disabled={!user} // Disable if not logged in
                             />
+                          </div>
+                          <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
+                            {form.form_description}
+                          </p>
+                          <p style={{ margin: '0 0 8px 0', color: '#007bff', fontSize: '13px' }}>
+                            <a href={form.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
+                                {form.url.length > 50 ? form.url.substring(0, 47) + '...' : form.url}
+                            </a>
+                          </p>
+                          <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span>📊 {form.submissions_count} submissions</span>
                             <span>•</span>
                             <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
                             {form.updated_at && (
@@ -473,36 +484,36 @@ function App() {
                               </>
                             )}
                           </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button 
-                            onClick={() => handleManageForm(form)} // Pass full form object
-                            className="btn btn-secondary" 
-                            style={{ fontSize: '12px' }}
-                          >
-                            🔌 Connectors
-                          </button>
-                          <button 
-                            onClick={() => handleEditForm(form)} // Pass full form object
-                            className="btn btn-secondary" 
-                            style={{ fontSize: '12px' }}
-                          >
-                            ⚙️ Edit
-                          </button>
-                          <button 
-                            onClick={() => handleGetEmbedCodeClick(form)} // Pass full form object
-                            className="btn btn-secondary" 
-                            style={{ fontSize: '12px' }}
-                          >
-                            📋 Embed Code
-                          </button>
-                          <button 
-                            onClick={() => handleShowAnalytics(form)} // Pass full form object
-                            className="btn btn-secondary" 
-                            style={{ fontSize: '12px' }}
-                          >
-                            📈 Analytics
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+                            <button 
+                              onClick={() => handleManageForm(form)} // Pass full form object
+                              className="btn btn-secondary" 
+                              style={{ fontSize: '12px' }}
+                            >
+                              🔌 Connectors
+                            </button>
+                            <button 
+                              onClick={() => handleEditForm(form)} // Pass full form object
+                              className="btn btn-secondary" 
+                              style={{ fontSize: '12px' }}
+                            >
+                              ⚙️ Edit
+                            </button>
+                            <button 
+                              onClick={() => handleGetEmbedCodeClick(form)} // Pass full form object
+                              className="btn btn-secondary" 
+                              style={{ fontSize: '12px' }}
+                            >
+                              📋 Embed Code
+                            </button>
+                            <button 
+                              onClick={() => handleShowAnalytics(form)} // Pass full form object
+                              className="btn btn-secondary" 
+                              style={{ fontSize: '12px' }}
+                            >
+                              📈 Analytics
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
