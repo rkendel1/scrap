@@ -160,95 +160,74 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   const renderDesignTokens = () => {
     if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
 
-    const { colorPalette, fontFamilies, headings, primaryColors } = extractedDesignTokens || {};
+    const { colorPalette, fontFamilies, primaryColors } = extractedDesignTokens || {};
     const { tone, personalityTraits } = extractedVoiceAnalysis || {};
 
     return (
       <div style={{ 
         backgroundColor: '#ffffff',
-        padding: '24px',
+        padding: '12px', /* Reduced padding */
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        border: '1px solid #e1e5e9',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        /* Removed border and boxShadow */
         maxWidth: '500px',
         margin: '0 auto',
         textAlign: 'left',
-        marginTop: '24px' // Changed from marginBottom to marginTop
+        marginTop: '16px', /* Reduced margin-top */
+        fontSize: '12px', /* Smaller base font size */
+        color: '#555'
       }}>
-        <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '20px' }}>
-          Website Analysis
-        </h3>
-        <p style={{ margin: '0 0 20px 0', color: '#666', fontSize: '14px' }}>
-          Here's what we've learned from <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
+        <h4 style={{ margin: '0 0 8px 0', color: '#333', fontSize: '14px', fontWeight: '600' }}>
+          Website Analysis Summary
+        </h4>
+        <p style={{ margin: '0 0 10px 0', fontSize: '11px', color: '#666' }}>
+          From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
         {colorPalette && colorPalette.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#007bff' }}>🎨 Color Palette</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {colorPalette.slice(0, 4).map((color: string, index: number) => ( // Limit to 4 colors
-                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '4px',
-                      backgroundColor: color,
-                      border: '1px solid #eee'
-                    }}
-                  ></div>
-                  <span style={{ fontSize: '12px', color: '#555' }}>{color}</span>
-                </div>
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#007bff' }}>Colors:</strong>{' '}
+            <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px', verticalAlign: 'middle' }}>
+              {colorPalette.slice(0, 2).map((color: string, index: number) => ( /* Limit to 2 colors */
+                <div key={index} style={{ 
+                  width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
+                  border: '1px solid #eee', display: 'inline-block' 
+                }}></div>
               ))}
-              {colorPalette.length > 4 && <span style={{ fontSize: '12px', color: '#888' }}>+{colorPalette.length - 4} more</span>}
+              {colorPalette.length > 2 && <span style={{ fontSize: '11px', color: '#888' }}> +{colorPalette.length - 2}</span>}
             </div>
           </div>
         )}
 
         {fontFamilies && fontFamilies.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#28a745' }}>🔠 Typography</h4>
-            <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc' }}>
-              {fontFamilies.slice(0, 2).map((font: string, index: number) => ( // Limit to 2 fonts
-                <li key={index} style={{ fontSize: '14px', color: '#555', fontFamily: font }}>{font}</li>
-              ))}
-              {fontFamilies.length > 2 && <li style={{ fontSize: '12px', color: '#888' }}>+{fontFamilies.length - 2} more</li>}
-            </ul>
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#28a745' }}>Fonts:</strong>{' '}
+            <span style={{ fontSize: '12px', color: '#555' }}>
+              {fontFamilies.slice(0, 1).join(', ')} {/* Limit to 1 font */}
+              {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
+            </span>
           </div>
         )}
 
         {tone && tone.primary && (
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#ffc107' }}>🗣️ Voice & Tone</h4>
-            <p style={{ margin: '0 0 5px 0', fontSize: '14px', color: '#555' }}>
-              Primary Tone: <strong style={{ color: '#333' }}>{tone.primary}</strong>
-            </p>
+          <div style={{ marginBottom: '8px' }}>
+            <strong style={{ color: '#ffc107' }}>Tone:</strong>{' '}
+            <span style={{ fontSize: '12px', color: '#555' }}>{tone.primary}</span>
             {personalityTraits && personalityTraits.length > 0 && (
-              <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
-                Personality: {personalityTraits.slice(0, 2).join(', ')} {/* Limit to 2 traits */}
-              </p>
+              <span style={{ fontSize: '12px', color: '#555' }}> ({personalityTraits.slice(0, 1).join(', ')})</span> /* Limit to 1 trait */
             )}
           </div>
         )}
 
         {primaryColors && primaryColors.length > 0 && (
-          <div style={{ marginBottom: '20px' }}>
-            <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#6f42c1' }}>✨ Brand Colors</h4>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {primaryColors.slice(0, 3).map((color: string, index: number) => (
-                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <div
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '4px',
-                      backgroundColor: color,
-                      border: '1px solid #eee'
-                    }}
-                  ></div>
-                  <span style={{ fontSize: '12px', color: '#555' }}>{color}</span>
-                </div>
+          <div>
+            <strong style={{ color: '#6f42c1' }}>Brand Colors:</strong>{' '}
+            <div style={{ display: 'inline-flex', flexWrap: 'wrap', gap: '4px', verticalAlign: 'middle' }}>
+              {primaryColors.slice(0, 2).map((color: string, index: number) => ( /* Limit to 2 brand colors */
+                <div key={index} style={{ 
+                  width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
+                  border: '1px solid #eee', display: 'inline-block' 
+                }}></div>
               ))}
             </div>
           </div>
