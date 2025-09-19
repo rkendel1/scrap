@@ -63,7 +63,7 @@
                     if (!data.success) {
                         throw new Error(data.message || 'Failed to load form');
                     }
-                    renderForm(data.data, embedCode, isTestMode); // Pass isTestMode to renderForm
+                    renderForm(data.data, embedCode, isTestMode);
                 })
                 .catch(error => {
                     console.error('Error loading form:', error);
@@ -71,7 +71,7 @@
                         `<div class="error-message">Error loading form: ${error.message}</div>`;
                 });
 
-            function renderForm(formData, embedCode, isTestMode) { // Accept isTestMode
+            function renderForm(formData, embedCode, isTestMode) {
                 const form = formData.generated_form;
                 if (!form) {
                     document.getElementById('formcraft-embed-container').innerHTML = 
@@ -86,21 +86,21 @@
                 let formHTML = `
                     <div style="
                         background-color: ${styling.backgroundColor || '#fff'};
-                        padding: 16px; /* Reduced padding */
+                        padding: 16px;
                         border-radius: ${styling.borderRadius || '8px'};
                         font-family: ${styling.fontFamily || 'system-ui'};
                         border: 1px solid #e1e5e9;
                         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        max-width: ${styling.maxWidth || '250px'}; /* Use dynamic maxWidth or default to 250px */
-                        width: 100%; /* Ensure it takes full width of its container */
+                        max-width: ${styling.maxWidth || '250px'};
+                        width: 100%;
                         margin: 0 auto;
                     ">
-                        <div style="margin-bottom: 16px;"> /* Reduced margin */
-                            <h3 style="margin: 0 0 6px 0; color: #333; font-size: 18px;"> /* Reduced margin and font size */
+                        <div style="margin-bottom: 16px;">
+                            <h3 style="margin: 0 0 6px 0; color: #333; font-size: 18px;">
                                 ${escapeHtml(form.title || formData.title)}
                             </h3>
                             ${form.description || formData.description ? `
-                                <p style="margin: 0; color: #666; font-size: 13px;"> /* Reduced font size */
+                                <p style="margin: 0; color: #666; font-size: 13px;">
                                     ${escapeHtml(form.description || formData.description)}
                                 </p>
                             ` : ''}
@@ -109,15 +109,15 @@
                         <form id="formcraft-form">
                             ${renderFields(form.fields || [])}
                             
-                            <div id="form-message" style="margin-bottom: 12px; display: none;"></div> /* Reduced margin */
+                            <div id="form-message" style="margin-bottom: 12px; display: none;"></div>
                             
                             <button type="submit" id="submit-btn" style="
                                 background-color: ${styling.primaryColor || '#007bff'};
                                 color: white;
-                                padding: 10px 20px; /* Reduced padding */
+                                padding: 10px 20px;
                                 border: none;
                                 border-radius: ${styling.borderRadius || '4px'};
-                                font-size: 15px; /* Reduced font size */
+                                font-size: 15px;
                                 font-weight: 500;
                                 cursor: pointer;
                                 width: 100%;
@@ -128,11 +128,11 @@
                             </button>
                         </form>
 
-                        <div id="thank-you-message" style="display: none; text-align: center; padding: 16px;"> /* Reduced padding */
-                            <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 16px; font-weight: bold; margin-bottom: 6px;"> /* Reduced font size and margin */
+                        <div id="thank-you-message" style="display: none; text-align: center; padding: 16px;">
+                            <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 16px; font-weight: bold; margin-bottom: 6px;">
                                 ✓ Thank You!
                             </div>
-                            <p style="margin: 0; color: #666; font-size: 13px;"> /* Reduced font size */
+                            <p style="margin: 0; color: #666; font-size: 13px;">
                                 ${escapeHtml(form.thankYouMessage || 'Thank you for your submission!')}
                             </p>
                         </div>
@@ -146,7 +146,7 @@
                 // Add form submission handler
                 document.getElementById('formcraft-form').addEventListener('submit', function(e) {
                     e.preventDefault();
-                    handleFormSubmission(form, embedCode, isTestMode); // Pass isTestMode to submission handler
+                    handleFormSubmission(form, embedCode, isTestMode);
                 });
             }
 
@@ -155,11 +155,11 @@
                     const fieldId = `field-${field.name}`;
                     const baseStyles = `
                         width: 100%;
-                        padding: 10px; /* Reduced padding */
+                        padding: 10px;
                         border: 1px solid #ddd;
                         border-radius: 4px;
-                        font-size: 14px; /* Reduced font size */
-                        margin-bottom: 6px; /* Reduced margin */
+                        font-size: 14px;
+                        margin-bottom: 6px;
                         font-family: inherit;
                     `;
 
@@ -171,7 +171,7 @@
                                 <textarea id="${fieldId}" name="${field.name}" 
                                     placeholder="${escapeHtml(field.placeholder || '')}" 
                                     ${field.required ? 'required' : ''}
-                                    style="${baseStyles} min-height: 80px; resize: vertical;"></textarea> /* Reduced min-height */
+                                    style="${baseStyles} min-height: 80px; resize: vertical;"></textarea>
                             `;
                             break;
                         
@@ -197,11 +197,11 @@
                     }
 
                     return `
-                        <div style="margin-bottom: 12px;"> /* Reduced margin */
+                        <div style="margin-bottom: 12px;">
                             <label for="${fieldId}" style="
                                 display: block;
-                                margin-bottom: 3px; /* Reduced margin */
-                                font-size: 13px; /* Reduced font size */
+                                margin-bottom: 3px;
+                                font-size: 13px;
                                 font-weight: 500;
                                 color: #333;
                             ">
@@ -214,7 +214,7 @@
                 }).join('');
             }
 
-            function handleFormSubmission(formData, embedCode, isTestMode) { // Accept isTestMode
+            function handleFormSubmission(formData, embedCode, isTestMode) {
                 const formElement = document.getElementById('formcraft-form');
                 const submitBtn = document.getElementById('submit-btn');
                 const messageDiv = document.getElementById('form-message');

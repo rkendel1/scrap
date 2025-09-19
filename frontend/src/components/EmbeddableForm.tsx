@@ -71,12 +71,12 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
 
     const baseStyles = {
       width: '100%',
-      padding: '10px', // Reduced padding
+      padding: '10px',
       border: `1px solid #ddd`,
       borderRadius: form.styling.borderRadius || '4px',
-      fontSize: '14px', // Reduced font size
+      fontSize: '14px',
       fontFamily: form.styling.fontFamily || 'inherit',
-      marginBottom: '6px' // Reduced margin
+      marginBottom: '6px'
     };
 
     switch (field.type) {
@@ -91,7 +91,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
             onChange={(e) => handleInputChange(field.name, e.target.value)}
             style={{
               ...baseStyles,
-              minHeight: '80px', // Reduced min-height
+              minHeight: '80px',
               resize: 'vertical'
             }}
           />
@@ -118,9 +118,9 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
 
       case 'checkbox':
         return (
-          <div style={{ marginBottom: '6px' }}> {/* Reduced margin */}
+          <div style={{ marginBottom: '6px' }}>
             {field.options?.map((option, index) => (
-              <label key={index} style={{ display: 'block', marginBottom: '3px' }}> {/* Reduced margin */}
+              <label key={index} style={{ display: 'block', marginBottom: '3px' }}>
                 <input
                   type="checkbox"
                   name={field.name}
@@ -144,9 +144,9 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
 
       case 'radio':
         return (
-          <div style={{ marginBottom: '6px' }}> {/* Reduced margin */}
+          <div style={{ marginBottom: '6px' }}>
             {field.options?.map((option, index) => (
-              <label key={index} style={{ display: 'block', marginBottom: '3px' }}> {/* Reduced margin */}
+              <label key={index} style={{ display: 'block', marginBottom: '3px' }}>
                 <input
                   type="radio"
                   name={field.name}
@@ -189,28 +189,28 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
   if (submitted) {
     return (
       <div style={{
-        padding: '16px', // Reduced padding
+        padding: '16px',
         backgroundColor: form.styling.backgroundColor || '#fff',
         borderRadius: form.styling.borderRadius || '8px',
         fontFamily: form.styling.fontFamily || 'system-ui',
         textAlign: 'center' as const,
         border: '1px solid #e1e5e9',
-        maxWidth: form.styling.maxWidth || '100%', // Apply maxWidth here
-        width: '100%', // Ensure it takes full width of its container
-        margin: '0 auto', // Center the form
-        maxHeight: '100%', // Ensure it doesn't grow beyond parent
-        overflowY: 'auto' // Add internal scroll if content is too tall
+        maxWidth: form.styling.maxWidth || '100%',
+        width: '100%',
+        margin: '0 auto',
+        maxHeight: '100%',
+        overflowY: 'auto'
       }}>
         <div style={{ 
           color: form.styling.primaryColor || '#28a745',
-          fontSize: '16px', // Reduced font size
+          fontSize: '16px',
           fontWeight: 'bold',
-          marginBottom: '6px' // Reduced margin
+          marginBottom: '6px'
         }}>
           ✓ Thank You!
         </div>
         <p 
-          style={{ margin: 0, color: '#666', fontSize: '13px' }} // Reduced font size
+          style={{ margin: 0, color: '#666', fontSize: '13px' }}
           dangerouslySetInnerHTML={{ __html: autoLinkText(form.thankYouMessage) }}
           onClick={handleLinkClick}
         />
@@ -221,21 +221,21 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
   return (
     <div style={{
       backgroundColor: form.styling.backgroundColor || '#fff',
-      padding: '16px', // Reduced padding
+      padding: '16px',
       borderRadius: form.styling.borderRadius || '8px',
       fontFamily: form.styling.fontFamily || 'system-ui',
       border: '1px solid #e1e5e9',
-      maxWidth: form.styling.maxWidth || '100%', // Apply maxWidth here
-      width: '100%', // Ensure it takes full width of its container
-      margin: '0 auto', // Center the form
-      maxHeight: '100%', // Ensure it doesn't grow beyond parent
-      overflowY: 'auto' // Add internal scroll if content is too tall
+      maxWidth: form.styling.maxWidth || '100%',
+      width: '100%',
+      margin: '0 auto',
+      maxHeight: '100%',
+      overflowY: 'auto'
     }}>
-      <div style={{ marginBottom: '16px' }}> {/* Reduced margin */}
+      <div style={{ marginBottom: '16px' }}>
         <h3 style={{ 
-          margin: '0 0 6px 0', // Reduced margin
+          margin: '0 0 6px 0',
           color: '#333',
-          fontSize: '18px' // Reduced font size
+          fontSize: '18px'
         }}>
           {form.title}
         </h3>
@@ -244,7 +244,7 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
             style={{ 
               margin: 0,
               color: '#666',
-              fontSize: '13px' // Reduced font size
+              fontSize: '13px'
             }}
             dangerouslySetInnerHTML={{ __html: autoLinkText(form.description) }}
             onClick={handleLinkClick}
@@ -254,13 +254,13 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
 
       <form onSubmit={handleSubmit}>
         {form.fields.map((field, index) => (
-          <div key={index} style={{ marginBottom: '12px' }}> {/* Reduced margin */}
+          <div key={index} style={{ marginBottom: '12px' }}>
             <label 
               htmlFor={`field-${field.name}`}
               style={{
                 display: 'block',
-                marginBottom: '3px', // Reduced margin
-                fontSize: '13px', // Reduced font size
+                marginBottom: '3px',
+                fontSize: '13px',
                 fontWeight: '500',
                 color: '#333'
               }}
@@ -276,12 +276,12 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
 
         {error && (
           <div style={{
-            padding: '10px', // Reduced padding
+            padding: '10px',
             backgroundColor: '#f8d7da',
             color: '#721c24',
             borderRadius: '4px',
-            marginBottom: '12px', // Reduced margin
-            fontSize: '13px' // Reduced font size
+            marginBottom: '12px',
+            fontSize: '13px'
           }}>
             {error}
           </div>
@@ -293,10 +293,10 @@ export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({
           style={{
             backgroundColor: form.styling.primaryColor || '#007bff',
             color: 'white',
-            padding: '10px 20px', // Reduced padding
+            padding: '10px 20px',
             border: 'none',
             borderRadius: form.styling.borderRadius || '4px',
-            fontSize: '15px', // Reduced font size
+            fontSize: '15px',
             fontWeight: '500',
             cursor: isSubmitting ? 'not-allowed' : 'pointer',
             opacity: isSubmitting ? 0.7 : 1,
