@@ -56,8 +56,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null);
-
+  // Removed currentQuickResponses state
+  
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
   const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
@@ -113,7 +113,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory, currentQuickResponses]);
+  }, [conversationHistory]); // Removed currentQuickResponses from dependency array
 
   useEffect(() => {
     onStateChange({
@@ -131,27 +131,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setConversationHistory((prev) => [...prev, { ...entry, timestamp: new Date() }]);
   };
 
-  const addPrompt = (content: string | JSX.Element, quickResponses: string[] | null = null) => {
+  const addPrompt = (content: string | JSX.Element) => { // Removed quickResponses parameter
     addEntry({ type: 'prompt', content });
-    setCurrentQuickResponses(quickResponses);
+    // Removed setCurrentQuickResponses(quickResponses);
     setIsLoading(false);
   };
 
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
-    setCurrentQuickResponses(null);
+    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
-    setCurrentQuickResponses(null);
+    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
-    setCurrentQuickResponses(null);
+    // Removed setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
@@ -278,15 +278,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (parsedInput.command === 'configure destination') {
         setCurrentStep('ASK_DESTINATION_TYPE');
         addPrompt(
-          "Okay, where should I send the form submissions?",
-          ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
+          "Okay, where should I send the form submissions?"
+          // Removed quick responses
         );
         return;
       }
       if (parsedInput.command === 'get embed code') {
         if (createdForm) {
           onGetEmbedCodeClick(createdForm);
-          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
+          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?"); // Removed quick responses
           setCurrentStep('DONE');
         } else {
           addPrompt("No form has been generated yet. Please start by providing a URL.");
@@ -334,7 +334,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?", ['Configure Destination', 'Get Embed Code']); // Changed order
+            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?"); // Removed quick responses
           }
           break;
 
@@ -346,7 +346,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             await processDestinationConfigInput(parsedInput.configInput);
           }
           else {
-            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".', ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']);
+            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".'); // Removed quick responses
           }
           break;
 
@@ -389,7 +389,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'DESTINATION_CONFIGURED':
-          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?", ['Yes', 'No']);
+          addPrompt("Great! Your form's destination is configured. Would you like to make this form live now?"); // Removed quick responses
           setCurrentStep('ASK_GO_LIVE');
           break;
 
@@ -397,7 +397,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.command === 'yes') {
             await processGoLive();
           } else if (parsedInput.command === 'no') {
-            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?", ['Yes', 'No']);
+            addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?"); // Removed quick responses
             setCurrentStep('DONE');
           } else {
             addPrompt("Please respond with 'Yes' or 'No'.");
@@ -461,8 +461,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, url }));
 
     addPrompt(
-      `Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles. Now, what do you want to capture with this form?`,
-      formPurposes.slice(0, 3)
+      `Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles. Now, what do you want to capture with this form?`
+      // Removed quick responses
     );
     setCurrentStep('ASK_PURPOSE');
   };
@@ -547,8 +547,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
           Are there any changes you'd like to make, or would you like to configure delivery?
         </div>
-      </>,
-      ['Configure Destination', 'Get Embed Code']
+      </>
+      // Removed quick responses
     );
   };
 
@@ -557,7 +557,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier'];
 
     if (!availableTypes.includes(normalizedType)) {
-      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.', ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']);
+      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.'); // Removed quick responses
       setCurrentStep('ASK_DESTINATION_TYPE'); // Stay on this step
       return;
     }
@@ -570,8 +570,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         addPrompt(
           <>
             Okay, I'll send submissions to your registered email: <strong>{user.email}</strong>. Is that correct?
-          </>,
-          ['Yes', 'No']
+          </>
+          // Removed quick responses
         );
         setCurrentStep('CONFIRM_DEFAULT_EMAIL');
         return;
@@ -579,8 +579,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         addPrompt(
           <>
             To use your email as the default, you need to create an account. Alternatively, you can provide a recipient email address now.
-          </>,
-          ['Create Account', 'Provide Email']
+          </>
+          // Removed quick responses
         );
         setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step to await input or command
         return;
@@ -687,8 +687,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsDestinationConfigured(true); // Set destination configured status
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
-      "Your form is ready! Would you like to make this form live now?",
-      ['Yes', 'No']
+      "Your form is ready! Would you like to make this form live now?"
+      // Removed quick responses
     );
     setCurrentStep('ASK_GO_LIVE'); // Transition to new step
     onFormGenerated(createdForm);
@@ -723,17 +723,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (result.success) {
         setCreatedForm(prev => prev ? { ...prev, is_live: true } : null);
         addSuccess("Great! Your form is now live and ready to collect submissions.");
-        addPrompt("Would you like to create another form?", ['Yes', 'No']);
+        addPrompt("Would you like to create another form?"); // Removed quick responses
         setCurrentStep('DONE');
       } else {
         addError(result.message || "Failed to make the form live. Please try again or check your subscription status.");
-        addPrompt("Would you like to create another form?", ['Yes', 'No']);
+        addPrompt("Would you like to create another form?"); // Removed quick responses
         setCurrentStep('DONE');
       }
     } catch (err: any) {
       console.error('Go live error:', err);
       addError(err.message || 'An unexpected error occurred while trying to make the form live.');
-      addPrompt("Would you like to create another form?", ['Yes', 'No']);
+      addPrompt("Would you like to create another form?"); // Removed quick responses
       setCurrentStep('DONE');
     }
   };
@@ -756,11 +756,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setIsDestinationConfigured(false); // Reset
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
-      setCurrentQuickResponses(null);
+      // Removed setCurrentQuickResponses(null);
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!", null);
       setUserInput('');
-      setCurrentQuickResponses(null);
+      // Removed setCurrentQuickResponses(null);
     }
   };
 
@@ -781,7 +781,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsDestinationConfigured(false); // Reset
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
-    setCurrentQuickResponses(null);
+    // Removed setCurrentQuickResponses(null);
   };
 
   const formatTimestamp = (date: Date) => {
@@ -825,23 +825,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </div>
 
-      {currentQuickResponses && (
-        <div style={{ width: '100%', marginTop: '12px' }}>
-          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED' || currentStep === 'CONFIRM_DEFAULT_EMAIL' || currentStep === 'ASK_GO_LIVE' || (currentStep === 'ASK_DESTINATION_CONFIG' && !user && selectedDestinationType === 'email')) && (
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-              Use the buttons above to select your option
-            </div>
-          )}
-          <div className="quick-reply-container">
-            {currentQuickResponses.map((response, idx) => (
-              <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
-                {destinationIcons[response.toLowerCase().replace(/\s/g, '')] || null}
-                {getDestinationLabel(response.toLowerCase().replace(/\s/g, ''))}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Removed Quick Responses Container */}
 
       <form onSubmit={handleUserInput} className="form-input-container">
         <input
