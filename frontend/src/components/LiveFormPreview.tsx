@@ -351,12 +351,13 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         {/* Render Design Tokens if available and not explicitly hidden */}
         { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
       </div>
-      {/* This badge now appears when tokens are extracted but no form is generated yet */}
+      {/* Removed the green banner:
       {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && (
         <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
           ✅ Design tokens extracted. Ready for form generation!
         </div>
       )}
+      */}
     </div>
   );
 };
