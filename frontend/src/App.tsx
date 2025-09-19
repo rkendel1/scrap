@@ -377,6 +377,7 @@ function App() {
           <>
             <div style={{ flex: 1, height: '100%' }}> {/* Left column for builder */}
               <ConversationalFormBuilder 
+                className="card conversational-builder-card" // Apply card class
                 onFormGenerated={handleFormGenerated}
                 user={user}
                 guestToken={guestToken || undefined}
@@ -386,6 +387,7 @@ function App() {
             </div>
             <div style={{ flex: 1, height: '100%' }}> {/* Right column for live preview */}
               <LiveFormPreview
+                className="card live-preview-card" // Apply card class
                 formData={builderState.formData}
                 generatedForm={builderState.generatedForm}
                 createdForm={builderState.createdForm}

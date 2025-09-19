@@ -60,6 +60,7 @@ interface LiveFormPreviewProps {
   extractedVoiceAnalysis: any | null;
   onGetEmbedCodeClick: (form: SaaSForm) => void;
   isDestinationConfigured: boolean; // New prop
+  className?: string; // Add className prop
 }
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
@@ -71,6 +72,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   extractedVoiceAnalysis,
   onGetEmbedCodeClick,
   isDestinationConfigured, // Destructure new prop
+  className, // Destructure new prop
 }) => {
   const { url, purpose, destinationType } = formData;
 
@@ -235,7 +237,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   return (
-    <div className="card live-preview-card">
+    <div className={`live-preview-card ${className || ''}`}> {/* Apply className here */}
       <div className="preview-header">
         <h3>Live Form Preview</h3>
         {url && <p>Styled with design tokens from: {url}</p>}
@@ -250,7 +252,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             flexShrink: 0,
             flexDirection: 'column',
             width: '100%',
-            padding: '20px'
+            padding: '20px',
+            boxSizing: 'border-box'
           }}
         >
           {generatedForm ? (
