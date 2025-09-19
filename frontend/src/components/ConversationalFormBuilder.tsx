@@ -803,11 +803,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   return (
     <div className="conversational-builder-card"> {/* Apply className here */}
-      {currentContextSummary && (
+      {/* Removed: {currentContextSummary && (
         <div className="context-summary">
           Current Form: {currentContextSummary}
         </div>
-      )}
+      )} */}
 
       <div className="chat-history-container">
         <div
