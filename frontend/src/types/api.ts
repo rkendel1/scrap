@@ -81,16 +81,6 @@ export interface GeneratedForm {
   // Removed formLayout
 }
 
-export interface FormVersion {
-  id: number;
-  form_id: number;
-  version_number: number;
-  generated_form: GeneratedForm;
-  created_at: string;
-  is_live: boolean;
-  is_draft: boolean;
-}
-
 export interface SaaSForm {
   id: number;
   user_id?: number;
@@ -98,6 +88,7 @@ export interface SaaSForm {
   url: string;
   form_name: string;
   form_description?: string;
+  is_live: boolean;
   embed_code?: string;
   submissions_count: number;
   last_submission_at?: string;
@@ -108,12 +99,8 @@ export interface SaaSForm {
   description: string;
   favicon: string;
   // Form-specific fields
-  live_version_id?: number; // Reference to the live version
-  draft_version_id?: number; // Reference to the draft version
-  live_version_config?: GeneratedForm; // The actual config of the live version
-  draft_version_config?: GeneratedForm; // The actual config of the draft version
-  allowed_domains: string[]; // Added allowed_domains
-  connectors: any[]; // Added connectors
+  generated_form: GeneratedForm;
+  allowed_domains?: string[]; // Added allowed_domains
 }
 
 // Interface for the conversational form builder's internal state

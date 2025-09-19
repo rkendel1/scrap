@@ -40,16 +40,6 @@ const testFormData = {
 mockForms.set(1, testFormData);
 mockEmbedCodes.set('test_embed_123', { form_id: 1, is_active: true, view_count: 0, submission_count: 0 });
 
-export interface FormVersion {
-  id: number;
-  form_id: number;
-  version_number: number;
-  generated_form: GeneratedForm;
-  created_at: Date;
-  is_live: boolean;
-  is_draft: boolean;
-}
-
 export interface SaaSForm {
   id: number;
   user_id?: number;
@@ -57,6 +47,7 @@ export interface SaaSForm {
   url: string;
   form_name: string;
   form_description?: string;
+  is_live: boolean;
   embed_code?: string;
   submissions_count: number;
   last_submission_at?: Date;
@@ -67,12 +58,8 @@ export interface SaaSForm {
   description: string;
   favicon: string;
   // Form-specific fields
-  live_version_id?: number; // Reference to the live version
-  draft_version_id?: number; // Reference to the draft version
-  live_version_config?: GeneratedForm; // The actual config of the live version
-  draft_version_config?: GeneratedForm; // The actual config of the draft version
-  allowed_domains: string[]; // Added allowed_domains
-  connectors: any[]; // Added connectors
+  generated_form: GeneratedForm;
+  allowed_domains?: string[]; // Added allowed_domains
 }
 
 export interface EmbedCode {
@@ -127,120 +114,89 @@ export class SaaSService {
     generatedForm: GeneratedForm,
     extractedData: any
   ): Promise<SaaSForm> {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+    const embedCode = this.generateEmbedCode();
+    
+    // A form is considered "non-expiring" when it's associated with a registered user (userId is not null)
+    // and is set to is_live = true. Guest forms (guestTokenId is not null) are temporary/expiring
+    // until converted to a user form.
+    const query = `
+      INSERT INTO forms (
+        user_id, guest_token_id, url, form_name, form_description, 
+        is_live, embed_code, title, description, favicon,
+        color_palette, primary_colors, color_usage, font_families, 
+        headings, text_samples, margins, paddings, spacing_scale,
+        layout_structure, grid_system, breakpoints, buttons, 
+        form_fields, cards, navigation, images, css_variables, 
+        raw_css, form_schema, logo_url, brand_colors, icons, 
+        messaging, preview_html, voice_tone, personality_traits, 
+        audience_analysis, extracted_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        $11, $12, $13, $14, $15, $16, $17, $18, $19,
+        $20, $21, $22, $23, $24, $25, $26, $27, $28,
+        $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39
+      )
+      RETURNING *
+    `;
 
-      const embedCode = this.generateEmbedCode();
-      
-      const formInsertQuery = `
-        INSERT INTO forms (
-          user_id, guest_token_id, url, form_name, form_description, 
-          embed_code, title, description, favicon,
-          color_palette, primary_colors, color_usage, font_families, 
-          headings, text_samples, margins, paddings, spacing_scale,
-          layout_structure, grid_system, breakpoints, buttons, 
-          form_fields, cards, navigation, images, css_variables, 
-          raw_css, form_schema, logo_url, brand_colors, icons, 
-          messaging, preview_html, voice_tone, personality_traits, 
-          audience_analysis, extracted_at
-        ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19,
-          $20, $21, $22, $23, $24, $25, $26, $27, $28,
-          $29, $30, $31, $32, $33, $34, $35, $36, $37, $38
-        )
-        RETURNING *
-      `;
+    const values = [
+      userId, guestTokenId, url, formName, formDescription,
+      false, embedCode, extractedData.title, extractedData.description, extractedData.favicon,
+      JSON.stringify(extractedData.designTokens.colorPalette),
+      JSON.stringify(extractedData.designTokens.primaryColors),
+      JSON.stringify(extractedData.designTokens.colorUsage),
+      JSON.stringify(extractedData.designTokens.fontFamilies),
+      JSON.stringify(extractedData.designTokens.headings),
+      JSON.stringify(extractedData.designTokens.textSamples),
+      JSON.stringify(extractedData.designTokens.margins),
+      JSON.stringify(extractedData.designTokens.paddings),
+      JSON.stringify(extractedData.designTokens.spacingScale),
+      JSON.stringify(extractedData.designTokens.layoutStructure),
+      JSON.stringify(extractedData.designTokens.gridSystem),
+      JSON.stringify(extractedData.designTokens.breakpoints),
+      JSON.stringify(extractedData.designTokens.buttons),
+      JSON.stringify(generatedForm.fields), // Store generated form fields
+      JSON.stringify(extractedData.designTokens.cards),
+      JSON.stringify(extractedData.designTokens.navigation),
+      JSON.stringify(extractedData.designTokens.images),
+      JSON.stringify(extractedData.designTokens.cssVariables),
+      extractedData.designTokens.rawCSS,
+      JSON.stringify([generatedForm]), // Store generated form schema
+      extractedData.designTokens.logoUrl,
+      JSON.stringify(extractedData.designTokens.brandColors),
+      JSON.stringify(extractedData.designTokens.icons),
+      JSON.stringify(extractedData.designTokens.messaging),
+      extractedData.designTokens.previewHTML,
+      JSON.stringify(extractedData.voiceAnalysis),
+      JSON.stringify(extractedData.voiceAnalysis.personalityTraits),
+      JSON.stringify(extractedData.voiceAnalysis.audienceAnalysis),
+      new Date().toISOString()
+    ];
 
-      const formInsertValues = [
-        userId, guestTokenId, url, formName, formDescription,
-        embedCode, extractedData.title, extractedData.description, extractedData.favicon,
-        JSON.stringify(extractedData.designTokens.colorPalette),
-        JSON.stringify(extractedData.designTokens.primaryColors),
-        JSON.stringify(extractedData.designTokens.colorUsage),
-        JSON.stringify(extractedData.designTokens.fontFamilies),
-        JSON.stringify(extractedData.designTokens.headings),
-        JSON.stringify(extractedData.designTokens.textSamples),
-        JSON.stringify(extractedData.designTokens.margins),
-        JSON.stringify(extractedData.designTokens.paddings),
-        JSON.stringify(extractedData.designTokens.spacingScale),
-        JSON.stringify(extractedData.designTokens.layoutStructure),
-        JSON.stringify(extractedData.designTokens.gridSystem),
-        JSON.stringify(extractedData.designTokens.breakpoints),
-        JSON.stringify(extractedData.designTokens.buttons),
-        JSON.stringify(extractedData.designTokens.formFields), // Initial form fields from extraction
-        JSON.stringify(extractedData.designTokens.cards),
-        JSON.stringify(extractedData.designTokens.navigation),
-        JSON.stringify(extractedData.designTokens.images),
-        JSON.stringify(extractedData.designTokens.cssVariables),
-        extractedData.designTokens.rawCSS,
-        JSON.stringify(extractedData.designTokens.formSchema), // NEW: form_schema
-        extractedData.designTokens.logoUrl,
-        JSON.stringify(extractedData.designTokens.brandColors),
-        JSON.stringify(extractedData.designTokens.icons),
-        JSON.stringify(extractedData.designTokens.messaging),
-        extractedData.designTokens.previewHTML,
-        JSON.stringify(extractedData.voiceAnalysis), // This is the voice_tone column
-        JSON.stringify(extractedData.voiceAnalysis.personalityTraits), // This is personality_traits
-        JSON.stringify(extractedData.voiceAnalysis.audienceAnalysis), // This is audience_analysis
-        new Date().toISOString()
-      ];
+    const result = await pool.query(query, values);
+    const formRecord = result.rows[0];
 
-      const formResult = await client.query(formInsertQuery, formInsertValues);
-      const newForm = formResult.rows[0];
+    // Create embed code record
+    await this.createEmbedCode(formRecord.id, embedCode);
 
-      // Create the first version of the form
-      const versionInsertQuery = `
-        INSERT INTO form_versions (form_id, version_number, generated_form, is_live, is_draft)
-        VALUES ($1, 1, $2, TRUE, TRUE) -- First version is both live and draft
-        RETURNING id, generated_form
-      `;
-      const versionResult = await client.query(versionInsertQuery, [newForm.id, JSON.stringify(generatedForm)]);
-      const firstVersion = versionResult.rows[0];
-
-      // Update the form to reference its first version as live and draft
-      const updateFormVersionRefsQuery = `
-        UPDATE forms
-        SET live_version_id = $1, draft_version_id = $1
-        WHERE id = $2
-        RETURNING *
-      `;
-      const updatedFormResult = await client.query(updateFormVersionRefsQuery, [firstVersion.id, newForm.id]);
-      const finalForm = updatedFormResult.rows[0];
-
-      // Create embed code record
-      await this.createEmbedCode(finalForm.id, embedCode);
-
-      await client.query('COMMIT');
-
-      return {
-        ...finalForm,
-        live_version_config: firstVersion.generated_form,
-        draft_version_config: firstVersion.generated_form,
-      };
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error('Error creating form with version:', error);
-      throw error;
-    } finally {
-      client.release();
-    }
+    return {
+      ...formRecord,
+      generated_form: generatedForm
+    };
   }
 
   async getFormByEmbedCode(embedCode: string): Promise<any | null> {
     try {
       const query = `
         SELECT 
-          f.id, f.title, f.description, f.embed_code, f.allowed_domains, f.user_id,
-          fv.generated_form,
+          f.*,
+          f.form_schema as generated_form_schema,
           ec.is_active as embed_active,
           ec.view_count,
           ec.submission_count
         FROM forms f
         JOIN embed_codes ec ON f.id = ec.form_id
-        JOIN form_versions fv ON f.live_version_id = fv.id
-        WHERE ec.code = $1 AND ec.is_active = true
+        WHERE ec.code = $1 AND ec.is_active = true AND f.is_live = true
       `;
       
       const result = await pool.query(query, [embedCode]);
@@ -285,11 +241,11 @@ export class SaaSService {
         id: row.id,
         title: row.title,
         description: row.description,
-        generated_form: row.generated_form || null,
-        styling: row.generated_form?.styling || {
-          primaryColor: '#007bff',
+        generated_form: row.generated_form_schema?.[0] || null,
+        styling: {
+          primaryColor: row.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
-          fontFamily: 'system-ui',
+          fontFamily: row.font_families?.[0] || 'system-ui',
           borderRadius: '8px'
         },
         embedCode,
@@ -327,46 +283,29 @@ export class SaaSService {
 
   async getUserForms(userId: number): Promise<SaaSForm[]> {
     const query = `
-      SELECT 
-        f.id, f.user_id, f.guest_token_id, f.url, f.form_name, f.form_description, 
-        f.embed_code, f.submissions_count, f.last_submission_at, f.created_at, f.updated_at,
-        f.title, f.description, f.favicon, f.allowed_domains, f.connectors,
-        f.live_version_id, f.draft_version_id,
-        fv_live.generated_form AS live_version_config,
-        fv_draft.generated_form AS draft_version_config
-      FROM forms f
-      LEFT JOIN form_versions fv_live ON f.live_version_id = fv_live.id
-      LEFT JOIN form_versions fv_draft ON f.draft_version_id = fv_draft.id
-      WHERE f.user_id = $1 
-      ORDER BY f.created_at DESC
+      SELECT *, form_schema as generated_form_schema
+      FROM forms 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC
     `;
     
     const result = await pool.query(query, [userId]);
     return result.rows.map(row => ({
       ...row,
-      // Determine is_live status from live_version_id presence
-      is_live: !!row.live_version_id,
+      generated_form: row.generated_form_schema?.[0] || null
     }));
   }
 
   async getFormById(formId: number, userId?: number): Promise<SaaSForm | null> {
     let query = `
-      SELECT 
-        f.id, f.user_id, f.guest_token_id, f.url, f.form_name, f.form_description, 
-        f.embed_code, f.submissions_count, f.last_submission_at, f.created_at, f.updated_at,
-        f.title, f.description, f.favicon, f.allowed_domains, f.connectors,
-        f.live_version_id, f.draft_version_id,
-        fv_live.generated_form AS live_version_config,
-        fv_draft.generated_form AS draft_version_config
-      FROM forms f
-      LEFT JOIN form_versions fv_live ON f.live_version_id = fv_live.id
-      LEFT JOIN form_versions fv_draft ON f.draft_version_id = fv_draft.id
-      WHERE f.id = $1
+      SELECT *, form_schema as generated_form_schema
+      FROM forms 
+      WHERE id = $1
     `;
     const params = [formId];
 
     if (userId) {
-      query += ` AND f.user_id = $2`;
+      query += ` AND user_id = $2`;
       params.push(userId);
     }
 
@@ -376,7 +315,7 @@ export class SaaSService {
     const row = result.rows[0];
     return {
       ...row,
-      is_live: !!row.live_version_id,
+      generated_form: row.generated_form_schema?.[0] || null
     };
   }
 
@@ -390,36 +329,24 @@ export class SaaSService {
         throw new Error('User not found.');
       }
 
-      // Get the form and its current live/draft versions
-      const formResult = await client.query(
-        `SELECT id, user_id, form_name, live_version_id, draft_version_id FROM forms WHERE id = $1 AND user_id = $2`,
+      // Get the current status of the form being toggled
+      const currentFormResult = await client.query(
+        `SELECT is_live FROM forms WHERE id = $1 AND user_id = $2`,
         [formId, userId]
       );
-      if (formResult.rows.length === 0) {
+      if (currentFormResult.rows.length === 0) {
         throw new Error('Form not found or not owned by user.');
       }
-      const form = formResult.rows[0];
-      const currentLiveVersionId = form.live_version_id;
-      const currentDraftVersionId = form.draft_version_id;
+      const currentIsLiveStatus = currentFormResult.rows[0].is_live;
+      const newIsLiveStatus = !currentIsLiveStatus; // What we want to set it to
 
-      let message = '';
-      let newIsLiveStatus = false; // Default to deactivating
+      let message = `Form ${newIsLiveStatus ? 'activated' : 'deactivated'}.`;
 
-      if (currentLiveVersionId === currentDraftVersionId) {
-        // If draft is already live, we are deactivating it
-        newIsLiveStatus = false;
-        message = `Form "${form.form_name}" deactivated.`;
-      } else {
-        // If draft is not live, we are activating it
-        newIsLiveStatus = true;
-        message = `Form "${form.form_name}" activated.`;
-      }
-
-      if (newIsLiveStatus === true) { // User is trying to activate the draft version
-        if (user.subscription_tier === 'free') {
+      if (user.subscription_tier === 'free') {
+        if (newIsLiveStatus === true) { // User is trying to activate a form
           // Find any other currently live form for this free user
           const otherLiveFormResult = await client.query(
-            `SELECT f.id, f.form_name, f.live_version_id FROM forms f WHERE f.user_id = $1 AND f.live_version_id IS NOT NULL AND f.id != $2`,
+            `SELECT id, form_name FROM forms WHERE user_id = $1 AND is_live = true AND id != $2`,
             [userId, formId]
           );
 
@@ -427,49 +354,27 @@ export class SaaSService {
             const otherLiveForm = otherLiveFormResult.rows[0];
             // Deactivate the other live form
             await client.query(
-              `UPDATE form_versions SET is_live = FALSE WHERE id = $1`,
-              [otherLiveForm.live_version_id]
-            );
-            await client.query(
-              `UPDATE forms SET live_version_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
+              `UPDATE forms SET is_live = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
               [otherLiveForm.id]
             );
             message += ` Your previous live form "${otherLiveForm.form_name}" has been deactivated.`;
           }
         }
-
-        // Deactivate the old live version of THIS form (if different from draft)
-        if (currentLiveVersionId && currentLiveVersionId !== currentDraftVersionId) {
-          await client.query(
-            `UPDATE form_versions SET is_live = FALSE WHERE id = $1`,
-            [currentLiveVersionId]
-          );
-        }
-
-        // Make the current draft version live
-        await client.query(
-          `UPDATE form_versions SET is_live = TRUE WHERE id = $1`,
-          [currentDraftVersionId]
-        );
-        // Update the form's live_version_id to point to the draft
-        await client.query(
-          `UPDATE forms SET live_version_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
-          [currentDraftVersionId, formId]
-        );
-      } else { // User is trying to deactivate the current live version (which is also the draft)
-        await client.query(
-          `UPDATE form_versions SET is_live = FALSE WHERE id = $1`,
-          [currentLiveVersionId]
-        );
-        await client.query(
-          `UPDATE forms SET live_version_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1`,
-          [formId]
-        );
+        // If newIsLiveStatus is false (deactivating), no special action needed for other forms.
+      } else if (user.subscription_tier === 'paid') {
+        // Paid users have no restrictions on number of live forms
+        // No additional logic needed here.
       }
+
+      // Now, toggle the requested form's status
+      const updateFormResult = await client.query(
+        `UPDATE forms SET is_live = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND user_id = $3 RETURNING is_live`,
+        [newIsLiveStatus, formId, userId]
+      );
 
       await client.query('COMMIT');
 
-      return { isLive: newIsLiveStatus, message };
+      return { isLive: updateFormResult.rows[0].is_live, message };
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Error toggling form live status:', error);
@@ -518,7 +423,7 @@ export class SaaSService {
 
         // Get embed code and form info
         const embedQuery = `
-          SELECT ec.*, f.live_version_id, f.user_id, f.id as form_id
+          SELECT ec.*, f.is_live, f.user_id, f.id as form_id
           FROM embed_codes ec
           JOIN forms f ON f.id = ec.form_id
           WHERE ec.code = $1 AND ec.is_active = true
@@ -532,12 +437,7 @@ export class SaaSService {
 
         const embed = embedResult.rows[0];
         
-        // Check if the live version exists and is active
-        const liveVersionCheck = await client.query(
-          `SELECT is_live FROM form_versions WHERE id = $1`,
-          [embed.live_version_id]
-        );
-        if (liveVersionCheck.rows.length === 0 || !liveVersionCheck.rows[0].is_live) {
+        if (!embed.is_live) {
           return { success: false, message: 'Form is not currently live' };
         }
 
@@ -751,20 +651,18 @@ export class SaaSService {
     try {
       let query = `
         SELECT 
-          f.id, f.title, f.description, f.embed_code, f.allowed_domains, f.user_id,
-          fv.generated_form,
-          fv.is_live as version_is_live,
+          f.*,
+          f.form_schema as generated_form_schema,
           ec.is_active as embed_active,
           ec.view_count,
           ec.submission_count
         FROM forms f
         JOIN embed_codes ec ON f.id = ec.form_id
-        JOIN form_versions fv ON f.live_version_id = fv.id
         WHERE ec.code = $1
       `;
       
       if (!isTestMode) {
-        query += ` AND ec.is_active = true AND fv.is_live = true`;
+        query += ` AND ec.is_active = true AND f.is_live = true`;
       }
 
       const result = await pool.query(query, [embedCode]);
@@ -796,11 +694,11 @@ export class SaaSService {
         id: row.id,
         title: row.title,
         description: row.description,
-        generated_form: row.generated_form || null,
-        styling: row.generated_form?.styling || {
-          primaryColor: '#007bff',
+        generated_form: row.generated_form_schema?.[0] || null,
+        styling: {
+          primaryColor: row.primary_colors?.[0] || '#007bff',
           backgroundColor: '#ffffff',
-          fontFamily: 'system-ui',
+          fontFamily: row.font_families?.[0] || 'system-ui',
           borderRadius: '8px'
         },
         embedCode,
@@ -835,7 +733,7 @@ export class SaaSService {
 
         // Get embed code and form info
         let embedQuery = `
-          SELECT ec.*, f.live_version_id, f.user_id, f.id as form_id, f.allowed_domains, u.subscription_tier
+          SELECT ec.*, f.is_live, f.user_id, f.id as form_id, f.allowed_domains, u.subscription_tier
           FROM embed_codes ec
           JOIN forms f ON f.id = ec.form_id
           JOIN users u ON f.user_id = u.id
@@ -844,7 +742,7 @@ export class SaaSService {
         
         // Conditionally add is_active and is_live checks for non-test submissions
         if (!metadata.isTestSubmission) {
-          embedQuery += ` AND ec.is_active = true`; // embed_code must be active
+          embedQuery += ` AND ec.is_active = true AND f.is_live = true`;
         }
 
         const embedResult = await client.query(embedQuery, [embedCode]);
@@ -855,12 +753,8 @@ export class SaaSService {
 
         const embed = embedResult.rows[0];
         
-        // Check if the live version exists and is active
-        const liveVersionCheck = await client.query(
-          `SELECT is_live FROM form_versions WHERE id = $1`,
-          [embed.live_version_id]
-        );
-        if (liveVersionCheck.rows.length === 0 || !liveVersionCheck.rows[0].is_live) {
+        // For non-test submissions, also check if the form is live
+        if (!metadata.isTestSubmission && !embed.is_live) {
           return { success: false, message: 'Form is not currently live' };
         }
 
@@ -1134,136 +1028,62 @@ export class SaaSService {
   }
 
   async getUserLiveFormCount(userId: number): Promise<number> {
-    const query = `
-      SELECT COUNT(f.id) as count 
-      FROM forms f
-      JOIN form_versions fv ON f.live_version_id = fv.id
-      WHERE f.user_id = $1 AND fv.is_live = true`;
+    const query = `SELECT COUNT(*) as count FROM forms WHERE user_id = $1 AND is_live = true`;
     const result = await pool.query(query, [userId]);
     return parseInt(result.rows[0].count);
   }
 
   async updateFormConfig(formId: number, userId: number, updatedConfig: GeneratedForm): Promise<SaaSForm | null> {
-    const client = await pool.connect();
     try {
-      await client.query('BEGIN');
-
-      // Get current form to find its draft version and increment version number
-      const currentFormResult = await client.query(
-        `SELECT draft_version_id, live_version_id FROM forms WHERE id = $1 AND user_id = $2`,
-        [formId, userId]
-      );
-      if (currentFormResult.rows.length === 0) {
-        throw new Error('Form not found or not owned by user.');
-      }
-      const { draft_version_id, live_version_id } = currentFormResult.rows[0];
-
-      // Get the highest version number for this form
-      const maxVersionResult = await client.query(
-        `SELECT MAX(version_number) AS max_version FROM form_versions WHERE form_id = $1`,
-        [formId]
-      );
-      const nextVersionNumber = (maxVersionResult.rows[0].max_version || 0) + 1;
-
-      // Insert new draft version
-      const newVersionQuery = `
-        INSERT INTO form_versions (form_id, version_number, generated_form, is_live, is_draft)
-        VALUES ($1, $2, $3, FALSE, TRUE) -- New version is draft, not live initially
-        RETURNING id, generated_form
-      `;
-      const newVersionResult = await client.query(newVersionQuery, [formId, nextVersionNumber, JSON.stringify(updatedConfig)]);
-      const newDraftVersion = newVersionResult.rows[0];
-
-      // Mark previous draft as not draft
-      if (draft_version_id) {
-        await client.query(
-          `UPDATE form_versions SET is_draft = FALSE WHERE id = $1`,
-          [draft_version_id]
-        );
-      }
-
-      // Update main form record to point to the new draft version
-      const updateFormQuery = `
+      const query = `
         UPDATE forms
         SET 
           form_name = $1,
           form_description = $2,
           title = $3,
           description = $4,
-          draft_version_id = $5,
+          form_schema = $5,
           primary_colors = $6,
           font_families = $7,
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $8 AND user_id = $9
-        RETURNING *
+        RETURNING *, form_schema as generated_form_schema
       `;
 
-      const formName = updatedConfig.title;
-      const formDescription = updatedConfig.description;
+      // Extract top-level fields from updatedConfig for direct columns
+      const formName = updatedConfig.title; // Use generatedForm.title as form_name
+      const formDescription = updatedConfig.description; // Use generatedForm.description as form_description
       const title = updatedConfig.title;
       const description = updatedConfig.description;
-      const primaryColors = [updatedConfig.styling.primaryColor];
-      const fontFamilies = [updatedConfig.styling.fontFamily];
+      const primaryColors = [updatedConfig.styling.primaryColor]; // Store as array
+      const fontFamilies = [updatedConfig.styling.fontFamily]; // Store as array
 
-      const updateFormValues = [
+      const values = [
         formName,
         formDescription,
         title,
         description,
-        newDraftVersion.id,
+        JSON.stringify([updatedConfig]), // Store the entire GeneratedForm object in form_schema
         JSON.stringify(primaryColors),
         JSON.stringify(fontFamilies),
         formId,
         userId
       ];
 
-      const updatedFormResult = await client.query(updateFormQuery, updateFormValues);
-      const updatedFormRecord = updatedFormResult.rows[0];
+      const result = await pool.query(query, values);
 
-      await client.query('COMMIT');
+      if (result.rows.length === 0) {
+        return null;
+      }
 
+      const row = result.rows[0];
       return {
-        ...updatedFormRecord,
-        live_version_id: live_version_id, // Keep existing live version ID
-        draft_version_id: newDraftVersion.id,
-        live_version_config: (await this.getFormVersionById(live_version_id))?.generated_form,
-        draft_version_config: newDraftVersion.generated_form,
+        ...row,
+        generated_form: row.generated_form_schema?.[0] || null
       };
     } catch (error) {
-      await client.query('ROLLBACK');
-      console.error('Error updating form configuration with versioning:', error);
+      console.error('Error updating form configuration:', error);
       throw error;
-    } finally {
-      client.release();
-    }
-  }
-
-  async getFormVersionById(versionId: number | null): Promise<FormVersion | null> {
-    if (!versionId) return null;
-    const query = `SELECT * FROM form_versions WHERE id = $1`;
-    const result = await pool.query(query, [versionId]);
-    return result.rows[0] || null;
-  }
-
-  // Helper to trigger connectors (remains the same)
-  private async triggerConnectors(formId: number, submissionData: any) {
-    try {
-      const form = await this.getFormById(formId);
-      if (!form) {
-        console.warn(`Form ${formId} not found for connector dispatch.`);
-        return;
-      }
-
-      const connectors = form.connectors || [];
-      if (connectors.length === 0) {
-        console.log(`No connectors configured for form ${formId}.`);
-        return;
-      }
-
-      const results = await dispatchToConnectors(submissionData, connectors);
-      console.log(`Connector dispatch results for form ${formId}:`, results);
-    } catch (error) {
-      console.error(`Error dispatching connectors for form ${formId}:`, error);
     }
   }
 }
