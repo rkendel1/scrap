@@ -1,6 +1,6 @@
 import React from 'react';
 import { FormData } from '../types/api';
-import { Palette, Type, Mic, Sparkles, Layout, Component, Code, MessageSquare, Users } from 'lucide-react'; // Added more icons for placeholders
+import { Sparkles } from 'lucide-react';
 
 interface WebsiteAnalysisSummaryProps {
   extractedDesignTokens?: any | null;
@@ -65,13 +65,7 @@ export const WebsiteAnalysisSummary: React.FC<WebsiteAnalysisSummaryProps> = ({
               ))}
               {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span className="text-gray-500"> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
             </div>
-          ) : (
-            <div className="flex flex-wrap gap-1">
-              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
-              <div className="w-4 h-4 rounded-sm border border-gray-300 bg-gray-200"></div>
-              <span className="text-gray-500">N/A</span>
-            </div>
-          )}
+          ) : <span className="text-gray-500">N/A</span>}
         </div>
 
         {/* Card 2: Typography */}
