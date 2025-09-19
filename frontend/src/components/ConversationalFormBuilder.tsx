@@ -82,10 +82,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const destinationIcons: Record<string, JSX.Element> = {
     email: <Mail size={16} />,
-    googlesheets: <Sheet size={16} />,
+    googlesheets: <Sheet size={16} />, // Corrected to match normalized type
     slack: <Slack size={16} />,
     webhook: <Link size={16} />,
-    zapier: <Zap size={16} />,
+    zapier: <Zap size={16} />, // Added Zapier icon
   };
 
   const formPurposes = [
@@ -181,16 +181,23 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   // New helper function to parse commands
   const parseCommand = (lowerInput: string): string | null => {
-    if (lowerInput.includes('help')) return 'help';
-    if (lowerInput.includes('start over') || lowerInput.includes('reset')) return 'start over';
+    // Exact matches for quick reply commands
+    if (lowerInput === 'help') return 'help';
+    if (lowerInput === 'start over' || lowerInput === 'reset') return 'start over';
     if (lowerInput === 'yes') return 'yes';
     if (lowerInput === 'no') return 'no';
-    if (lowerInput.includes('configure destination') || lowerInput.includes('set destination')) return 'configure destination';
-    if (lowerInput.includes('get embed code') || lowerInput.includes('embed code')) return 'get embed code';
-    if (lowerInput.includes('create account')) return 'create account';
-    if (lowerInput.includes('provide email')) return 'provide email';
-    if (lowerInput.includes('i\'m done') || lowerInput.includes('im done')) return 'im done';
-    if (lowerInput.includes('make changes') || lowerInput.includes('change form')) return 'make changes';
+    if (lowerInput === 'configure destination' || lowerInput === 'set destination') return 'configure destination';
+    if (lowerInput === 'get embed code' || lowerInput === 'embed code') return 'get embed code';
+    if (lowerInput === 'create account') return 'create account';
+    if (lowerInput === 'provide email') return 'provide email';
+    if (lowerInput === 'i\'m done' || lowerInput === 'im done') return 'im done';
+    if (lowerInput === 'make changes' || lowerInput === 'change form') return 'make changes';
+    // Destination types as commands
+    if (lowerInput === 'email') return 'email';
+    if (lowerInput === 'google sheets') return 'google sheets'; // Keep original for parsing
+    if (lowerInput === 'slack') return 'slack';
+    if (lowerInput === 'webhook') return 'webhook';
+    if (lowerInput === 'zapier') return 'zapier';
     return null; // No command found
   };
 
@@ -209,6 +216,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const command = parseCommand(lowerInput);
     if (command) {
       parsed.command = command;
+      // If the command is a destination type, also set destinationType
+      const destinationCommands = ['email', 'google sheets', 'slack', 'webhook', 'zapier'];
+      if (destinationCommands.includes(command)) {
+        parsed.destinationType = command.replace(/\s/g, ''); // Normalize for internal use
+      }
       return parsed; // If a command is found, prioritize it and return immediately
     }
 
