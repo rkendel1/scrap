@@ -930,17 +930,17 @@ app.get('/embed.html', (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); 
   res.setHeader('X-Frame-Options', 'ALLOWALL'); // Allow framing
   res.removeHeader('X-Frame-Options'); // Remove default frame blocking
-  res.sendFile(path.join(__dirname, '../../frontend/public/embed.html')); // Use absolute path
+  res.sendFile(path.join(__dirname, '../frontend/public/embed.html')); // Use absolute path
 });
 
 // NEW: Serve test-embed.html from backend
 app.get('/test-embed.html', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../frontend/public/test-embed.html')); // Use absolute path
+  res.sendFile(path.join(__dirname, '../frontend/public/test-embed.html')); // Use absolute path
 });
 
 // Serve embed.js script
 app.get('/embed.js', (req, res) => {
-  const embedJsPath = path.join(__dirname, '../../frontend/public/embed.js'); // Correct path to static file
+  const embedJsPath = path.join(__dirname, '../frontend/public/embed.js'); // Correct path to static file
   fs.readFile(embedJsPath, 'utf8', (err, data) => {
     if (err) {
       console.error('Error reading embed.js file:', err); // Detailed error logging
