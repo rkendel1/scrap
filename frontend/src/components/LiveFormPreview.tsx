@@ -190,10 +190,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           <button 
             onClick={() => onGetEmbedCodeClick(createdForm)}
             className="btn-embed-code"
-            disabled={!user || !isDestinationConfigured} // Disable if not logged in or destination not configured
+            disabled={!user} // Only disable if not logged in
           >
             <Lock size={18} />
-            {!user ? 'Sign in to get embed code' : (!isDestinationConfigured ? 'Configure Destination First' : 'Get Embed Code')}
+            {!user ? 'Sign in to get embed code' : 'Get Embed Code'}
           </button>
         </div>
       )}

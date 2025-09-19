@@ -267,13 +267,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         return;
       }
       if (parsedInput.command === 'get embed code') {
-        if (createdForm && isDestinationConfigured) {
+        if (createdForm) {
           onGetEmbedCodeClick(createdForm);
           addPrompt("Great! You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
           setCurrentStep('DONE');
-        } else if (createdForm && !isDestinationConfigured) {
-          addError("Please configure a destination for your form before getting the embed code.");
-          addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
         } else {
           addError("No form has been generated yet. Please start by providing a URL.");
           setCurrentStep('ASK_URL');
@@ -461,7 +458,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(generateResult.generatedForm);
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
-    setIsDestinationConfigured(false); // Reset destination configured status
+    // isDestinationConfigured remains as is, it doesn't block embed code anymore
 
     setCurrentStep('FORM_GENERATED_REVIEW'); // New state
     addPrompt(
@@ -469,7 +466,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>What would you like to do next?</div>
       </>,
-      ['Configure Destination', 'Get Embed Code']
+      ['Get Embed Code', 'Configure Destination'] // Changed order and options
     );
   };
 
