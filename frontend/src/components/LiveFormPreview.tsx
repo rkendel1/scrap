@@ -249,7 +249,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     <div className={`live-preview-card ${className || ''}`}>
       <div className="preview-header">
         <h3>Live Form Preview</h3>
-        {url && <p>Styled with design tokens from: {url}</p>}
+        {/* Removed: {url && <p>Styled with design tokens from: {url}</p>} */}
       </div>
       
       <div className="live-preview-content-wrapper">
@@ -290,11 +290,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
         </div>
       </div>
-      {currentFormToRender && (
+      {/* Removed: {currentFormToRender && (
         <div className="ai-generated-badge">
           ✅ AI-generated form preview.
         </div>
-      )}
+      )} */}
       {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && (
         <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
           ✅ Design tokens extracted. Ready for form generation!
