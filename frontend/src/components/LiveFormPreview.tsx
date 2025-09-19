@@ -265,13 +265,16 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     alert('Embed code copied to clipboard!');
   };
 
+  // Determine if the zero state is active
+  const isZeroState = !currentFormToRender && !(extractedDesignTokens || extractedVoiceAnalysis);
+
   return (
     <div className={`live-preview-card ${className || ''}`}>
       <div className="preview-header">
         <h3>Live Form Preview</h3>
       </div>
       
-      <div className="live-preview-content-wrapper">
+      <div className={`live-preview-content-wrapper ${isZeroState ? 'is-zero-state' : ''}`}>
         <div
           style={{
             display: 'flex',
@@ -295,7 +298,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           )}
 
           {/* Render Placeholder if no form and no analysis is available */}
-          { !currentFormToRender && !(extractedDesignTokens || extractedVoiceAnalysis) && (
+          { isZeroState && (
             <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
