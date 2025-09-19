@@ -110,18 +110,18 @@ main {
 }
 
 .builder-column {
-  flex: 1;
+  flex: 0 0 40%; /* Allocate 40% width to the builder column */
   display: flex;
   flex-direction: column;
-  max-width: 50%;
+  max-width: 40%; /* Ensure max-width matches flex-basis */
   height: 100%; /* Take full height of parent */
 }
 
 .preview-column {
-  flex: 1;
+  flex: 0 0 60%; /* Allocate 60% width to the preview column */
   display: flex;
   flex-direction: column;
-  max-width: 50%;
+  max-width: 60%; /* Ensure max-width matches flex-basis */
   height: 100%; /* Take full height of parent */
 }
 
@@ -751,6 +751,7 @@ main {
   .builder-column, .preview-column {
     max-width: none;
     height: auto;
+    flex: 1; /* Reset flex to allow them to stack */
   }
 
   .live-preview-card {
