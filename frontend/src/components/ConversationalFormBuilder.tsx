@@ -16,6 +16,7 @@ interface ConversationalFormBuilderProps {
     isDestinationConfigured: boolean; // Added
   }) => void;
   onGetEmbedCodeClick: (form: SaaSForm) => void;
+  onShowAuth: (mode: 'login' | 'register') => void; // New prop
 }
 
 type ConversationEntry = {
@@ -31,7 +32,9 @@ type ConversationStep =
   | 'PROCESSING_PURPOSE'
   | 'FORM_GENERATED_REVIEW' // New state
   | 'ASK_DESTINATION_TYPE'
+  | 'CONFIRM_DEFAULT_EMAIL' // New intermediate state
   | 'ASK_DESTINATION_CONFIG'
+  | 'PROCESSING_DESTINATION' // New state
   | 'DESTINATION_CONFIGURED' // New state
   | 'DONE';
 
@@ -41,6 +44,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   guestToken,
   onStateChange,
   onGetEmbedCodeClick,
+  onShowAuth, // Destructure new prop
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
@@ -151,7 +155,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code'; // Added commands
+      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code' | 'create account' | 'provide email'; // Added commands
       configInput?: string;
     } = {};
 
@@ -179,6 +183,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
     if (lowerInput.includes('get embed code') || lowerInput.includes('embed code')) {
       parsed.command = 'get embed code';
+      return parsed;
+    }
+    if (lowerInput.includes('create account')) {
+      parsed.command = 'create account';
+      return parsed;
+    }
+    if (lowerInput.includes('provide email')) {
+      parsed.command = 'provide email';
       return parsed;
     }
 
@@ -278,6 +290,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         return;
       }
     }
+    if (parsedInput.command === 'create account') {
+      onShowAuth('register');
+      addPrompt("Please create an account in the modal. Once done, you can continue configuring your destination.");
+      return;
+    }
 
 
     try {
@@ -323,7 +340,27 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           }
           break;
 
+        case 'CONFIRM_DEFAULT_EMAIL':
+          if (parsedInput.command === 'yes') {
+            if (user?.email) {
+              await processDestinationConfigInput(user.email, 'email');
+            } else {
+              addError("I couldn't find your email. Please provide it manually.");
+              setCurrentStep('ASK_DESTINATION_CONFIG');
+            }
+          } else if (parsedInput.command === 'no') {
+            addPrompt("Okay, please provide the recipient email address (e.g., \"sales@yourcompany.com\").");
+            setCurrentStep('ASK_DESTINATION_CONFIG');
+          } else {
+            addError("Please respond with 'Yes' or 'No'.");
+          }
+          break;
+
         case 'ASK_DESTINATION_CONFIG':
+          if (parsedInput.command === 'provide email') {
+            addPrompt("Please provide the recipient email address (e.g., \"sales@yourcompany.com\").");
+            return;
+          }
           if (parsedInput.configInput) {
             await processDestinationConfigInput(parsedInput.configInput);
           } else if (parsedInput.destinationType) {
@@ -489,6 +526,29 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setSelectedDestinationType(normalizedType);
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
 
+    if (normalizedType === 'email') {
+      if (user?.email) {
+        addPrompt(
+          <>
+            Okay, I'll send submissions to your registered email: <strong>{user.email}</strong>. Is that correct?
+          </>,
+          ['Yes', 'No']
+        );
+        setCurrentStep('CONFIRM_DEFAULT_EMAIL');
+        return;
+      } else {
+        addPrompt(
+          <>
+            To use your email as the default, you need to create an account. Alternatively, you can provide a recipient email address now.
+          </>,
+          ['Create Account', 'Provide Email']
+        );
+        setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step to await input or command
+        return;
+      }
+    }
+
+    // For other destination types, proceed as before
     if (configInput) {
       await processDestinationConfigInput(configInput, normalizedType);
     } else {
@@ -550,6 +610,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (validationError) {
       addError(`${validationError} ${expectedInputPrompt}`);
+      setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step
       return;
     }
 
@@ -580,6 +641,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!configureResult.success) {
       addError(configureResult.error || 'Failed to save destination configuration.');
+      setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step
       return;
     }
 
@@ -650,6 +712,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       case 'slack': return 'Slack';
       case 'webhook': return 'Webhook';
       case 'zapier': return 'Zapier';
+      case 'create account': return 'Create Account';
+      case 'provide email': return 'Provide Email';
       default: return type;
     }
   };
@@ -686,7 +750,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
       {currentQuickResponses && (
         <div style={{ width: '100%', marginTop: '12px' }}>
-          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED') && (
+          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED' || currentStep === 'CONFIRM_DEFAULT_EMAIL' || (currentStep === 'ASK_DESTINATION_CONFIG' && !user && selectedDestinationType === 'email')) && (
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
               Use the buttons above to select your option
             </div>

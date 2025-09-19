@@ -279,6 +279,11 @@ function App() {
     }
   };
 
+  const handleShowAuth = (mode: 'login' | 'register') => {
+    setAuthMode(mode);
+    setShowAuth(true);
+  };
+
   if (loading) {
     return (
       <div className="App">
@@ -383,6 +388,7 @@ function App() {
                 guestToken={guestToken || undefined}
                 onStateChange={setBuilderState} // Pass state update callback
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
+                onShowAuth={handleShowAuth} // Pass the new handler
               />
             </div>
             <div style={{ flex: 1, height: '100%' }}> {/* Right column for live preview */}
