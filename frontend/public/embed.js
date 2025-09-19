@@ -73,7 +73,7 @@
         const formHTML = `
             <div style="
                 background-color: ${styling.backgroundColor || '#fff'};
-                padding: 24px;
+                padding: 16px; /* Reduced padding */
                 border-radius: ${styling.borderRadius || '8px'};
                 font-family: ${styling.fontFamily || 'system-ui'};
                 border: 1px solid #e1e5e9;
@@ -82,12 +82,12 @@
                 width: 100%; /* Ensure it takes full width of its container */
                 margin: 0 auto;
             ">
-                <div style="margin-bottom: 24px;">
-                    <h3 style="margin: 0 0 8px 0; color: #333; font-size: 20px;">
+                <div style="margin-bottom: 16px;"> /* Reduced margin */
+                    <h3 style="margin: 0 0 6px 0; color: #333; font-size: 18px;"> /* Reduced margin and font size */
                         ${escapeHtml(form.title || formData.title)}
                     </h3>
                     ${form.description || formData.description ? `
-                        <p style="margin: 0; color: #666; font-size: 14px;">
+                        <p style="margin: 0; color: #666; font-size: 13px;"> /* Reduced font size */
                             ${escapeHtml(form.description || formData.description)}
                         </p>
                     ` : ''}
@@ -96,15 +96,15 @@
                 <form id="formcraft-form-${embedCode}">
                     ${renderFields(form.fields || [])}
                     
-                    <div id="form-message-${embedCode}" style="margin-bottom: 16px; display: none;"></div>
+                    <div id="form-message-${embedCode}" style="margin-bottom: 12px; display: none;"></div> /* Reduced margin */
                     
                     <button type="submit" id="submit-btn-${embedCode}" style="
                         background-color: ${styling.primaryColor || '#007bff'};
                         color: white;
-                        padding: 12px 24px;
+                        padding: 10px 20px; /* Reduced padding */
                         border: none;
                         border-radius: ${styling.borderRadius || '4px'};
-                        font-size: 16px;
+                        font-size: 15px; /* Reduced font size */
                         font-weight: 500;
                         cursor: pointer;
                         width: 100%;
@@ -115,24 +115,24 @@
                     </button>
                 </form>
 
-                <div id="thank-you-message-${embedCode}" style="display: none; text-align: center; padding: 20px;">
-                    <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 18px; font-weight: bold; margin-bottom: 8px;">
+                <div id="thank-you-message-${embedCode}" style="display: none; text-align: center; padding: 16px;"> /* Reduced padding */
+                    <div style="color: ${styling.primaryColor || '#28a745'}; font-size: 16px; font-weight: bold; margin-bottom: 6px;"> /* Reduced font size and margin */
                         ✓ Thank You!
                     </div>
-                    <p style="margin: 0; color: #666;">
+                    <p style="margin: 0; color: #666; font-size: 13px;"> /* Reduced font size */
                         ${escapeHtml(form.thankYouMessage || 'Thank you for your submission!')}
                     </p>
                 </div>
 
                 ${formData.showBranding ? `
                     <div style="
-                        margin-top: 16px;
-                        padding-top: 16px;
+                        margin-top: 12px; /* Reduced margin */
+                        padding-top: 12px; /* Reduced padding */
                         border-top: 1px solid #e1e5e9;
                         text-align: center;
                     ">
                         <a href="https://formcraft.ai" target="_blank" rel="noopener noreferrer" style="
-                            font-size: 12px;
+                            font-size: 11px; /* Reduced font size */
                             color: #666;
                             text-decoration: none;
                         ">
@@ -160,11 +160,11 @@
             const fieldId = `field-${field.name}-${embedCode}`;
             const baseStyles = `
                 width: 100%;
-                padding: 12px;
+                padding: 10px; /* Reduced padding */
                 border: 1px solid #ddd;
                 border-radius: 4px;
-                font-size: 16px;
-                margin-bottom: 8px;
+                font-size: 14px; /* Reduced font size */
+                margin-bottom: 6px; /* Reduced margin */
                 font-family: inherit;
                 box-sizing: border-box;
             `;
@@ -177,7 +177,7 @@
                         <textarea id="${fieldId}" name="${field.name}" 
                             placeholder="${escapeHtml(field.placeholder || '')}" 
                             ${field.required ? 'required' : ''}
-                            style="${baseStyles} min-height: 100px; resize: vertical;"></textarea>
+                            style="${baseStyles} min-height: 80px; resize: vertical;"></textarea> /* Reduced min-height */
                     `;
                     break;
                 
@@ -203,11 +203,11 @@
             }
 
             return `
-                <div style="margin-bottom: 16px;">
+                <div style="margin-bottom: 12px;"> /* Reduced margin */
                     <label for="${fieldId}" style="
                         display: block;
-                        margin-bottom: 4px;
-                        font-size: 14px;
+                        margin-bottom: 3px; /* Reduced margin */
+                        font-size: 13px; /* Reduced font size */
                         font-weight: 500;
                         color: #333;
                     ">
