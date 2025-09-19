@@ -474,193 +474,9 @@ export class SaaSService {
     return result.rows;
   }
 
-  async connectFormToService(
-    formId: number, 
-    destinationType: string, // Changed from connectorId to destinationType
-    destinationConfig: any
-  ): Promise<boolean> {
-    // Verify user owns the form (assuming this is called after form creation by the owner)
-    // No user_id check here, as it's assumed to be handled by the calling API endpoint
-    const form = await this.getFormById(formId); // Fetch without user_id check
-    if (!form) return false;
-
-    // Find the connector by type
-    const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
-    const connectorResult = await pool.query(connectorQuery, [destinationType]);
-    
-    if (connectorResult.rows.length === 0) {
-      throw new Error(`Connector type ${destinationType} not found`);
-    }
-    
-    const connectorId = connectorResult.rows[0].id;
-    
-    // Insert or update the form connector configuration
-    const upsertQuery = `
-      INSERT INTO form_connectors (form_id, connector_id, config, is_active)
-      VALUES ($1, $2, $3, true)
-      ON CONFLICT (form_id, connector_id) 
-      DO UPDATE SET 
-        config = EXCLUDED.config,
-        is_active = EXCLUDED.is_active
-      RETURNING id
-    `;
-    
-    await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
-    
-    return result.rows.length > 0;
-  }
-
-  async getFormAnalytics(formId: number, userId: number): Promise<any> {
-    const form = await this.getFormById(formId, userId);
-    if (!form) return null;
-
-    const analyticsQuery = `
-      SELECT 
-        COUNT(*) as total_submissions,
-        COUNT(DISTINCT DATE(created_at)) as active_days,
-        AVG(EXTRACT(EPOCH FROM (created_at - LAG(created_at) OVER (ORDER BY created_at)))) as avg_time_between_submissions
-      FROM form_submissions 
-      WHERE form_id = $1
-    `;
-    
-    const embedAnalyticsQuery = `
-      SELECT 
-        ec.code, 
-        ec.domain, 
-        ec.view_count, 
-        ec.submission_count,
-        ROUND((ec.submission_count::float / NULLIF(ec.view_count, 0)) * 100, 2) as conversion_rate
-      FROM embed_codes ec 
-      WHERE ec.form_id = $1
-    `;
-
-    const [analyticsResult, embedResult] = await Promise.all([
-      pool.query(analyticsQuery, [formId]),
-      pool.query(embedAnalyticsQuery, [formId])
-    ]);
-
-    return {
-      overview: analyticsResult.rows[0],
-      embeds: embedResult.rows
-    };
-  }
-
-  private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
-    try {
-      // Check if form has customer mapping for n8n routing
-      const customerId = await customerConfigService.getFormCustomerMapping(formId);
-      
-      if (customerId) {
-        // Construct n8n connector config
-        const n8nConnectorConfig: ConnectorConfig = {
-          type: 'n8n',
-          settings: {
-            webhookUrl: process.env.N8N_WEBHOOK_URL || 'http://n8n:5678/webhook/form-submission', // Use env var or default
-            customerId: customerId,
-            formId: formId, // Pass formId to n8n
-            // authToken: process.env.N8N_INTERNAL_AUTH_TOKEN // Optional: internal token for n8n to authenticate with backend
-          }
-        };
-        
-        // Dispatch to n8n
-        const n8nResults = await dispatchToConnectors(submissionData, [n8nConnectorConfig]);
-        
-        if (n8nResults[0]?.success) {
-          console.log(`✓ n8n customer routing succeeded for customer ${customerId}: ${n8nResults[0].message}`);
-        } else {
-          console.error(`❌ n8n customer routing failed for customer ${customerId}: ${n8nResults[0]?.message}`, n8nResults[0]?.error);
-        }
-        return; // Exit after dispatching to n8n
-      }
-
-      // Fallback to existing connector logic if no customer mapping
-      // First try to get connectors from the new JSONB column
-      const newFormatQuery = `
-        SELECT connectors
-        FROM forms
-        WHERE id = $1
-      `;
-      
-      const newFormatResult = await pool.query(newFormatQuery, [formId]);
-      
-      if (newFormatResult.rows.length > 0) {
-        const connectors = newFormatResult.rows[0].connectors || [];
-        
-        if (connectors.length > 0) {
-          // Use new JSONB format
-          const dispatchResults = await dispatchToConnectors(submissionData, connectors);
-          
-          // Log results
-          dispatchResults.forEach((result, index) => {
-            const connector = connectors[index];
-            if (result.success) {
-              console.log(`✓ ${connector.type} connector succeeded: ${result.message}`);
-            } else {
-              console.error(`❌ ${connector.type} connector failed: ${result.message}`, result.error);
-            }
-          });
-          return;
-        }
-      }
-
-      // Fallback to old format for backward compatibility
-      const oldFormatQuery = `
-        SELECT fc.config, c.type, c.name
-        FROM form_connectors fc
-        JOIN connectors c ON fc.connector_id = c.id
-        WHERE fc.form_id = $1 AND fc.is_active = true
-      `;
-      
-      const oldFormatResult = await pool.query(oldFormatQuery, [formId]);
-      
-      if (oldFormatResult.rows.length === 0) {
-        console.log(`No connectors configured for form ${formId}`);
-        return;
-      }
-
-      // Convert database rows to ConnectorConfig format
-      const connectorConfigs: ConnectorConfig[] = oldFormatResult.rows.map(row => ({
-        type: row.type,
-        ...JSON.parse(row.config || '{}')
-      }));
-
-      // Use the modular dispatcher
-      const results = await dispatchToConnectors(submissionData, connectorConfigs);
-      
-      // Log results
-      results.forEach((result, index) => {
-        const connectorName = `${connectorConfigs[index].type} connector`;
-        
-        if (result.success) {
-          console.log(`✅ ${connectorName}: ${result.message}`);
-        } else {
-          console.error(`❌ ${connectorName}: ${result.message}`, result.error);
-        }
-      });
-    } catch (error) {
-      console.error('Failed to dispatch to connectors:', error);
-    }
-  }
-
-  private async getUserById(userId: number): Promise<any> {
-    const query = `SELECT * FROM users WHERE id = $1`;
-    const result = await pool.query(query, [userId]);
-    return result.rows[0] || null;
-  }
-
-  private async getUserLiveFormCount(userId: number): Promise<number> {
-    const query = `SELECT COUNT(*) as count FROM forms WHERE user_id = $1 AND is_live = true`;
-    const result = await pool.query(query, [userId]);
-    return parseInt(result.rows[0].count);
-  }
-
-  private generateEmbedCode(): string {
-    return 'embed_' + Math.random().toString(36).substring(2) + Date.now().toString(36);
-  }
-
   async configureFormDestination(
     formId: number, 
-    destinationType: string, 
+    destinationType: string, // Changed from connectorId to destinationType
     destinationConfig: any,
     userId: number | null, // Added userId
     guestToken: string | null // Added guestToken
@@ -668,13 +484,14 @@ export class SaaSService {
     console.log('Backend: configureFormDestination called with:', { formId, destinationType, destinationConfig, userId, guestToken }); // DEBUG LOG
     try {
       // Verify form ownership
-      const formQuery = `SELECT user_id, guest_token_id FROM forms WHERE id = $1`;
+      const formQuery = `SELECT user_id, guest_token_id, form_name FROM forms WHERE id = $1`;
       const formResult = await pool.query(formQuery, [formId]);
       if (formResult.rows.length === 0) {
         console.log('Backend: Form not found for ID:', formId); // DEBUG LOG
         throw new Error('Form not found');
       }
       const formOwner = formResult.rows[0];
+      const formName = formResult.rows[0].form_name;
 
       let isAuthorized = false;
       if (userId && formOwner.user_id === userId) {
@@ -693,6 +510,55 @@ export class SaaSService {
         throw new Error('Unauthorized to configure this form');
       }
 
+      // --- NEW LOGIC: Check for customer mapping and update customer_configs if applicable ---
+      const customerId = await customerConfigService.getFormCustomerMapping(formId);
+      
+      if (customerId) {
+        console.log(`Backend: Form ${formId} is mapped to customer ${customerId}. Updating customer_configs.`);
+        const customerConfig = await customerConfigService.getCustomerConfig(customerId);
+        if (!customerConfig) {
+          throw new Error(`Customer configuration not found for ID: ${customerId}`);
+        }
+
+        // Prepare the new routing rule
+        let newRule: any;
+        if (destinationType === 'email') {
+          newRule = {
+            condition: `form_id == ${formId}`, // Specific to this form
+            action: 'email',
+            target: destinationConfig.to,
+            template: destinationConfig.subject ? `New submission for ${formName}: ${destinationConfig.subject}` : `New submission for ${formName}`
+          };
+        } else {
+          // For other types, create a generic webhook rule for now
+          newRule = {
+            condition: `form_id == ${formId}`,
+            action: 'webhook',
+            target: destinationConfig.webhookUrl,
+            headers: { 'Content-Type': 'application/json' }
+          };
+        }
+
+        // Update or add the rule in routing_config
+        let updatedRules = customerConfig.routing_config.routing_rules || [];
+        const existingRuleIndex = updatedRules.findIndex((rule: any) => 
+          rule.condition === `form_id == ${formId}` && rule.action === newRule.action
+        );
+
+        if (existingRuleIndex !== -1) {
+          updatedRules[existingRuleIndex] = newRule; // Update existing rule
+        } else {
+          updatedRules.push(newRule); // Add new rule
+        }
+
+        customerConfig.routing_config.routing_rules = updatedRules;
+        await customerConfigService.updateCustomerConfig(customerId, { routing_config: customerConfig.routing_config });
+        console.log(`Backend: Customer configuration for ${customerId} updated with new ${destinationType} rule for form ${formId}.`);
+        return true;
+      }
+      // --- END NEW LOGIC ---
+
+      // Fallback to existing connector logic if no customer mapping
       // First, find the connector by type
       const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
       const connectorResult = await pool.query(connectorQuery, [destinationType]);
