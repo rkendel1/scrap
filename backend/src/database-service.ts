@@ -26,7 +26,7 @@ export interface FormRecord {
   images: any[];
   css_variables: Record<string, any>;
   raw_css: string;
-  form_schema: any[];
+  -- REMOVED: form_schema: any[]; -- This column was dropped
   logo_url: string;
   brand_colors: any[];
   icons: any[];
@@ -38,6 +38,8 @@ export interface FormRecord {
   created_at: Date;
   updated_at: Date;
   extracted_at: Date;
+  live_version_id?: number; -- Added after migration 007
+  draft_version_id?: number; -- Added after migration 007
 }
 
 export class DatabaseService {
@@ -50,7 +52,7 @@ export class DatabaseService {
         margins, paddings, spacing_scale,
         layout_structure, grid_system, breakpoints,
         buttons, form_fields, cards, navigation, images,
-        css_variables, raw_css, form_schema,
+        css_variables, raw_css, -- REMOVED: form_schema,
         logo_url, brand_colors, icons, messaging,
         preview_html, voice_tone, personality_traits, audience_analysis,
         extracted_at
@@ -61,10 +63,10 @@ export class DatabaseService {
         $11, $12, $13,
         $14, $15, $16,
         $17, $18, $19, $20, $21,
-        $22, $23, $24,
-        $25, $26, $27, $28,
-        $29, $30, $31, $32,
-        $33
+        $22, $23, -- REMOVED: $24,
+        $24, $25, $26, $27,
+        $28, $29, $30, $31,
+        $32
       ) RETURNING *`;
 
     const values = [
@@ -91,7 +93,7 @@ export class DatabaseService {
       JSON.stringify(data.designTokens.images),
       JSON.stringify(data.designTokens.cssVariables),
       data.designTokens.rawCSS,
-      JSON.stringify(data.designTokens.formSchema),
+      -- REMOVED: JSON.stringify(data.designTokens.formSchema),
       data.designTokens.logoUrl,
       JSON.stringify(data.designTokens.brandColors),
       JSON.stringify(data.designTokens.icons),
