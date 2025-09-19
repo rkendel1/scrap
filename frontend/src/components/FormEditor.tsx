@@ -60,6 +60,9 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<number | null>(null); // Index of field being edited
+  const [extractedDesignTokens, setExtractedDesignTokens] = useState<any | null>(null);
+  const [extractedVoiceAnalysis, setExtractedVoiceAnalysis] = useState<any | null>(null);
+
 
   const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<GeneratedForm>({
     defaultValues: form.generated_form,
@@ -71,6 +74,19 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
   });
 
   const watchedFormConfig = watch(); // Watch the entire form for live preview
+
+  // Reconstruct extracted data for LiveFormPreview
+  useEffect(() => {
+    if (form) {
+      setExtractedDesignTokens({
+        colorPalette: form.color_palette,
+        primaryColors: form.primary_colors,
+        fontFamilies: form.font_families,
+        messaging: form.messaging,
+      });
+      setExtractedVoiceAnalysis(form.voice_tone);
+    }
+  }, [form]);
 
   const onSubmit = async (data: GeneratedForm) => {
     setIsLoading(true);
@@ -361,7 +377,10 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
         <LiveFormPreview
           previewGeneratedForm={watchedFormConfig} // Pass the live-watched form config
           hideEmbedSection={true} // Hide embed section in editor
-          hideAnalysisSection={true} // Hide analysis section in editor
+          hideAnalysisSection={false} // Now show analysis section
+          extractedDesignTokens={extractedDesignTokens} // Pass extracted design tokens
+          extractedVoiceAnalysis={extractedVoiceAnalysis} // Pass extracted voice analysis
+          formData={{ url: form.url }} // Pass form URL for context in analysis display
           className="h-full" // Ensure it takes full height
         />
       </div>
