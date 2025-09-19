@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { SaaSForm, GeneratedForm, FormField } from '../types/api';
 import { Plus, Trash2, GripVertical, Edit, Check, X } from 'lucide-react';
+import { LiveFormPreview } from './LiveFormPreview'; // Import LiveFormPreview
 
 interface FormEditorProps {
   form: SaaSForm;
@@ -69,7 +70,7 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
     name: 'fields',
   });
 
-  const watchedFields = watch('fields'); // Watch fields array for conditional rendering
+  const watchedFormConfig = watch(); // Watch the entire form for live preview
 
   const onSubmit = async (data: GeneratedForm) => {
     setIsLoading(true);
@@ -222,136 +223,148 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
   };
 
   return (
-    <div className="card p-6 space-y-6">
-      <div className="flex items-center justify-between mb-4">
-        <button onClick={onCancel} className="btn btn-secondary btn-header-small">
-          ← Back to Dashboard
-        </button>
-        <h2 className="text-2xl font-bold text-gray-900">Edit Form: "{form.form_name}"</h2>
-        <button
-          type="submit"
-          onClick={handleSubmit(onSubmit)}
-          disabled={isLoading}
-          className="btn btn-primary btn-header-small"
-        >
-          {isLoading ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
-
-      {error && (
-        <div className="error-message p-3 rounded-md text-sm">
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-        {/* General Form Details */}
-        <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">General Form Details</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="form-label">Form Name</label>
-              <input type="text" {...register('title', { required: true })} className="form-input" />
-              {errors.title && <span className="error-message">Form title is required</span>}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Form Description</label>
-              <textarea {...register('description')} className="form-input" rows={3} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Call-to-Action (CTA) Text</label>
-              <input type="text" {...register('ctaText', { required: true })} className="form-input" />
-              {errors.ctaText && <span className="error-message">CTA text is required</span>}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Thank You Message</label>
-              <textarea {...register('thankYouMessage')} className="form-input" rows={3} />
-            </div>
-          </div>
-        </div>
-
-        {/* Styling */}
-        <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Form Styling</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="form-group">
-              <label className="form-label">Primary Color</label>
-              <input type="color" {...register('styling.primaryColor')} className="form-input h-10" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Background Color</label>
-              <input type="color" {...register('styling.backgroundColor')} className="form-input h-10" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Font Family</label>
-              <input type="text" {...register('styling.fontFamily')} className="form-input" placeholder="e.g., Inter, sans-serif" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Border Radius</label>
-              <input type="text" {...register('styling.borderRadius')} className="form-input" placeholder="e.g., 8px, 0.5rem" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Max Width</label>
-              <input type="text" {...register('styling.maxWidth')} className="form-input" placeholder="e.g., 500px, 75%" />
-            </div>
-          </div>
-        </div>
-
-        {/* Form Fields */}
-        <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
-          <h3 className="text-xl font-semibold text-gray-800 mb-4">Form Fields</h3>
-          <div className="space-y-4">
-            {fields.map((field, index) => (
-              <div key={field.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <GripVertical size={18} className="text-gray-400 cursor-grab" />
-                    <span className="font-medium text-gray-700">{field.label}</span>
-                    <span className="text-sm text-gray-500">({field.type})</span>
-                    {field.required && <span className="text-red-500 text-xs ml-1">Required</span>}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditingField(index)}
-                      className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-50"
-                      title="Edit field"
-                    >
-                      <Edit size={18} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(index)}
-                      className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50"
-                      title="Delete field"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-                {editingField === index && renderFieldEditor(field, index)}
-              </div>
-            ))}
-            <button
-              type="button"
-              onClick={addNewField}
-              className="btn btn-secondary w-full flex items-center justify-center space-x-2"
-            >
-              <Plus size={18} />
-              <span>Add New Field</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          <button type="button" onClick={onCancel} className="btn btn-secondary">
-            Cancel
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full"> {/* Two-column layout */}
+      <div className="card p-6 space-y-6 overflow-y-auto"> {/* Left column for editor, with scroll */}
+        <div className="flex items-center justify-between mb-4">
+          <button onClick={onCancel} className="btn btn-secondary btn-header-small">
+            ← Back to Dashboard
           </button>
-          <button type="submit" disabled={isLoading} className="btn btn-primary">
+          <h2 className="text-2xl font-bold text-gray-900">Edit Form: "{form.form_name}"</h2>
+          <button
+            type="submit"
+            onClick={handleSubmit(onSubmit)}
+            disabled={isLoading}
+            className="btn btn-primary btn-header-small"
+          >
             {isLoading ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
-      </form>
+
+        {error && (
+          <div className="error-message p-3 rounded-md text-sm">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
+          {/* General Form Details */}
+          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">General Form Details</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="form-group">
+                <label className="form-label">Form Name</label>
+                <input type="text" {...register('title', { required: true })} className="form-input" />
+                {errors.title && <span className="error-message">Form title is required</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Form Description</label>
+                <textarea {...register('description')} className="form-input" rows={3} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Call-to-Action (CTA) Text</label>
+                <input type="text" {...register('ctaText', { required: true })} className="form-input" />
+                {errors.ctaText && <span className="error-message">CTA text is required</span>}
+              </div>
+              <div className="form-group">
+                <label className="form-label">Thank You Message</label>
+                <textarea {...register('thankYouMessage')} className="form-input" rows={3} />
+              </div>
+            </div>
+          </div>
+
+          {/* Styling */}
+          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Form Styling</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="form-group">
+                <label className="form-label">Primary Color</label>
+                <input type="color" {...register('styling.primaryColor')} className="form-input h-10" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Background Color</label>
+                <input type="color" {...register('styling.backgroundColor')} className="form-input h-10" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Font Family</label>
+                <input type="text" {...register('styling.fontFamily')} className="form-input" placeholder="e.g., Inter, sans-serif" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Border Radius</label>
+                <input type="text" {...register('styling.borderRadius')} className="form-input" placeholder="e.g., 8px, 0.5rem" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Max Width</label>
+                <input type="text" {...register('styling.maxWidth')} className="form-input" placeholder="e.g., 500px, 75%" />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Fields */}
+          <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Form Fields</h3>
+            <div className="space-y-4">
+              {fields.map((field, index) => (
+                <div key={field.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <GripVertical size={18} className="text-gray-400 cursor-grab" />
+                      <span className="font-medium text-gray-700">{field.label}</span>
+                      <span className="text-sm text-gray-500">({field.type})</span>
+                      {field.required && <span className="text-red-500 text-xs ml-1">Required</span>}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingField(index)}
+                        className="text-blue-600 hover:text-blue-800 p-1 rounded-md hover:bg-blue-50"
+                        title="Edit field"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="text-red-600 hover:text-red-800 p-1 rounded-md hover:bg-red-50"
+                        title="Delete field"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                  {editingField === index && renderFieldEditor(field, index)}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addNewField}
+                className="btn btn-secondary w-full flex items-center justify-center space-x-2"
+              >
+                <Plus size={18} />
+                <span>Add New Field</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex justify-end space-x-4">
+            <button type="button" onClick={onCancel} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" disabled={isLoading} className="btn btn-primary">
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Right column for live preview */}
+      <div className="card live-preview-card">
+        <LiveFormPreview
+          previewGeneratedForm={watchedFormConfig} // Pass the live-watched form config
+          hideEmbedSection={true} // Hide embed section in editor
+          hideAnalysisSection={true} // Hide analysis section in editor
+          className="h-full" // Ensure it takes full height
+        />
+      </div>
     </div>
   );
 };

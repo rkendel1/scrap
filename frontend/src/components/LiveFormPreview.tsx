@@ -52,17 +52,22 @@ const isLightColor = (color: string): boolean => {
 };
 
 interface LiveFormPreviewProps {
-  formData: Partial<FormData>;
-  generatedForm: GeneratedForm | null;
-  createdForm: SaaSForm | null;
+  formData?: Partial<FormData>; // Optional for editor mode
+  generatedForm?: GeneratedForm | null; // Optional for editor mode
+  createdForm?: SaaSForm | null; // Optional for editor mode
   user?: any;
-  extractedDesignTokens: any | null;
-  extractedVoiceAnalysis: any | null;
-  onGetEmbedCodeClick: (form: SaaSForm) => void;
-  isDestinationConfigured: boolean;
+  extractedDesignTokens?: any | null;
+  extractedVoiceAnalysis?: any | null;
+  onGetEmbedCodeClick?: (form: SaaSForm) => void; // Optional for editor mode
+  isDestinationConfigured?: boolean; // Optional for editor mode
   className?: string;
-  showEmbedCodeSection: boolean; // New prop
-  onToggleEmbedCodeSection: () => void; // New prop
+  showEmbedCodeSection?: boolean; // New prop, optional
+  onToggleEmbedCodeSection?: () => void; // New prop, optional
+
+  // New props for direct form preview (e.g., in FormEditor)
+  previewGeneratedForm?: GeneratedForm | null;
+  hideEmbedSection?: boolean;
+  hideAnalysisSection?: boolean;
 }
 
 export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
@@ -75,14 +80,20 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   onGetEmbedCodeClick,
   isDestinationConfigured,
   className,
-  showEmbedCodeSection, // Destructure new prop
-  onToggleEmbedCodeSection, // Destructure new prop
+  showEmbedCodeSection,
+  onToggleEmbedCodeSection,
+  previewGeneratedForm, // New prop
+  hideEmbedSection = false, // New prop
+  hideAnalysisSection = false, // New prop
 }) => {
-  const { url, purpose, destinationType } = formData;
+  const { url, purpose, destinationType } = formData || {}; // Use optional chaining
 
   const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
 
   const getPreviewForm = (): GeneratedForm => {
+    if (previewGeneratedForm) { // Prioritize direct preview form
+      return previewGeneratedForm;
+    }
     if (generatedForm) {
       return generatedForm;
     }
@@ -120,11 +131,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     };
   };
 
-  const previewForm = getPreviewForm();
+  const currentFormToRender = getPreviewForm();
 
   const formContent = (
     <EmbeddableForm
-      form={previewForm}
+      form={currentFormToRender}
       embedCode={createdForm?.embed_code || "preview-mode"}
       showBranding={false}
       onSubmit={(data) => console.log('Preview submission:', data)}
@@ -132,8 +143,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   );
 
   const getDestinationText = () => {
-    if (!formData.destinationType) return '';
-    switch (formData.destinationType) {
+    if (!destinationType) return '';
+    switch (destinationType) {
       case 'email': return 'Email';
       case 'googlesheets': return 'Google Sheets';
       case 'slack': return 'Slack';
@@ -144,7 +155,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   };
 
   const renderDesignTokens = () => {
-    if (!extractedDesignTokens && !extractedVoiceAnalysis) return null;
+    if (hideAnalysisSection || (!extractedDesignTokens && !extractedVoiceAnalysis)) return null;
 
     const { colorPalette, fontFamilies, headings, primaryColors } = extractedDesignTokens || {};
     const { tone, personalityTraits } = extractedVoiceAnalysis || {};
@@ -271,7 +282,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             boxSizing: 'border-box'
           }}
         >
-          {generatedForm ? (
+          {currentFormToRender && !hideAnalysisSection ? ( // Render form if available and not hiding analysis
             <>
               {formContent}
               {isDestinationConfigured && (
@@ -280,9 +291,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
                 </div>
               )}
             </>
-          ) : (extractedDesignTokens || extractedVoiceAnalysis) ? (
+          ) : (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection ? ( // Render analysis if available and not hiding
             renderDesignTokens()
-          ) : (
+          ) : ( // Render placeholder
             <div style={{ textAlign: 'center', padding: '20px', color: '#666' }}>
               <div className="sparkle-icon">✨</div>
               <h4 style={{ fontSize: '18px', marginBottom: '8px', color: '#333' }}>Your AI-Powered Form</h4>
@@ -293,18 +304,19 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           )}
         </div>
       </div>
-      {generatedForm && (
+      {currentFormToRender && !hideAnalysisSection && (
         <div className="ai-generated-badge">
           ✅ AI-generated form preview.
         </div>
       )}
-      {(extractedDesignTokens || extractedVoiceAnalysis) && !generatedForm && (
+      {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && !hideAnalysisSection && (
         <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
           ✅ Design tokens extracted. Ready for form generation!
         </div>
       )}
 
-      {generatedForm && createdForm && (
+      {/* Only show embed section if not hidden and createdForm exists */}
+      {createdForm && !hideEmbedSection && (
         <div className="ready-to-embed-card">
           <h3>Ready to embed?</h3>
           <p>
@@ -312,7 +324,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             to add it to your website.
           </p>
           <button 
-            onClick={() => onGetEmbedCodeClick(createdForm)} // This now calls the prop to toggle visibility
+            onClick={() => onGetEmbedCodeClick?.(createdForm)} // Use optional chaining
             className="btn-embed-code"
           >
             {showEmbedCodeSection ? <EyeOff size={18} /> : <Lock size={18} />}
