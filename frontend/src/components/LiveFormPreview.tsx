@@ -174,7 +174,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {(colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0) ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}`}
+              title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}\nBrand Colors: ${formatArray(brandColors || [], 5)}`}
             >
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
@@ -263,10 +263,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           ) : null}
 
           {/* NEW Card 7: Buttons & Forms */}
-          {(buttons && buttons.length > 0) || (formFields && formFields.length > 0) ? (
+          {(buttons && buttons.length > 0) || (formFields && formFields.length > 0) || (formSchema && formSchema.length > 0) ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}`}
+              title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}\nForm Schema: ${formatArray((formSchema || []).map((s: any) => s.title || 'Form'), 2)}`}
             >
               <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Components:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
@@ -279,11 +279,37 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {cssVariables && Object.keys(cssVariables).length > 0 ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}`}
+              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}\nRaw CSS (first 500 chars): ${rawCSS?.substring(0, 500) || 'N/A'}`}
             >
               <strong style={{ color: '#6c757d', display: 'block', marginBottom: '4px', fontSize: '11px' }}>CSS Vars:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
                 {Object.keys(cssVariables).length} variables
+              </span>
+            </div>
+          ) : null}
+
+          {/* NEW Card 9: Cards & Navigation */}
+          {(cards && cards.length > 0) || (navigation && navigation.length > 0) ? (
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Cards: ${formatArray((cards || []).map((c: any) => `Img:${c.hasImage} Title:${c.hasTitle}`), 5)}\nNavigation: ${formatArray((navigation || []).map((n: any) => n.links?.length + ' links'), 5)}`}
+            >
+              <strong style={{ color: '#00bcd4', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Structure:</strong>
+              <span style={{ fontSize: '11px', color: '#555' }}>
+                Cards: {cards?.length || 0} | Navs: {navigation?.length || 0}
+              </span>
+            </div>
+          ) : null}
+
+          {/* NEW Card 10: Images & Icons */}
+          {(images && images.length > 0) || (icons && icons.length > 0) || logoUrl ? (
+            <div 
+              style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
+              title={`Images: ${formatArray((images || []).map((i: any) => i.src), 5)}\nIcons: ${formatArray((icons || []).map((i: any) => i.classes), 5)}\nLogo URL: ${logoUrl || 'N/A'}`}
+            >
+              <strong style={{ color: '#9c27b0', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Media:</strong>
+              <span style={{ fontSize: '11px', color: '#555' }}>
+                Imgs: {images?.length || 0} | Icons: {icons?.length || 0}
               </span>
             </div>
           ) : null}
@@ -351,13 +377,6 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         {/* Render Design Tokens if available and not explicitly hidden */}
         { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
       </div>
-      {/* Removed the green banner:
-      {(extractedDesignTokens || extractedVoiceAnalysis) && !currentFormToRender && (
-        <div className="ai-generated-badge" style={{ backgroundColor: '#d4edda', color: '#155724' }}>
-          ✅ Design tokens extracted. Ready for form generation!
-        </div>
-      )}
-      */}
     </div>
   );
 };
