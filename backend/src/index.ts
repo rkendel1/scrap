@@ -408,6 +408,7 @@ app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (re
       return res.status(400).json({ error: 'URL is required' });
     }
 
+    // Validate URL format
     try {
       new URL(url);
     } catch (error) {
@@ -418,19 +419,49 @@ app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (re
     const extractedData = await extractor.extractWebsiteData(url);
     const savedRecord = await dbService.saveExtractedData(extractedData);
 
+    // Reconstruct the full VoiceAnalysis object from savedRecord fields
+    const fullVoiceAnalysis = {
+      tone: savedRecord.voice_tone,
+      personalityTraits: savedRecord.personality_traits,
+      audienceAnalysis: savedRecord.audience_analysis,
+    };
+
     res.json({
       success: true,
       message: 'Website data extracted and saved successfully',
       data: {
         id: savedRecord.id,
         url: savedRecord.url,
+        // Return the full designTokens object
         designTokens: {
           colorPalette: savedRecord.color_palette,
           primaryColors: savedRecord.primary_colors,
+          colorUsage: savedRecord.color_usage,
           fontFamilies: savedRecord.font_families,
+          headings: savedRecord.headings,
+          textSamples: savedRecord.text_samples,
+          margins: savedRecord.margins,
+          paddings: savedRecord.paddings,
+          spacingScale: savedRecord.spacing_scale,
+          layoutStructure: savedRecord.layout_structure,
+          gridSystem: savedRecord.grid_system,
+          breakpoints: savedRecord.breakpoints,
+          buttons: savedRecord.buttons,
+          formFields: savedRecord.form_fields,
+          cards: savedRecord.cards,
+          navigation: savedRecord.navigation,
+          images: savedRecord.images,
+          cssVariables: savedRecord.css_variables,
+          rawCSS: savedRecord.raw_css,
+          formSchema: savedRecord.form_schema,
+          logoUrl: savedRecord.logo_url,
+          brandColors: savedRecord.brand_colors,
+          icons: savedRecord.icons,
           messaging: savedRecord.messaging,
+          previewHTML: savedRecord.preview_html,
         },
-        voiceAnalysis: savedRecord.voice_tone, // This is still the flattened tone, but LLMService will reconstruct
+        // Return the reconstructed full voiceAnalysis object
+        voiceAnalysis: fullVoiceAnalysis,
       }
     });
   } catch (error) {
@@ -1004,6 +1035,43 @@ app.get('/api/forms/embed/:embedCode', async (req, res) => {
 
 // REMOVED: Submit form (public endpoint) - replaced by submitPublicForm
 // app.post('/api/forms/submit/:embedCode', async (req, res) => { /* ... */ });
+
+// NEW: Submit form publicly with embed code validation
+app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
+  try {
+    const { embedCode } = req.params;
+    const { isTestSubmission, ...submissionData } = req.body; // Extract isTestSubmission
+
+    const metadata = {
+      submittedFromUrl: req.headers.referer,
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      hostname: req.headers.origin || req.headers.referer, // Use origin or referer for hostname
+      isTestSubmission: isTestSubmission === true // Ensure boolean type
+    };
+
+    if (!embedCode || !submissionData || !metadata.hostname) {
+      return res.status(400).json({ success: false, message: 'Embed code, submission data, and hostname are required' });
+    }
+
+    const result = await saasService.submitPublicForm(embedCode, submissionData, metadata);
+
+    if (!result.success && result.message?.includes('Rate limit exceeded')) {
+      return res.status(429).json(result);
+    }
+    if (!result.success && (result.message?.includes('Unauthorized') || result.message?.includes('active') || result.message?.includes('allowed'))) {
+      return res.status(403).json(result);
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Public form submission error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to submit form publicly'
+    });
+  }
+});
 
 // Get available connectors
 app.get('/api/connectors', authService.authenticateToken, async (req: AuthRequest, res) => {
