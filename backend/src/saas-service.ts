@@ -932,6 +932,81 @@ export class SaaSService {
     }
   }
 
+  /**
+   * Fetches form configuration for public embedding, including security checks.
+   */
+  async getFormConfigForPublicEmbed(embedCode: string, hostname: string, isTestMode: boolean): Promise<any | null> {
+    try {
+      const query = `
+        SELECT 
+          f.id, f.user_id, f.form_name, f.form_description, f.is_live, f.embed_code,
+          f.form_schema as generated_form_schema, f.allowed_domains,
+          u.subscription_tier, u.subscription_status
+        FROM forms f
+        JOIN embed_codes ec ON f.id = ec.form_id
+        JOIN users u ON f.user_id = u.id
+        WHERE ec.code = $1 AND ec.is_active = true
+      `;
+      
+      const result = await pool.query(query, [embedCode]);
+      
+      if (result.rows.length === 0) {
+        console.warn(`Embed config: Form not found or embed code inactive for ${embedCode}`);
+        return null;
+      }
+
+      const formRecord = result.rows[0];
+      const generatedForm = formRecord.generated_form_schema?.[0];
+
+      if (!generatedForm) {
+        console.warn(`Embed config: Generated form schema missing for form ID ${formRecord.id}`);
+        return null;
+      }
+
+      // --- Security Checks ---
+      // 1. Check if form is live (unless in test mode)
+      if (!formRecord.is_live && !isTestMode) {
+        console.warn(`Embed config: Form ID ${formRecord.id} is not live.`);
+        return null;
+      }
+
+      // 2. Check user subscription status (unless in test mode)
+      if (formRecord.subscription_status !== 'active' && !isTestMode) {
+        console.warn(`Embed config: User subscription for form ID ${formRecord.id} is not active.`);
+        return null;
+      }
+
+      // 3. Domain validation (unless in test mode)
+      const allowedDomains = formRecord.allowed_domains || [];
+      if (!this.embedSecurity.isDomainAllowed(hostname, allowedDomains) && !isTestMode) {
+        console.warn(`Embed config: Domain ${hostname} not allowed for form ID ${formRecord.id}. Allowed: ${allowedDomains.join(', ')}`);
+        return null;
+      }
+      // --- End Security Checks ---
+
+      // Update view count for embed code
+      await pool.query(`
+        UPDATE embed_codes 
+        SET view_count = view_count + 1, last_accessed = CURRENT_TIMESTAMP 
+        WHERE code = $1
+      `, [embedCode]);
+
+      return {
+        id: formRecord.id,
+        title: formRecord.form_name,
+        description: formRecord.form_description,
+        generated_form: generatedForm,
+        styling: generatedForm.styling, // Use styling directly from generated_form
+        embedCode: formRecord.embed_code,
+        showBranding: formRecord.subscription_tier === 'free' // Show branding for free tier
+      };
+
+    } catch (error) {
+      console.error('Error in getFormConfigForPublicEmbed:', error);
+      throw error;
+    }
+  }
+
   private async triggerConnectors(formId: number, submissionData: any): Promise<void> {
     try {
       // First, check if this form is mapped to a customer for n8n routing
