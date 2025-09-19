@@ -179,26 +179,34 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsLoading(false);
   };
 
-  // New helper function to parse commands
-  const parseCommand = (lowerInput: string): string | null => {
-    // Exact matches for quick reply commands
-    if (lowerInput === 'help') return 'help';
-    if (lowerInput === 'start over' || lowerInput === 'reset') return 'start over';
-    if (lowerInput === 'yes') return 'yes';
-    if (lowerInput === 'no') return 'no';
-    if (lowerInput === 'configure destination' || lowerInput === 'set destination') return 'configure destination';
-    if (lowerInput === 'get embed code' || lowerInput === 'embed code') return 'get embed code';
-    if (lowerInput === 'create account') return 'create account';
-    if (lowerInput === 'provide email') return 'provide email';
-    if (lowerInput === 'i\'m done' || lowerInput === 'im done') return 'im done';
-    if (lowerInput === 'make changes' || lowerInput === 'change form') return 'make changes';
-    // Destination types as commands
-    if (lowerInput === 'email') return 'email';
-    if (lowerInput === 'google sheets') return 'google sheets'; // Keep original for parsing
-    if (lowerInput === 'slack') return 'slack';
-    if (lowerInput === 'webhook') return 'webhook';
-    if (lowerInput === 'zapier') return 'zapier';
-    return null; // No command found
+  // MODIFIED: New helper function to parse commands, returning command and destinationType if applicable
+  const parseCommand = (lowerInput: string): { command: string | null; destinationType?: string } => {
+    const destinationCommandsMap: Record<string, string> = {
+      'email': 'email',
+      'google sheets': 'googlesheets',
+      'slack': 'slack',
+      'webhook': 'webhook',
+      'zapier': 'zapier',
+    };
+
+    // Check for exact command matches first
+    if (lowerInput === 'help') return { command: 'help' };
+    if (lowerInput === 'start over' || lowerInput === 'reset') return { command: 'start over' };
+    if (lowerInput === 'yes') return { command: 'yes' };
+    if (lowerInput === 'no') return { command: 'no' };
+    if (lowerInput === 'configure destination' || lowerInput === 'set destination') return { command: 'configure destination' };
+    if (lowerInput === 'get embed code' || lowerInput === 'embed code') return { command: 'get embed code' };
+    if (lowerInput === 'create account') return { command: 'create account' };
+    if (lowerInput === 'provide email') return { command: 'provide email' };
+    if (lowerInput === 'i\'m done' || lowerInput === 'im done') return { command: 'im done' };
+    if (lowerInput === 'make changes' || lowerInput === 'change form') return { command: 'make changes' };
+
+    // Check if the input is one of the destination commands
+    if (destinationCommandsMap[lowerInput]) {
+      return { command: lowerInput, destinationType: destinationCommandsMap[lowerInput] };
+    }
+
+    return { command: null }; // No command found
   };
 
   const parseUserInput = (input: string) => {
@@ -213,13 +221,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const lowerInput = input.toLowerCase();
 
     // First, try to parse a command
-    const command = parseCommand(lowerInput);
-    if (command) {
-      parsed.command = command;
-      // If the command is a destination type, also set destinationType
-      const destinationCommands = ['email', 'google sheets', 'slack', 'webhook', 'zapier'];
-      if (destinationCommands.includes(command)) {
-        parsed.destinationType = command.replace(/\s/g, ''); // Normalize for internal use
+    const commandResult = parseCommand(lowerInput);
+    if (commandResult.command) {
+      parsed.command = commandResult.command;
+      if (commandResult.destinationType) {
+        parsed.destinationType = commandResult.destinationType;
       }
       return parsed; // If a command is found, prioritize it and return immediately
     }
@@ -288,6 +294,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     console.log('handleUserInput: Input received:', inputToProcess);
     console.log('handleUserInput: Parsed input command:', parsedInput.command);
+    console.log('handleUserInput: Parsed input destinationType:', parsedInput.destinationType);
     console.log('handleUserInput: Current step before switch:', currentStep);
 
     // Global command checks (outside switch)
