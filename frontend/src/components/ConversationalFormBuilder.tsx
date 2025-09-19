@@ -71,6 +71,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
 
+  const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
   const destinationIcons: Record<string, JSX.Element> = {
     email: <Mail size={16} />,
     googlesheets: <Sheet size={16} />,
@@ -283,7 +285,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (parsedInput.command === 'get embed code') {
         if (createdForm) {
           onGetEmbedCodeClick(createdForm);
-          addPrompt("Great! You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
+          addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
           setCurrentStep('DONE');
         } else {
           addError("No form has been generated yet. Please start by providing a URL.");
@@ -500,18 +502,39 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       return;
     }
 
+    const newForm = generateResult.form; // Get the newly created form
     setGeneratedForm(generateResult.generatedForm);
-    setCreatedForm(generateResult.form);
+    setCreatedForm(newForm);
     setFormData((prev) => ({ ...prev, purpose }));
     // isDestinationConfigured remains as is, it doesn't block embed code anymore
+
+    const embedCode = newForm.embed_code;
+    const isGuestForm = !user; // Check if it's a guest form
+
+    let embedCodeMessage = `Here's your embed code:
+<div class="code-block" style="background-color: #f0f2f5; border: 1px solid #e1e5e9; border-radius: 4px; padding: 12px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; white-space: pre-wrap; overflow-x: auto; margin: 8px 0;">
+  &lt;script src="${API_BASE}/embed.js" data-form="${embedCode}"&gt;&lt;/script&gt;
+</div>
+`;
+
+    if (isGuestForm) {
+      embedCodeMessage += `This form is currently temporary and will expire if not associated with an account.`;
+    } else {
+      embedCodeMessage += `This form is permanent as it's linked to your account.`;
+    }
 
     setCurrentStep('FORM_GENERATED_REVIEW'); // New state
     addPrompt(
       <>
         Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>What would you like to do next?</div>
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+          {embedCodeMessage}
+        </div>
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+          Are there any changes you'd like to make, or would you like to configure delivery?
+        </div>
       </>,
-      ['Get Embed Code', 'Configure Destination']
+      ['Configure Destination', 'Get Embed Code']
     );
   };
 
@@ -675,7 +698,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (localStorage.getItem('authToken')) {
       authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
     } else {
-      addError("You need to be logged in to make a form live. Please create an account.");
+      addError("You need to be logged in to make a form live. Creating an account will also make your form permanent. Please create an account.");
       onShowAuth('register');
       setCurrentStep('ASK_GO_LIVE'); // Stay in this step
       return;
