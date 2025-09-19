@@ -132,7 +132,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     const { 
       colorPalette, primaryColors, colorUsage, fontFamilies, headings, textSamples,
       margins, paddings, spacingScale, layoutStructure, gridSystem, breakpoints,
-      buttons, formFields, cssVariables, messaging
+      buttons, formFields, cards, navigation, images, cssVariables, rawCSS, formSchema,
+      logoUrl, brandColors, icons, messaging
     } = extractedDesignTokens || {};
     const { tone, personalityTraits, audienceAnalysis } = extractedVoiceAnalysis || {};
 
@@ -173,7 +174,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {(colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0) ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Palette: ${formatArray(colorPalette, 10)}\nPrimary: ${formatArray(primaryColors, 5)}\nUsage: ${formatObject(colorUsage, 5)}`}
+              title={`Palette: ${formatArray(colorPalette || [], 10)}\nPrimary: ${formatArray(primaryColors || [], 5)}\nUsage: ${formatObject(colorUsage || {}, 5)}`}
             >
               <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
@@ -198,7 +199,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {fontFamilies && fontFamilies.length > 0 && (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Font Families: ${formatArray(fontFamilies, 5)}\nHeadings: ${formatArray(headings.map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples, 2)}`}
+              title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
             >
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Fonts:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
@@ -212,7 +213,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {tone && tone.primary && (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Tone: ${tone.primary}\nScores: ${formatObject(tone.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}), 5)}\nPersonality Traits: ${formatArray(personalityTraits, 5)}`}
+              title={`Primary Tone: ${tone?.primary || 'N/A'}\nScores: ${formatObject(tone?.scores?.reduce((acc: any, s: any) => ({...acc, [s.tone]: s.score}), {}) || {}, 5)}\nPersonality Traits: ${formatArray(personalityTraits || [], 5)}`}
             >
               <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Tone:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>{tone.primary}</span>
@@ -228,7 +229,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {audienceAnalysis && audienceAnalysis.primary && (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Primary Audience: ${audienceAnalysis.primary}\nComplexity: ${audienceAnalysis.complexity}\nMessaging: ${formatArray(messaging, 5)}`}
+              title={`Primary Audience: ${audienceAnalysis?.primary || 'N/A'}\nComplexity: ${audienceAnalysis?.complexity || 'N/A'}\nMessaging: ${formatArray(messaging || [], 5)}`}
             >
               <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
@@ -239,11 +240,11 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {(margins && margins.length > 0) || (paddings && paddings.length > 0) ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Margins: ${formatArray(margins, 5)}\nPaddings: ${formatArray(paddings, 5)}\nScale: ${formatArray(spacingScale.map((s: any) => `${s.value}${s.unit}`), 5)}`}
+              title={`Margins: ${formatArray(margins || [], 5)}\nPaddings: ${formatArray(paddings || [], 5)}\nScale: ${formatArray((spacingScale || []).map((s: any) => `${s.value}${s.unit}`), 5)}`}
             >
               <strong style={{ color: '#e83e8c', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Spacing:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
-                M: {formatArray(margins, 1)} | P: {formatArray(paddings, 1)}
+                M: {formatArray(margins || [], 1)} | P: {formatArray(paddings || [], 1)}
               </span>
             </div>
           ) : null}
@@ -252,7 +253,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {layoutStructure && Object.keys(layoutStructure).length > 0 ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Structure: ${formatObject(layoutStructure, 5)}\nGrid: ${formatObject(gridSystem, 5)}\nBreakpoints: ${formatArray(breakpoints, 5)}`}
+              title={`Structure: ${formatObject(layoutStructure || {}, 5)}\nGrid: ${formatObject(gridSystem || {}, 5)}\nBreakpoints: ${formatArray(breakpoints || [], 5)}`}
             >
               <strong style={{ color: '#17a2b8', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Layout:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
@@ -265,7 +266,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {(buttons && buttons.length > 0) || (formFields && formFields.length > 0) ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Buttons: ${formatArray(buttons.map((b: any) => b.text), 5)}\nForm Fields: ${formatArray(formFields.map((f: any) => f.name), 5)}`}
+              title={`Buttons: ${formatArray((buttons || []).map((b: any) => b.text), 5)}\nForm Fields: ${formatArray((formFields || []).map((f: any) => f.name), 5)}`}
             >
               <strong style={{ color: '#fd7e14', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Components:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
@@ -278,7 +279,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           {cssVariables && Object.keys(cssVariables).length > 0 ? (
             <div 
               style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`CSS Variables: ${formatObject(cssVariables, 10)}`}
+              title={`CSS Variables: ${formatObject(cssVariables || {}, 10)}`}
             >
               <strong style={{ color: '#6c757d', display: 'block', marginBottom: '4px', fontSize: '11px' }}>CSS Vars:</strong>
               <span style={{ fontSize: '11px', color: '#555' }}>
