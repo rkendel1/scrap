@@ -522,29 +522,37 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setIsGeneratingForm(false); // Reset generating state
     addPrompt(
       <>
-        Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+        <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#333' }}>
+          Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
           {isGuestForm ? (
-            "This form is currently temporary and will expire if not associated with an account."
+            " This form is currently temporary and will expire if not associated with an account."
           ) : (
-            "This form is permanent as it's linked to your account."
+            " This form is permanent as it's linked to your account."
           )}
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
+          <button
+            onClick={() => handleCopyEmbedCode(embedCode || '')}
+            className="btn btn-secondary"
+            style={{ backgroundColor: copyStatus === 'copied' ? '#28a745' : '#e9ecef', color: copyStatus === 'copied' ? 'white' : '#495057' }}
+            disabled={!embedCode}
+          >
+            {copyStatus === 'copied' ? <Check size={16} className="mr-1" /> : <Copy size={16} className="mr-1" />}
+            {copyStatus === 'copied' ? 'Copied!' : 'Copy Embed Code'}
+          </button>
+          <a
+            href="/test-embed.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-secondary"
+            style={{ fontSize: '14px' }}
+          >
+            🧪 Test Embed Page
+          </a>
         </div>
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
-          Here's your embed code:
-        </div>
-        <button
-          onClick={() => handleCopyEmbedCode(embedCode || '')}
-          className="quick-reply-btn"
-          style={{ marginTop: '8px', backgroundColor: copyStatus === 'copied' ? '#28a745' : '#007bff', color: 'white' }}
-          disabled={!embedCode}
-        >
-          {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
-          {copyStatus === 'copied' ? 'Copied!' : 'Copy Embed Code'}
-        </button>
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+        <p style={{ margin: 0, fontSize: '14px', color: '#333' }}>
           Are there any changes you'd like to make, or would you like to configure delivery?
-        </div>
+        </p>
       </>
     );
   };
