@@ -436,7 +436,7 @@ main {
   padding: 16px;
   background-color: #f8f9fa; /* Lighter background for chat area */
   /* Removed display: flex and flex-direction: column; inherited from parent */
-  gap: 10px;
+  gap: 16px; /* Increased gap for more spacing */
   box-shadow: inset 0 1px 3px rgba(0,0,0,0.03);
 }
 
