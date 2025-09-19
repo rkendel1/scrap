@@ -332,7 +332,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
   // Determine if the zero state is active (no form generated yet)
   const isZeroState = !currentFormToRender;
-  
+  const hasAnalysisData = (extractedDesignTokens || extractedVoiceAnalysis);
 
   // Determine the appropriate justify-content class for the wrapper
   let wrapperJustifyClass = '';
@@ -365,21 +365,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
         {/* If no form is generated, but analysis data is present, show analysis summary */}
         {!currentFormToRender && hasAnalysisData && (
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexShrink: 0,
-            flexDirection: 'column',
-            width: '100%',
-            padding: '20px',
-            boxSizing: 'border-box',
-            flexGrow: 1,
-            minHeight: 0,
-            overflowY: 'auto'
-          }}>
-            {renderDesignTokens()} {/* Render analysis summary here */}
-          </div>
+          renderDesignTokens() /* Render analysis summary directly here */
         )}
 
         {/* If no form and no analysis data, show the initial placeholder */}
@@ -395,7 +381,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
       </div>
 
       {/* Render Design Tokens if a form IS generated and not explicitly hidden */}
-      {hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
+      {currentFormToRender && hasAnalysisData && !hideAnalysisSection && renderDesignTokens()}
     </div>
   );
 };
