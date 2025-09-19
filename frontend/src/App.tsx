@@ -397,8 +397,8 @@ function App() {
       <main className="container">
         {/* Main Content */}
         {currentView === 'builder' ? (
-          <>
-            <div style={{ flex: 1, height: '100%' }}> {/* Left column for builder */}
+          <div className="builder-layout"> {/* New wrapper div */}
+            <div className="builder-column"> {/* Left column for builder */}
               <ConversationalFormBuilder 
                 onFormGenerated={handleFormGenerated}
                 user={user}
@@ -408,7 +408,7 @@ function App() {
                 onShowAuth={handleShowAuth} // Pass the new handler
               />
             </div>
-            <div style={{ flex: 1, height: '100%' }}> {/* Right column for live preview */}
+            <div className="preview-column"> {/* Right column for live preview */}
               <LiveFormPreview
                 className="card live-preview-card" // Apply card class
                 formData={builderState.formData}
@@ -423,7 +423,7 @@ function App() {
                 onToggleEmbedCodeSection={() => setBuilderState(prev => ({ ...prev, showEmbedCodeSection: !prev.showEmbedCodeSection }))} // Pass toggle handler
               />
             </div>
-          </>
+          </div>
         ) : currentView === 'dashboard' && user ? (
           <div>
             <div className="card">

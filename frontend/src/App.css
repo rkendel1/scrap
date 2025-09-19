@@ -77,18 +77,41 @@ html, body, #root, .App {
 main {
   flex-grow: 1;
   padding: 24px 0;
-  display: flex;
+  display: flex; /* Make main a flex container */
   align-items: stretch;
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
-  /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom + additional_reduction) */
-  /* Header height: 10px (container top padding) + 12px (logo height) + 10px (container bottom padding) = 32px */
-  /* Main vertical padding: 24px (top) + 24px (bottom) = 48px */
-  /* Total fixed vertical space: 32px (header) + 48px (main padding) = 80px */
-  /* To make it shorter, let's add another 170px to the fixed space. */
-  height: calc(100vh - 200px); /* Reduced by 170px from previous calc(100vh - 80px) */
+  height: calc(100vh - 100px); /* Adjusted height for better fit */
   min-height: 0; /* Allow flex item to shrink */
 }
+
+/* Styles for the conversational builder layout */
+.builder-layout {
+  display: flex;
+  flex-direction: row; /* Always row for builder layout */
+  gap: 24px;
+  flex: 1; /* Take full width of main */
+  height: 100%; /* Take full height of main */
+}
+
+.builder-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 50%; /* Each column takes half width */
+}
+
+.preview-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 50%; /* Each column takes half width */
+}
+
+/* FormEditor will now be a direct child of main and use its internal grid */
+/* No specific styles needed for FormEditor as a direct child of main,
+   its internal grid handles the layout. */
+
 
 /* Card Component */
 .card {
@@ -338,17 +361,9 @@ main {
 }
 
 /* Specific styles for the conversational builder and preview */
-.App > main {
-  flex-direction: row;
-  height: calc(100vh - 20px); /* Set static height for main content area */
-}
+/* Removed .App > main > div styles as they are now handled by .builder-column and .preview-column */
+/* Removed .App > main flex-direction: row as it's now handled by .builder-layout */
 
-.App > main > div {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  max-width: 50%;
-}
 
 /* Fixed Error Message */
 .fixed-error-alert {
@@ -742,9 +757,15 @@ main {
     height: auto; /* Allow height to be flexible on smaller screens */
   }
 
-  .App > main > div {
-    width: 100%;
-    max-width: none;
+  /* Responsive for builder layout */
+  .builder-layout {
+    flex-direction: column; /* Stack columns on smaller screens */
+    height: auto;
+  }
+
+  .builder-column, .preview-column {
+    max-width: none; /* Allow full width */
+    height: auto;
   }
 
   .live-preview-card {
