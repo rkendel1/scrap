@@ -288,7 +288,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           addPrompt("You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
           setCurrentStep('DONE');
         } else {
-          addError("No form has been generated yet. Please start by providing a URL.");
+          addPrompt("No form has been generated yet. Please start by providing a URL.");
           setCurrentStep('ASK_URL');
         }
         return;
@@ -306,8 +306,12 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_URL':
           if (parsedInput.url) {
             await processUrlInput(parsedInput.url);
+          } else if (parsedInput.purpose) {
+            addPrompt("That sounds like a form's purpose! But first, I need the website URL where this form will live.");
+          } else if (parsedInput.destinationType) {
+            addPrompt("You're thinking ahead about destinations! Let's get the website URL first, then we can set up where to send the data.");
           } else {
-            addError('Please provide a valid URL starting with http:// or https://');
+            addPrompt('I\'m not sure how to interpret that. Please provide a valid URL starting with http:// or https://');
           }
           break;
 
@@ -317,8 +321,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           } else if (parsedInput.url) {
             addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
             await processUrlInput(parsedInput.url);
+          } else if (parsedInput.destinationType) {
+            addPrompt("That's a great destination! But before we configure delivery, what is the main purpose of this form?");
           } else {
-            addError('Please tell me the main purpose of this form (e.g., "lead generation", "contact form", or even "tool rental form").');
+            addPrompt('I\'m not sure how to interpret that. Please tell me the main purpose of this form (e.g., "lead generation", "contact form", or even "tool rental form").');
           }
           break;
 
@@ -327,20 +333,19 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
-            addPrompt("What would you like to do next?", ['Get Embed Code', 'Configure Destination']); // Changed order
+            addPrompt("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?", ['Configure Destination', 'Get Embed Code']); // Changed order
           }
           break;
 
         case 'ASK_DESTINATION_TYPE':
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
-          } else {
-            addError('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".');
-            addPrompt(
-              "Where should I send the form submissions?",
-              ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
-            );
+          } else if (parsedInput.configInput && selectedDestinationType) {
+            // User provided config directly without explicitly selecting type again
+            await processDestinationConfigInput(parsedInput.configInput);
+          }
+          else {
+            addPrompt('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".', ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']);
           }
           break;
 
@@ -349,42 +354,36 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             if (user?.email) {
               await processDestinationConfigInput(user.email, 'email');
             } else {
-              addError("I couldn't find your email. Please provide it manually.");
+              addPrompt("I couldn't find your email. Please provide it manually.");
               setCurrentStep('ASK_DESTINATION_CONFIG');
             }
           } else if (parsedInput.command === 'no') {
             addPrompt("Okay, please provide the recipient email address (e.g., \"sales@yourcompany.com\").");
             setCurrentStep('ASK_DESTINATION_CONFIG');
           } else {
-            addError("Please respond with 'Yes' or 'No'.");
+            addPrompt("Please respond with 'Yes' or 'No'.");
           }
           break;
 
         case 'ASK_DESTINATION_CONFIG':
-          if (parsedInput.command === 'provide email') {
-            addPrompt("Please provide the recipient email address (e.g., \"sales@yourcompany.com\").");
-            return;
-          }
           if (parsedInput.configInput) {
             await processDestinationConfigInput(parsedInput.configInput);
-          } else if (parsedInput.destinationType) {
-            if (parsedInput.destinationType === selectedDestinationType) {
-                let configPrompt = '';
-                switch (selectedDestinationType) {
-                    case 'email': configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").'; break;
-                    case 'googlesheets': configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").'; break;
-                    case 'slack': configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").'; break;
-                    case 'webhook': configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").'; break;
-                    case 'zapier': configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").'; break;
-                }
-                addPrompt(configPrompt);
-            } else {
-                await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
-            }
+          } else if (parsedInput.destinationType && parsedInput.destinationType !== selectedDestinationType) {
+            addPrompt(`Okay, let's switch to ${parsedInput.destinationType}.`);
+            await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else if (parsedInput.purpose) {
-            addError(`"${parsedInput.purpose}" sounds like a form purpose. I'm currently asking for configuration details for ${selectedDestinationType}.`);
+            addPrompt(`We've already determined the form's purpose. Now I need the configuration details for ${selectedDestinationType}.`);
           } else {
-            addError('Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").');
+            let configPrompt = '';
+            switch (selectedDestinationType) {
+                case 'email': configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").'; break;
+                case 'googlesheets': configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").'; break;
+                case 'slack': configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").'; break;
+                case 'webhook': configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").'; break;
+                case 'zapier': configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").'; break;
+                default: configPrompt = 'Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").'; break;
+            }
+            addPrompt(configPrompt);
           }
           break;
 
@@ -400,16 +399,16 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             addPrompt("Okay, your form will remain in draft mode. You can make it live later from your dashboard. Would you like to create another form?", ['Yes', 'No']);
             setCurrentStep('DONE');
           } else {
-            addError("Please respond with 'Yes' or 'No'.");
+            addPrompt("Please respond with 'Yes' or 'No'.");
           }
           break;
 
         case 'DONE':
-          addError('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
+          addPrompt('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
           break;
 
         default:
-          addError('I\'m not sure how to respond to that. Can you rephrase or type "help"?');
+          addPrompt('I\'m not sure how to respond to that. Can you rephrase or type "help"?');
           break;
       }
     } catch (err: any) {
@@ -430,7 +429,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     try {
       new URL(url);
     } catch {
-      addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
+      addPrompt('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
+      setCurrentStep('ASK_URL'); // Stay on this step
       return;
     }
 
@@ -449,6 +449,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     if (!extractResult.success) {
       addError(extractResult.error || 'Failed to analyze website. Please check the URL.');
+      setCurrentStep('ASK_URL'); // Stay on this step
       return;
     }
 
@@ -499,6 +500,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       if (generateResult.upgradeRequired) {
         addPrompt('It looks like you\'ve reached your form limit. Please upgrade to Pro for unlimited forms!');
       }
+      setCurrentStep('ASK_PURPOSE'); // Stay on this step
       return;
     }
 
@@ -543,14 +545,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier'];
 
     if (!availableTypes.includes(normalizedType)) {
-      addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.');
-      addPrompt(
-        <>
-          Where should I send the form submissions?
-          <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>Choose a destination:</div>
-        </>,
-        ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
-      );
+      addPrompt('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.', ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']);
+      setCurrentStep('ASK_DESTINATION_TYPE'); // Stay on this step
       return;
     }
 
@@ -640,7 +636,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
 
     if (validationError) {
-      addError(`${validationError} ${expectedInputPrompt}`);
+      addPrompt(`${validationError} ${expectedInputPrompt}`);
       setCurrentStep('ASK_DESTINATION_CONFIG'); // Stay in this step
       return;
     }
@@ -698,7 +694,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (localStorage.getItem('authToken')) {
       authHeaders['Authorization'] = `Bearer ${localStorage.getItem('authToken')}`;
     } else {
-      addError("You need to be logged in to make a form live. Creating an account will also make your form permanent. Please create an account.");
+      addPrompt("You need to be logged in to make a form live. Creating an account will also make your form permanent. Please create an account.");
       onShowAuth('register');
       setCurrentStep('ASK_GO_LIVE'); // Stay in this step
       return;
