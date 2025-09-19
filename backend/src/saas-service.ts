@@ -728,9 +728,9 @@ export class SaaSService {
    * NEW: Get form configuration for public embed.js script.
    * This replaces the JWT-based getFormByEmbedToken for initial embed loading.
    */
-  async getFormConfigForPublicEmbed(embedCode: string, hostname: string): Promise<any | null> {
+  async getFormConfigForPublicEmbed(embedCode: string, hostname: string, isTestMode: boolean = false): Promise<any | null> {
     try {
-      const query = `
+      let query = `
         SELECT 
           f.*,
           f.form_schema as generated_form_schema,
@@ -739,31 +739,37 @@ export class SaaSService {
           ec.submission_count
         FROM forms f
         JOIN embed_codes ec ON f.id = ec.form_id
-        WHERE ec.code = $1 AND ec.is_active = true AND f.is_live = true
+        WHERE ec.code = $1
       `;
       
+      if (!isTestMode) {
+        query += ` AND ec.is_active = true AND f.is_live = true`;
+      }
+
       const result = await pool.query(query, [embedCode]);
       
       if (result.rows.length === 0) {
-        console.log(`FormCraft: Form not found, inactive, or not live for embedCode: ${embedCode}`);
+        console.log(`FormCraft: Form not found, inactive, or not live for embedCode: ${embedCode} (isTestMode: ${isTestMode})`);
         return null;
       }
       
       const row = result.rows[0];
       
-      // Check domain restrictions
+      // Check domain restrictions (always apply, even in test mode, but localhost is allowed by EmbedSecurityService)
       const allowedDomains = row.allowed_domains || [];
       if (!this.embedSecurity.isDomainAllowed(hostname, allowedDomains)) {
-        console.log(`FormCraft: Domain ${hostname} not allowed for embedCode: ${embedCode}`);
+        console.log(`FormCraft: Domain ${hostname} not allowed for embedCode: ${embedCode} (isTestMode: ${isTestMode})`);
         return null; // Domain not allowed
       }
 
-      // Update view count
-      await pool.query(`
-        UPDATE embed_codes 
-        SET view_count = view_count + 1, last_accessed = CURRENT_TIMESTAMP 
-        WHERE code = $1
-      `, [embedCode]);
+      // Update view count (only in non-test mode)
+      if (!isTestMode) {
+        await pool.query(`
+          UPDATE embed_codes 
+          SET view_count = view_count + 1, last_accessed = CURRENT_TIMESTAMP 
+          WHERE code = $1
+        `, [embedCode]);
+      }
       
       return {
         id: row.id,

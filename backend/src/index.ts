@@ -730,6 +730,7 @@ app.get('/api/forms/embed-config/:embedCode', async (req, res) => {
   try {
     const { embedCode } = req.params;
     const hostname = req.query.hostname as string || req.headers.origin || req.headers.referer;
+    const isTestMode = req.query.testMode === 'true'; // Check for testMode query parameter
 
     if (!embedCode) {
       return res.status(400).json({ success: false, message: 'Embed code is required' });
@@ -738,7 +739,7 @@ app.get('/api/forms/embed-config/:embedCode', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Hostname is required for domain validation' });
     }
 
-    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname);
+    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname, isTestMode);
 
     if (!formData) {
       return res.status(403).json({ success: false, message: 'Unauthorized, form not active, or domain not allowed' });
@@ -964,6 +965,7 @@ app.get('/api/forms/embed/:embedCode', async (req, res) => {
   try {
     const { embedCode } = req.params;
     const hostname = req.query.hostname as string || req.headers.origin || req.headers.referer;
+    const isTestMode = req.query.testMode === 'true'; // Check for testMode query parameter
 
     if (!embedCode) {
       return res.status(400).json({ success: false, message: 'Embed code is required' });
@@ -972,7 +974,7 @@ app.get('/api/forms/embed/:embedCode', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Hostname is required for domain validation' });
     }
 
-    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname);
+    const formData = await saasService.getFormConfigForPublicEmbed(embedCode, hostname, isTestMode);
 
     if (!formData) {
       return res.status(403).json({ success: false, message: 'Unauthorized, form not active, or domain not allowed' });

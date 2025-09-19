@@ -182,7 +182,25 @@
 
                 // Append all children of the temporary div to the formEmbedArea
                 while (tempDiv.firstChild) {
-                    formEmbedArea.appendChild(tempDiv.firstChild);
+                    const node = tempDiv.firstChild;
+                    if (node.tagName === 'SCRIPT') {
+                        // For script tags, we need to modify the src to include testMode
+                        const src = node.getAttribute('src');
+                        if (src && src.includes('/embed.js')) {
+                            const url = new URL(src);
+                            url.searchParams.set('testMode', 'true');
+                            node.setAttribute('src', url.toString());
+                        }
+                    } else if (node.tagName === 'IFRAME') {
+                        // For iframe tags, we need to modify the src to include testMode
+                        const src = node.getAttribute('src');
+                        if (src && (src.includes('/embed.html') || src.includes('/api/forms/embed/'))) {
+                            const url = new URL(src);
+                            url.searchParams.set('testMode', 'true');
+                            node.setAttribute('src', url.toString());
+                        }
+                    }
+                    formEmbedArea.appendChild(node);
                 }
 
                 // If it's a script tag, it needs to be re-executed by the browser
