@@ -540,6 +540,9 @@ main {
   text-align: center;
   padding: 24px;
   height: 100%; /* Ensure it fills its parent div */
+  background-color: #f0f2f5; /* Match main background */
+  box-shadow: none; /* Remove shadow to make it float */
+  border: none; /* Remove border */
 }
 
 .live-preview-card .preview-header {
