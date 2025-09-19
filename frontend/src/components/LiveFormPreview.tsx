@@ -174,7 +174,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         maxWidth: '500px',
         margin: '0 auto',
         textAlign: 'left',
-        marginBottom: '24px' // Add margin bottom to separate from form
+        marginTop: '24px' // Changed from marginBottom to marginTop
       }}>
         <h3 style={{ margin: '0 0 16px 0', color: '#333', fontSize: '20px' }}>
           Website Analysis
@@ -187,7 +187,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           <div style={{ marginBottom: '20px' }}>
             <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#007bff' }}>🎨 Color Palette</h4>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {colorPalette.slice(0, 8).map((color: string, index: number) => (
+              {colorPalette.slice(0, 4).map((color: string, index: number) => ( // Limit to 4 colors
                 <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <div
                     style={{
@@ -201,7 +201,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
                   <span style={{ fontSize: '12px', color: '#555' }}>{color}</span>
                 </div>
               ))}
-              {colorPalette.length > 8 && <span style={{ fontSize: '12px', color: '#888' }}>+{colorPalette.length - 8} more</span>}
+              {colorPalette.length > 4 && <span style={{ fontSize: '12px', color: '#888' }}>+{colorPalette.length - 4} more</span>}
             </div>
           </div>
         )}
@@ -210,10 +210,10 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
           <div style={{ marginBottom: '20px' }}>
             <h4 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#28a745' }}>🔠 Typography</h4>
             <ul style={{ margin: 0, paddingLeft: '20px', listStyleType: 'disc' }}>
-              {fontFamilies.slice(0, 3).map((font: string, index: number) => (
+              {fontFamilies.slice(0, 2).map((font: string, index: number) => ( // Limit to 2 fonts
                 <li key={index} style={{ fontSize: '14px', color: '#555', fontFamily: font }}>{font}</li>
               ))}
-              {fontFamilies.length > 3 && <li style={{ fontSize: '12px', color: '#888' }}>+{fontFamilies.length - 3} more</li>}
+              {fontFamilies.length > 2 && <li style={{ fontSize: '12px', color: '#888' }}>+{fontFamilies.length - 2} more</li>}
             </ul>
           </div>
         )}
@@ -226,7 +226,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             </p>
             {personalityTraits && personalityTraits.length > 0 && (
               <p style={{ margin: 0, fontSize: '14px', color: '#555' }}>
-                Personality: {personalityTraits.slice(0, 3).join(', ')}
+                Personality: {personalityTraits.slice(0, 2).join(', ')} {/* Limit to 2 traits */}
               </p>
             )}
           </div>
@@ -286,9 +286,6 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             boxSizing: 'border-box'
           }}
         >
-          {/* Render Design Tokens if available and not explicitly hidden */}
-          { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
-
           {/* Render Form Content if available */}
           { currentFormToRender && formContent }
 
@@ -309,6 +306,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
               </p>
             </div>
           )}
+
+          {/* Render Design Tokens if available and not explicitly hidden */}
+          { (extractedDesignTokens || extractedVoiceAnalysis) && !hideAnalysisSection && renderDesignTokens() }
         </div>
       </div>
       {currentFormToRender && (
