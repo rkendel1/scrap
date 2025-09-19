@@ -4,6 +4,7 @@ import { EmbedSecurityService, EmbedTokenPayload } from './embed-security-servic
 import { dispatchToConnectors } from './connectors/dispatcher';
 import { ConnectorConfig } from './connectors/types';
 import { customerConfigService } from './customer-config-service'; // Import customerConfigService
+import { validateConnectorConfig } from './connectors/connectorDefinitions'; // Import for validation
 
 // In-memory storage for testing when database is not available
 const mockForms = new Map();
@@ -64,6 +65,7 @@ export interface SaaSForm {
   // Form-specific fields
   generated_form: GeneratedForm;
   allowed_domains?: string[]; // Added allowed_domains
+  connectors?: ConnectorConfig[]; // Added connectors JSONB field
 }
 
 export interface EmbedCode {
@@ -187,7 +189,7 @@ export class SaaSService {
 
     return {
       ...formRecord,
-      generated_form: generatedForm
+      generated_form: formRecord.generated_form_schema?.[0] || null // Ensure generated_form is populated
     };
   }
 
@@ -630,232 +632,61 @@ export class SaaSService {
       // --- END NEW LOGIC ---
 
       // Fallback to existing connector logic if no customer mapping
-      // First, find the connector by type
-      const connectorQuery = `SELECT id FROM connectors WHERE type = $1`;
-      const connectorResult = await pool.query(connectorQuery, [destinationType]);
-      
-      if (connectorResult.rows.length === 0) {
-        console.log('Backend: Connector type not found:', destinationType); // DEBUG LOG
-        throw new Error(`Connector type ${destinationType} not found`);
+      // This part needs to be updated to use the 'forms.connectors' JSONB column
+      // instead of the separate 'form_connectors' table.
+
+      // Fetch current connectors for the form
+      const currentFormResult = await pool.query(
+        `SELECT connectors FROM forms WHERE id = $1 AND (user_id = $2 OR guest_token_id = (SELECT id FROM guest_tokens WHERE token = $3))`,
+        [formId, userId, guestToken]
+      );
+
+      if (currentFormResult.rows.length === 0) {
+        throw new Error('Form not found or unauthorized to configure.');
       }
+
+      let existingConnectors: ConnectorConfig[] = currentFormResult.rows[0].connectors || [];
+
+      // Find the connector definition to validate the config
+      const validation = validateConnectorConfig(destinationType, destinationConfig);
       
-      const connectorId = connectorResult.rows[0].id;
-      
-      // Insert or update the form connector configuration
-      const upsertQuery = `
-        INSERT INTO form_connectors (form_id, connector_id, config, is_active)
-        VALUES ($1, $2, $3, true)
-        ON CONFLICT (form_id, connector_id) 
-        DO UPDATE SET 
-          config = EXCLUDED.config,
-          is_active = EXCLUDED.is_active
+      if (!validation.valid) {
+        throw new Error(`Invalid configuration for ${destinationType}: ${validation.errors.join(', ')}`);
+      }
+
+      // Update or add the new connector config
+      const newConnectorConfig: ConnectorConfig = {
+        type: destinationType,
+        settings: destinationConfig
+      };
+
+      const existingConnectorIndex = existingConnectors.findIndex(c => c.type === destinationType);
+
+      if (existingConnectorIndex !== -1) {
+        existingConnectors[existingConnectorIndex] = newConnectorConfig; // Update existing
+      } else {
+        existingConnectors.push(newConnectorConfig); // Add new
+      }
+
+      // Save the updated connectors array back to the forms table
+      const updateQuery = `
+        UPDATE forms
+        SET connectors = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+        RETURNING id;
       `;
       
-      await pool.query(upsertQuery, [formId, connectorId, JSON.stringify(destinationConfig)]);
+      const updateResult = await pool.query(updateQuery, [JSON.stringify(existingConnectors), formId]);
       
-      console.log(`Backend: Configured ${destinationType} destination for form ${formId} successfully.`); // DEBUG LOG
+      if (updateResult.rowCount === 0) {
+        throw new Error('Failed to update form connectors in forms table.');
+      }
+      
+      console.log(`Backend: Configured ${destinationType} destination for form ${formId} successfully (via forms.connectors JSONB).`);
       return true;
     } catch (error) {
       console.error('Backend: Error configuring form destination:', error); // DEBUG LOG
       throw error;
-    }
-  }
-
-  /**
-   * NEW: Get form configuration for public embed.js script.
-   * This replaces the JWT-based getFormByEmbedToken for initial embed loading.
-   */
-  async getFormConfigForPublicEmbed(embedCode: string, hostname: string, isTestMode: boolean = false): Promise<any | null> {
-    try {
-      let query = `
-        SELECT 
-          f.*,
-          f.form_schema as generated_form_schema,
-          ec.is_active as embed_active,
-          ec.view_count,
-          ec.submission_count
-        FROM forms f
-        JOIN embed_codes ec ON f.id = ec.form_id
-        WHERE ec.code = $1
-      `;
-      
-      if (!isTestMode) {
-        query += ` AND ec.is_active = true AND f.is_live = true`;
-      }
-
-      const result = await pool.query(query, [embedCode]);
-      
-      if (result.rows.length === 0) {
-        console.log(`FormCraft: Form not found, inactive, or not live for embedCode: ${embedCode} (isTestMode: ${isTestMode})`);
-        return null;
-      }
-      
-      const row = result.rows[0];
-      
-      // Check domain restrictions (always apply, even in test mode, but localhost is allowed by EmbedSecurityService)
-      const allowedDomains = row.allowed_domains || [];
-      if (!this.embedSecurity.isDomainAllowed(hostname, allowedDomains)) {
-        console.log(`FormCraft: Domain ${hostname} not allowed for embedCode: ${embedCode} (isTestMode: ${isTestMode})`);
-        return null; // Domain not allowed
-      }
-
-      // Update view count (only in non-test mode)
-      if (!isTestMode) {
-        await pool.query(`
-          UPDATE embed_codes 
-          SET view_count = view_count + 1, last_accessed = CURRENT_TIMESTAMP 
-          WHERE code = $1
-        `, [embedCode]);
-      }
-      
-      return {
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        generated_form: row.generated_form_schema?.[0] || null,
-        styling: {
-          primaryColor: row.primary_colors?.[0] || '#007bff',
-          backgroundColor: '#ffffff',
-          fontFamily: row.font_families?.[0] || 'system-ui',
-          borderRadius: '8px',
-          textColor: '#333333',
-          buttonTextColor: '#ffffff',
-          buttonBackgroundColor: row.primary_colors?.[0] || '#007bff',
-          buttonBorder: '1px solid #ccc',
-        },
-        embedCode,
-        showBranding: true // Could be based on subscription tier
-      };
-    } catch (error) {
-      console.error('FormCraft: Error fetching public embed config:', error);
-      return null;
-    }
-  }
-
-  /**
-   * NEW: Submit form using public embed code.
-   * This replaces the JWT-based submitFormSecure.
-   */
-  async submitPublicForm(
-    embedCode: string,
-    submissionData: any,
-    metadata: {
-      submittedFromUrl?: string;
-      ipAddress?: string;
-      userAgent?: string;
-      hostname?: string;
-      isTestSubmission?: boolean; // Added isTestSubmission flag
-    }
-  ): Promise<{ success: boolean; message: string; remaining?: number }> {
-    try {
-      const client = await pool.connect();
-      
-      try {
-        await client.query('BEGIN');
-
-        // Get embed code and form info
-        let embedQuery = `
-          SELECT ec.*, f.is_live, f.user_id, f.id as form_id, f.allowed_domains, u.subscription_tier
-          FROM embed_codes ec
-          JOIN forms f ON f.id = ec.form_id
-          JOIN users u ON f.user_id = u.id
-          WHERE ec.code = $1
-        `;
-        
-        // Conditionally add is_active and is_live checks for non-test submissions
-        if (!metadata.isTestSubmission) {
-          embedQuery += ` AND ec.is_active = true AND f.is_live = true`;
-        }
-
-        const embedResult = await client.query(embedQuery, [embedCode]);
-        
-        if (embedResult.rows.length === 0) {
-          return { success: false, message: 'Invalid or inactive embed code' };
-        }
-
-        const embed = embedResult.rows[0];
-        
-        // For non-test submissions, also check if the form is live
-        if (!metadata.isTestSubmission && !embed.is_live) {
-          return { success: false, message: 'Form is not currently live' };
-        }
-
-        // Check domain restrictions
-        const allowedDomains = embed.allowed_domains || [];
-        if (metadata.hostname && !this.embedSecurity.isDomainAllowed(metadata.hostname, allowedDomains)) {
-          return { success: false, message: 'Domain not authorized for this form' };
-        }
-
-        // Check rate limits
-        const rateLimit = await this.embedSecurity.checkRateLimit(
-          embed.form_id,
-          metadata.ipAddress || '0.0.0.0',
-          metadata.hostname || 'unknown'
-        );
-        
-        if (!rateLimit.allowed) {
-          return { success: false, message: 'Rate limit exceeded. Please try again later.' };
-        }
-        
-        // Check if user subscription is still active (from embed.user_id)
-        const subscription = await this.embedSecurity.getUserSubscriptionStatus(embed.user_id);
-        if (!subscription.active) {
-          return { success: false, message: 'Form owner\'s subscription is not active. Please contact the form owner.' };
-        }
-
-        // Create submission record
-        const submissionQuery = `
-          INSERT INTO form_submissions (
-            form_id, embed_code_id, submission_data, 
-            submitted_from_url, ip_address, user_agent
-          ) VALUES ($1, $2, $3, $4, $5, $6)
-          RETURNING id
-        `;
-        
-        await client.query(submissionQuery, [
-          embed.form_id,
-          embed.id,
-          JSON.stringify(submissionData),
-          metadata.submittedFromUrl,
-          metadata.ipAddress,
-          metadata.userAgent
-        ]);
-
-        // Update counters (only for non-test submissions)
-        if (!metadata.isTestSubmission) {
-          await client.query(`
-            UPDATE embed_codes 
-            SET submission_count = submission_count + 1, last_accessed = CURRENT_TIMESTAMP 
-            WHERE id = $1
-          `, [embed.id]);
-
-          await client.query(`
-            UPDATE forms 
-            SET submissions_count = submissions_count + 1, last_submission_at = CURRENT_TIMESTAMP 
-            WHERE id = $1
-          `, [embed.form_id]);
-        }
-
-        await client.query('COMMIT');
-
-        // Trigger connectors
-        await this.triggerConnectors(embed.form_id, submissionData);
-
-        return { 
-          success: true, 
-          message: 'Form submitted successfully',
-          remaining: rateLimit.remaining 
-        };
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-      
-    } catch (error) {
-      console.error('Public form submission error:', error);
-      return { success: false, message: 'Failed to submit form. Please try again.' };
     }
   }
 
@@ -883,7 +714,6 @@ export class SaaSService {
   async saveFormConnectors(formId: number, connectors: any[], userId: number): Promise<boolean> {
     try {
       // Validate connector configurations before saving
-      const { validateConnectorConfig } = await import('./connectors/connectorDefinitions');
       
       for (const connector of connectors) {
         const validation = validateConnectorConfig(connector.type, connector.settings || {});
@@ -926,7 +756,6 @@ export class SaaSService {
       }
 
       // Validate connector configuration
-      const { validateConnectorConfig } = await import('./connectors/connectorDefinitions');
       const validation = validateConnectorConfig(connectorType, settings);
       
       if (!validation.valid) {
