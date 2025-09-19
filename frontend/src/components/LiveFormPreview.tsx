@@ -169,57 +169,63 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
         padding: '16px',
         borderRadius: '8px',
         fontFamily: 'system-ui',
-        maxWidth: '750px', /* Increased max-width for 3 columns */
+        maxWidth: '750px', /* Keep max-width for overall container */
         margin: '0 auto',
         textAlign: 'left',
-        marginTop: '16px',
-        fontSize: '12px',
+        marginTop: '12px', /* Reduced margin-top */
+        fontSize: '11px', /* Smaller font size */
         color: '#555',
         border: '1px solid #e1e5e9',
         boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
       }}>
-        <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '16px', fontWeight: '600', textAlign: 'center' }}>
+        <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '15px', fontWeight: '600', textAlign: 'center' }}>
           Website Analysis Summary
         </h4>
-        <p style={{ margin: '0 0 16px 0', fontSize: '11px', color: '#666', textAlign: 'center' }}>
+        <p style={{ margin: '0 0 16px 0', fontSize: '10px', color: '#666', textAlign: 'center' }}>
           From <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#007bff', textDecoration: 'none' }}>{url}</a>:
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}> {/* Explicit 3-column grid */}
-          {/* Card 1: Colors */}
-          {colorPalette && colorPalette.length > 0 && (
-            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px' }}>Colors:</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {colorPalette.slice(0, 3).map((color: string, index: number) => ( 
-                  <div key={index} style={{ 
-                    width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}> {/* Explicit 4-column grid, reduced gap */}
+          {/* Card 1: Colors & Brand Colors */}
+          {(colorPalette && colorPalette.length > 0) || (primaryColors && primaryColors.length > 0) ? (
+            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+              <strong style={{ color: '#007bff', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Colors & Brand:</strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}> {/* Reduced gap */}
+                {primaryColors && primaryColors.slice(0, 2).map((color: string, index: number) => (
+                  <div key={`brand-${index}`} style={{ 
+                    width: '14px', height: '14px', borderRadius: '3px', backgroundColor: color, 
+                    border: '1px solid #ccc', display: 'inline-block' 
+                  }}></div>
+                ))}
+                {colorPalette && colorPalette.slice(0, 2).map((color: string, index: number) => ( 
+                  <div key={`palette-${index}`} style={{ 
+                    width: '14px', height: '14px', borderRadius: '3px', backgroundColor: color, 
                     border: '1px solid #eee', display: 'inline-block' 
                   }}></div>
                 ))}
-                {colorPalette.length > 3 && <span style={{ fontSize: '11px', color: '#888' }}> +{colorPalette.length - 3}</span>}
+                {(primaryColors?.length || 0) + (colorPalette?.length || 0) > 4 && <span style={{ fontSize: '10px', color: '#888' }}> +{((primaryColors?.length || 0) + (colorPalette?.length || 0)) - 4}</span>}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* Card 2: Fonts */}
           {fontFamilies && fontFamilies.length > 0 && (
-            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px' }}>Fonts:</strong>
-              <span style={{ fontSize: '12px', color: '#555' }}>
-                {fontFamilies.slice(0, 2).join(', ')}
-                {fontFamilies.length > 2 && ` +${fontFamilies.length - 2}`}
+            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+              <strong style={{ color: '#28a745', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Fonts:</strong>
+              <span style={{ fontSize: '11px', color: '#555' }}>
+                {fontFamilies.slice(0, 1).join(', ')}
+                {fontFamilies.length > 1 && ` +${fontFamilies.length - 1}`}
               </span>
             </div>
           )}
 
           {/* Card 3: Tone & Personality */}
           {tone && tone.primary && (
-            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px' }}>Tone:</strong>
-              <span style={{ fontSize: '12px', color: '#555' }}>{tone.primary}</span>
+            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+              <strong style={{ color: '#ffc107', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Tone:</strong>
+              <span style={{ fontSize: '11px', color: '#555' }}>{tone.primary}</span>
               {personalityTraits && personalityTraits.length > 0 && (
-                <span style={{ fontSize: '12px', color: '#555', display: 'block', marginTop: '4px' }}>
+                <span style={{ fontSize: '11px', color: '#555', display: 'block', marginTop: '4px' }}>
                   <strong>Personality:</strong> {personalityTraits.slice(0, 1).join(', ')}
                 </span>
               )}
@@ -228,24 +234,9 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
 
           {/* Card 4: Audience */}
           {audienceAnalysis && audienceAnalysis.primary && (
-            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px' }}>Audience:</strong>
-              <span style={{ fontSize: '12px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
-            </div>
-          )}
-
-          {/* Card 5: Brand Colors (if distinct from main palette) */}
-          {primaryColors && primaryColors.length > 0 && (
-            <div style={{ padding: '8px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
-              <strong style={{ color: '#dc3545', display: 'block', marginBottom: '4px' }}>Brand Colors:</strong>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                {primaryColors.slice(0, 2).map((color: string, index: number) => (
-                  <div key={index} style={{ 
-                    width: '16px', height: '16px', borderRadius: '3px', backgroundColor: color, 
-                    border: '1px solid #eee', display: 'inline-block' 
-                  }}></div>
-                ))}
-              </div>
+            <div style={{ padding: '6px', borderRadius: '6px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}>
+              <strong style={{ color: '#6f42c1', display: 'block', marginBottom: '4px', fontSize: '11px' }}>Audience:</strong>
+              <span style={{ fontSize: '11px', color: '#555' }}>{audienceAnalysis.primary} ({audienceAnalysis.complexity})</span>
             </div>
           )}
         </div>
