@@ -272,14 +272,18 @@ function App() {
       const result: ApiResponse<{ isLive: boolean; message?: string }> = await response.json();
 
       if (result.success) {
+        // Update the forms state based on the backend's response
         setForms(prevForms => 
           prevForms.map(form => {
+            // If this form was toggled, update its is_live status
             if (form.id === formId) {
               return { ...form, is_live: result.data!.isLive };
             }
-            // If a free user activated a new form, other forms might have been deactivated
-            // We need to update their status too.
+            // If another form was implicitly deactivated (for free users), update its status
+            // This logic assumes the backend sends a message if another form was deactivated.
+            // A more robust solution might involve the backend returning the full updated list of forms.
             if (user?.subscription_tier === 'free' && result.data!.isLive && form.is_live) {
+              // If the current form is now live, and this 'form' was previously live, deactivate it.
               return { ...form, is_live: false };
             }
             return form;
