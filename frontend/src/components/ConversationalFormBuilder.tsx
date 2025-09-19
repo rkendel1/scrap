@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
-import { Mail, Sheet, Slack, Link, Zap } from 'lucide-react'; // Import Lucide icons
+import { Mail, Sheet, Slack, Link, Zap, Copy, Check } from 'lucide-react'; // Import Lucide icons, including Copy and Check
 
 interface ConversationalFormBuilderProps {
   onFormGenerated: (form: SaaSForm) => void;
@@ -68,6 +68,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [selectedDestinationType, setSelectedDestinationType] = useState<string | null>(null);
   const [destinationConfig, setDestinationConfig] = useState<any>({});
   const [isDestinationConfigured, setIsDestinationConfigured] = useState(false); // New state
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle'); // State for copy button feedback
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
 
@@ -466,6 +467,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentStep('ASK_PURPOSE');
   };
 
+  const handleCopyEmbedCode = (embedCode: string) => {
+    const scriptEmbedCode = `<script src="${API_BASE}/embed.js" data-form="${embedCode}"></script>`;
+    navigator.clipboard.writeText(scriptEmbedCode);
+    setCopyStatus('copied');
+    setTimeout(() => setCopyStatus('idle'), 2000); // Reset status after 2 seconds
+  };
+
   const processPurposeInput = async (purpose: string) => {
     setCurrentStep('PROCESSING_PURPOSE');
     if (!extractedRecordId) {
@@ -513,25 +521,29 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const embedCode = newForm.embed_code;
     const isGuestForm = !user; // Check if it's a guest form
 
-    let embedCodeMessage = `Here's your embed code:
-<div class="code-block" style="background-color: #f0f2f5; border: 1px solid #e1e5e9; border-radius: 4px; padding: 12px; font-family: 'Monaco', 'Menlo', monospace; font-size: 13px; white-space: pre-wrap; overflow-x: auto; margin: 8px 0;">
-  &lt;script src="${API_BASE}/embed.js" data-form="${embedCode}"&gt;&lt;/script&gt;
-</div>
-`;
-
-    if (isGuestForm) {
-      embedCodeMessage += `This form is currently temporary and will expire if not associated with an account.`;
-    } else {
-      embedCodeMessage += `This form is permanent as it's linked to your account.`;
-    }
-
     setCurrentStep('FORM_GENERATED_REVIEW'); // New state
     addPrompt(
       <>
         Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
-          {embedCodeMessage}
+          {isGuestForm ? (
+            "This form is currently temporary and will expire if not associated with an account."
+          ) : (
+            "This form is permanent as it's linked to your account."
+          )}
         </div>
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+          Here's your embed code:
+        </div>
+        <button
+          onClick={() => handleCopyEmbedCode(embedCode || '')}
+          className="quick-reply-btn"
+          style={{ marginTop: '8px', backgroundColor: copyStatus === 'copied' ? '#28a745' : '#007bff', color: 'white' }}
+          disabled={!embedCode}
+        >
+          {copyStatus === 'copied' ? <Check size={16} /> : <Copy size={16} />}
+          {copyStatus === 'copied' ? 'Copied!' : 'Copy Embed Code'}
+        </button>
         <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
           Are there any changes you'd like to make, or would you like to configure delivery?
         </div>
