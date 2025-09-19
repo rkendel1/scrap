@@ -24,7 +24,6 @@ type ConversationEntry = {
   type: 'prompt' | 'user' | 'error' | 'success';
   content: string | JSX.Element;
   timestamp?: Date;
-  buttons?: { label: string; command: string; icon?: JSX.Element }[]; // Added buttons property
 };
 
 type ConversationStep =
@@ -155,7 +154,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </>
     ) : content;
-    addEntry({ type: 'prompt', content: fullContent, buttons });
+    addEntry({ type: 'prompt', content: fullContent });
     setIsLoading(false);
   };
 
@@ -278,17 +277,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     return parsed;
   };
 
-  const handleUserInput = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!userInput.trim() || isLoading) return;
+  const handleUserInput = async (inputToProcess: string) => {
+    if (!inputToProcess.trim() || isLoading) return;
 
-    const input = userInput.trim();
-    addUserResponse(input);
+    addUserResponse(inputToProcess);
     setUserInput('');
     setError(null);
     setIsLoading(true);
 
-    const parsedInput = parseUserInput(input);
+    const parsedInput = parseUserInput(inputToProcess);
 
     if (parsedInput.command === 'help') {
       addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
@@ -487,8 +484,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           break;
 
         case 'ASK_FORM_CHANGES':
-          if (input) {
-            await processFormChanges(input);
+          if (inputToProcess) {
+            await processFormChanges(inputToProcess);
           } else {
             addPrompt("Please tell me what changes you'd like to make to the form.");
           }
@@ -515,9 +512,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
   const handleQuickResponseClick = async (response: string) => {
     if (isLoading) return;
-    setUserInput(response);
+    // No need to setUserInput here, just call handleUserInput directly
     setError(null);
-    await handleUserInput({ preventDefault: () => {} } as React.FormEvent);
+    await handleUserInput(response); // Pass response directly to handleUserInput
   };
 
   const processUrlInput = async (url: string) => {
@@ -987,45 +984,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCurrentContextSummary('');
   };
 
-  const handleConfigureDestinationClick = () => {
-    handleQuickResponseClick('configure destination');
-  };
-
-  const handleMakeChangesClick = () => {
-    handleQuickResponseClick('make changes');
-  };
-
-  const handleDoneClick = () => {
-    handleQuickResponseClick('im done');
-  };
-
-  const handleDestinationTypeClick = (type: string) => {
-    handleQuickResponseClick(type);
-  };
-
-  const handleGoLiveClick = () => {
-    handleQuickResponseClick('yes');
-  };
-
-  const handleNotLiveClick = () => {
-    handleQuickResponseClick('no');
-  };
-
   const formatTimestamp = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const getDestinationLabel = (type: string) => {
-    switch (type) {
-      case 'email': return 'Email';
-      case 'googlesheets': return 'Google Sheets';
-      case 'slack': return 'Slack';
-      case 'webhook': return 'Webhook';
-      case 'zapier': return 'Zapier';
-      case 'create account': return 'Create Account';
-      case 'provide email': return 'Provide Email';
-      default: return type;
-    }
   };
 
   return (
@@ -1052,7 +1012,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </div>
 
-      <form onSubmit={handleUserInput} className="form-input-container">
+      <form onSubmit={(e) => { e.preventDefault(); handleUserInput(userInput); }} className="form-input-container">
         <input
           type="text"
           value={userInput}
