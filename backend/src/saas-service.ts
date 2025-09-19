@@ -107,6 +107,9 @@ export class SaaSService {
   ): Promise<SaaSForm> {
     const embedCode = this.generateEmbedCode();
     
+    // A form is considered "non-expiring" when it's associated with a registered user (userId is not null)
+    // and is set to is_live = true. Guest forms (guestTokenId is not null) are temporary/expiring
+    // until converted to a user form.
     const query = `
       INSERT INTO forms (
         user_id, guest_token_id, url, form_name, form_description, 
