@@ -108,7 +108,7 @@ export interface FormData {
   url: string;
   purpose: string;
   // Removed formLayout from FormData
-  destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook';
+  destinationType?: 'email' | 'google_sheets' | 'slack' | 'webhook' | 'zapier'; // Added Zapier
   destinationConfig?: any;
 }
 

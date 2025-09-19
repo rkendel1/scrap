@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useForm } from 'react-hook-form';
 import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
 import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
 import { Mail, Sheet, Slack, Link, Zap } from 'lucide-react'; // Import Lucide icons
@@ -14,14 +13,15 @@ interface ConversationalFormBuilderProps {
     createdForm: SaaSForm | null;
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
+    isDestinationConfigured: boolean; // Added
   }) => void;
-  onGetEmbedCodeClick: (form: SaaSForm) => void; // New prop
+  onGetEmbedCodeClick: (form: SaaSForm) => void;
 }
 
 type ConversationEntry = {
   type: 'prompt' | 'user' | 'error' | 'success';
   content: string | JSX.Element;
-  timestamp?: Date; // Added timestamp
+  timestamp?: Date;
 };
 
 type ConversationStep =
@@ -29,9 +29,10 @@ type ConversationStep =
   | 'PROCESSING_URL'
   | 'ASK_PURPOSE'
   | 'PROCESSING_PURPOSE'
+  | 'FORM_GENERATED_REVIEW' // New state
   | 'ASK_DESTINATION_TYPE'
   | 'ASK_DESTINATION_CONFIG'
-  | 'PROCESSING_DESTINATION'
+  | 'DESTINATION_CONFIGURED' // New state
   | 'DONE';
 
 export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps> = ({
@@ -39,7 +40,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   user,
   guestToken,
   onStateChange,
-  onGetEmbedCodeClick, // Destructure new prop
+  onGetEmbedCodeClick,
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
@@ -49,7 +50,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
-  const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null); // Changed type to string[] | null
+  const [currentQuickResponses, setCurrentQuickResponses] = useState<string[] | null>(null);
 
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -60,6 +61,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null);
   const [selectedDestinationType, setSelectedDestinationType] = useState<string | null>(null);
   const [destinationConfig, setDestinationConfig] = useState<any>({});
+  const [isDestinationConfigured, setIsDestinationConfigured] = useState(false); // New state
 
   const chatHistoryRef = useRef<HTMLDivElement>(null);
 
@@ -68,10 +70,9 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     googlesheets: <Sheet size={16} />,
     slack: <Slack size={16} />,
     webhook: <Link size={16} />,
-    zapier: <Zap size={16} />, // Added Zapier icon
+    zapier: <Zap size={16} />,
   };
 
-  // List of predefined form purposes for matching
   const formPurposes = [
     'Lead Generation',
     'Contact Form',
@@ -84,7 +85,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     'Consultation Booking',
   ];
 
-  // Helper to build the context summary string
   const buildContextSummary = () => {
     let summaryParts: string[] = [];
     if (formData.url) {
@@ -94,20 +94,18 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       summaryParts.push(`🎯 ${formData.purpose}`);
     }
     if (formData.destinationType) {
-      const icon = destinationIcons[formData.destinationType] ? ' ' : ''; // Placeholder for icon
+      const icon = destinationIcons[formData.destinationType] ? ' ' : '';
       summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
     }
     setCurrentContextSummary(summaryParts.join(' | '));
   };
 
-  // Scroll to bottom of chat history
   useEffect(() => {
     if (chatHistoryRef.current) {
       chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
     }
-  }, [conversationHistory, currentQuickResponses]); // Also scroll when quick responses appear/disappear
+  }, [conversationHistory, currentQuickResponses]);
 
-  // Update parent component's state for LiveFormPreview
   useEffect(() => {
     onStateChange({
       formData,
@@ -115,53 +113,50 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       createdForm,
       extractedDesignTokens,
       extractedVoiceAnalysis,
+      isDestinationConfigured, // Pass new state
     });
-    buildContextSummary(); // Update summary whenever formData changes
-  }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, onStateChange]);
+    buildContextSummary();
+  }, [formData, generatedForm, createdForm, extractedDesignTokens, extractedVoiceAnalysis, isDestinationConfigured, onStateChange]);
 
   const addEntry = (entry: ConversationEntry) => {
     setConversationHistory((prev) => [...prev, { ...entry, timestamp: new Date() }]);
   };
 
-  // Modified addPrompt to accept string[] for quickResponses
   const addPrompt = (content: string | JSX.Element, quickResponses: string[] | null = null) => {
     addEntry({ type: 'prompt', content });
-    setCurrentQuickResponses(quickResponses); // Now stores string[]
+    setCurrentQuickResponses(quickResponses);
     setIsLoading(false);
   };
 
-  // Modified addUserResponse, addError, addSuccess to clear quick responses
   const addUserResponse = (content: string) => {
     addEntry({ type: 'user', content });
-    setCurrentQuickResponses(null); // Clear quick responses
+    setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addError = (content: string) => {
     addEntry({ type: 'error', content });
-    setCurrentQuickResponses(null); // Clear quick responses
+    setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
   const addSuccess = (content: string | JSX.Element) => {
     addEntry({ type: 'success', content });
-    setCurrentQuickResponses(null); // Clear quick responses
+    setCurrentQuickResponses(null);
     setIsLoading(false);
   };
 
-  // Helper to parse user input for various intents
   const parseUserInput = (input: string) => {
     const parsed: {
       url?: string;
       purpose?: string;
       destinationType?: string;
-      command?: 'help' | 'start over' | 'yes' | 'no';
-      configInput?: string; // For destination config
+      command?: 'help' | 'start over' | 'yes' | 'no' | 'configure destination' | 'get embed code'; // Added commands
+      configInput?: string;
     } = {};
 
     const lowerInput = input.toLowerCase();
 
-    // Check for commands
     if (lowerInput.includes('help')) {
       parsed.command = 'help';
       return parsed;
@@ -178,14 +173,20 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       parsed.command = 'no';
       return parsed;
     }
+    if (lowerInput.includes('configure destination') || lowerInput.includes('set destination')) {
+      parsed.command = 'configure destination';
+      return parsed;
+    }
+    if (lowerInput.includes('get embed code') || lowerInput.includes('embed code')) {
+      parsed.command = 'get embed code';
+      return parsed;
+    }
 
-    // Check for URL
     const urlMatch = input.match(/https?:\/\/[^\s]+/i);
     if (urlMatch) {
       parsed.url = urlMatch[0];
     }
 
-    // Refined purpose parsing: only if currentStep is ASK_PURPOSE
     if (currentStep === 'ASK_PURPOSE') {
         let matchedPurpose: string | undefined;
         for (const purposeOption of formPurposes) {
@@ -203,18 +204,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         if (matchedPurpose) {
             parsed.purpose = matchedPurpose;
         } else {
-            // If no predefined purpose is matched, treat the user's input as a custom purpose
             parsed.purpose = input;
         }
     }
 
-
-    // Check for destination type
-    const destinationKeywords = ['email', 'google sheets', 'slack', 'webhook', 'zapier']; // Added Zapier
+    const destinationKeywords = ['email', 'google sheets', 'slack', 'webhook', 'zapier'];
     for (const keyword of destinationKeywords) {
       if (lowerInput.includes(keyword)) {
-        parsed.destinationType = keyword.replace(/\s/g, ''); // Normalize to 'googlesheets'
-        // If destination type is found, the rest of the input might be the config
+        parsed.destinationType = keyword.replace(/\s/g, '');
         const configMatch = input.match(new RegExp(`${keyword}\\s*(.*)`, 'i'));
         if (configMatch && configMatch[1]) {
           parsed.configInput = configMatch[1].trim();
@@ -223,17 +220,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       }
     }
     
-    // If no specific destination type keyword, but it looks like an email or URL for config
     if (!parsed.destinationType) {
       if (lowerInput.includes('@') && lowerInput.includes('.')) {
         parsed.configInput = lowerInput.match(/\S+@\S+\.\S+/)?.[0];
         if (parsed.configInput) parsed.destinationType = 'email';
       } else if (lowerInput.includes('http') || lowerInput.includes('www')) {
         parsed.configInput = lowerInput.match(/https?:\/\/[^\s]+|www\.[^\s]+/)?.[0];
-        if (parsed.configInput) parsed.destinationType = 'webhook'; // Default to webhook for generic URL
+        if (parsed.configInput) parsed.destinationType = 'webhook';
       }
     }
-
 
     return parsed;
   };
@@ -243,14 +238,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     if (!userInput.trim() || isLoading) return;
 
     const input = userInput.trim();
-    addUserResponse(input); // This is now the only place user input is added to history
+    addUserResponse(input);
     setUserInput('');
     setError(null);
-    setIsLoading(true); // Set loading here, will be cleared by addPrompt/addError/addSuccess
+    setIsLoading(true);
 
     const parsedInput = parseUserInput(input);
 
-    // Handle commands first
     if (parsedInput.command === 'help') {
       addPrompt("I can help you create a form by asking for a website URL, the form's purpose, and where to send submissions. You can also type 'start over' to reset the conversation.");
       return;
@@ -263,8 +257,32 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       handleRestart(parsedInput.command);
       return;
     }
+    if (currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED') {
+      if (parsedInput.command === 'configure destination') {
+        setCurrentStep('ASK_DESTINATION_TYPE');
+        addPrompt(
+          "Okay, where should I send the form submissions?",
+          ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
+        );
+        return;
+      }
+      if (parsedInput.command === 'get embed code') {
+        if (createdForm && isDestinationConfigured) {
+          onGetEmbedCodeClick(createdForm);
+          addPrompt("Great! You can find your embed code in the 'My Forms' dashboard or by clicking the 'Get Embed Code' button in the preview. Would you like to create another form?", ['Yes', 'No']);
+          setCurrentStep('DONE');
+        } else if (createdForm && !isDestinationConfigured) {
+          addError("Please configure a destination for your form before getting the embed code.");
+          addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
+        } else {
+          addError("No form has been generated yet. Please start by providing a URL.");
+          setCurrentStep('ASK_URL');
+        }
+        return;
+      }
+    }
 
-    // Process based on current step and detected intents
+
     try {
       switch (currentStep) {
         case 'ASK_URL':
@@ -278,7 +296,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         case 'ASK_PURPOSE':
           if (parsedInput.purpose) {
             await processPurposeInput(parsedInput.purpose);
-          } else if (parsedInput.url) { // User provided URL again, restart URL processing
+          } else if (parsedInput.url) {
             addPrompt("Looks like you're providing a URL again. Let's re-analyze that website.");
             await processUrlInput(parsedInput.url);
           } else {
@@ -286,61 +304,63 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
           }
           break;
 
+        case 'FORM_GENERATED_REVIEW':
+          // If user provides a destination type directly in this state
+          if (parsedInput.destinationType) {
+            await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
+          } else {
+            addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
+            addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
+          }
+          break;
+
         case 'ASK_DESTINATION_TYPE':
           if (parsedInput.destinationType) {
             await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
           } else {
-            // If it's not a destination type, it's an invalid input for this step.
-            // Provide a clear error message and re-prompt for destination type.
             addError('I\'m sorry, I didn\'t understand that. Please choose a destination type like "Email", "Google Sheets", "Slack", "Webhook", or "Zapier".');
             addPrompt(
               "Where should I send the form submissions?",
-              ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier'] // Added Zapier
+              ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier']
             );
           }
           break;
 
         case 'ASK_DESTINATION_CONFIG':
           if (parsedInput.configInput) {
-            // User provided config input, process it
             await processDestinationConfigInput(parsedInput.configInput);
           } else if (parsedInput.destinationType) {
-            // User provided a destination type.
-            // If it's the same as the currently selected one, just re-prompt for config.
             if (parsedInput.destinationType === selectedDestinationType) {
                 let configPrompt = '';
                 switch (selectedDestinationType) {
-                    case 'email':
-                        configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
-                        break;
-                    case 'googlesheets':
-                        configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
-                        break;
-                    case 'slack':
-                        configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
-                        break;
-                    case 'webhook':
-                        configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
-                        break;
-                    case 'zapier':
-                        configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").';
-                        break;
+                    case 'email': configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").'; break;
+                    case 'googlesheets': configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").'; break;
+                    case 'slack': configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").'; break;
+                    case 'webhook': configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").'; break;
+                    case 'zapier': configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").'; break;
                 }
-                addPrompt(configPrompt); // No quick responses here, just the prompt
+                addPrompt(configPrompt);
             } else {
-                // User provided a *different* destination type, switch to it
                 await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
             }
-          } else if (parsedInput.purpose) { // NEW: User entered a purpose when expecting config
+          } else if (parsedInput.purpose) {
             addError(`"${parsedInput.purpose}" sounds like a form purpose. I'm currently asking for configuration details for ${selectedDestinationType}.`);
           } else {
             addError('Please provide the configuration details for your selected destination, or type a new destination type (e.g., "Slack").');
           }
           break;
 
+        case 'DESTINATION_CONFIGURED':
+          // If user provides a destination type directly in this state
+          if (parsedInput.destinationType) {
+            await processDestinationTypeInput(parsedInput.destinationType, parsedInput.configInput);
+          } else {
+            addError("I'm not sure how to interpret that. Would you like to 'Configure Destination' or 'Get Embed Code'?");
+            addPrompt("What would you like to do next?", ['Configure Destination', 'Get Embed Code']);
+          }
+          break;
+
         case 'DONE':
-          // This case should be handled by the command check above for 'yes'/'no'
-          // If we reach here, it means an unexpected input in DONE state
           addError('I\'m done for now. Would you like to create another form? Type "yes" or "no".');
           break;
 
@@ -354,19 +374,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
   };
 
-  // Refactored handleQuickResponseClick
   const handleQuickResponseClick = async (response: string) => {
     if (isLoading) return;
-    setUserInput(response); // Set the input field value
+    setUserInput(response);
     setError(null);
-    // Trigger handleUserInput by simulating a form submission
     await handleUserInput({ preventDefault: () => {} } as React.FormEvent);
   };
 
   const processUrlInput = async (url: string) => {
-    setCurrentStep('PROCESSING_URL'); // Update step for dynamic button text
+    setCurrentStep('PROCESSING_URL');
     try {
-      new URL(url); // Basic URL validation
+      new URL(url);
     } catch {
       addError('That doesn\'t look like a valid URL. Please enter a URL starting with http:// or https://');
       return;
@@ -398,13 +416,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
 
     addPrompt(
       `Perfect! I've analyzed ${url} and extracted the design tokens. The preview is updating live with their styles. Now, what do you want to capture with this form?`,
-      formPurposes.slice(0, 3) // Pass string array
+      formPurposes.slice(0, 3)
     );
     setCurrentStep('ASK_PURPOSE');
   };
 
   const processPurposeInput = async (purpose: string) => {
-    setCurrentStep('PROCESSING_PURPOSE'); // Update step for dynamic button text
+    setCurrentStep('PROCESSING_PURPOSE');
     if (!extractedRecordId) {
       addError('Something went wrong. I lost the website data. Please start over by providing the URL.');
       setCurrentStep('ASK_URL');
@@ -443,24 +461,24 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(generateResult.generatedForm);
     setCreatedForm(generateResult.form);
     setFormData((prev) => ({ ...prev, purpose }));
+    setIsDestinationConfigured(false); // Reset destination configured status
 
-    setCurrentStep('ASK_DESTINATION_TYPE'); 
+    setCurrentStep('FORM_GENERATED_REVIEW'); // New state
     addPrompt(
       <>
-        Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right. Where should this data go when submitted?
-        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>Choose a destination:</div>
+        Excellent! I've instantly generated a form for "{purpose}". You can see it live on the right.
+        <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>What would you like to do next?</div>
       </>,
-      ['Email', 'Google Sheets', 'Slack', 'Webhook', 'Zapier'] // Added Zapier
+      ['Configure Destination', 'Get Embed Code']
     );
   };
 
   const processDestinationTypeInput = async (typeInput: string, configInput?: string) => {
     const normalizedType = typeInput.toLowerCase().replace(/\s/g, '');
-    const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier']; // Match backend connector types
+    const availableTypes = ['email', 'googlesheets', 'slack', 'webhook', 'zapier'];
 
     if (!availableTypes.includes(normalizedType)) {
       addError('I don\'t recognize that destination type. Please choose from Email, Google Sheets, Slack, Webhook, or Zapier.');
-      // Re-prompt with quick responses
       addPrompt(
         <>
           Where should I send the form submissions?
@@ -475,27 +493,15 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setFormData((prev) => ({ ...prev, destinationType: normalizedType as any }));
 
     if (configInput) {
-      // If config was provided with type, process it immediately
       await processDestinationConfigInput(configInput, normalizedType);
     } else {
-      // Prompt for config based on type
       let configPrompt = '';
       switch (normalizedType) {
-        case 'email':
-          configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").';
-          break;
-        case 'googlesheets':
-          configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
-          break;
-        case 'slack':
-          configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").';
-          break;
-        case 'webhook':
-          configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").';
-          break;
-        case 'zapier':
-          configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").';
-          break;
+        case 'email': configPrompt = 'Please provide the recipient email address (e.g., "sales@yourcompany.com").'; break;
+        case 'googlesheets': configPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").'; break;
+        case 'slack': configPrompt = 'Please provide the Slack Webhook URL (e.g., "https://hooks.slack.com/services/...").'; break;
+        case 'webhook': configPrompt = 'Please provide the Webhook URL (e.g., "https://api.yourdomain.com/webhook").'; break;
+        case 'zapier': configPrompt = 'Please provide the Zapier Webhook URL (e.g., "https://hooks.zapier.com/hooks/catch/...").'; break;
       }
       addPrompt(configPrompt);
       setCurrentStep('ASK_DESTINATION_CONFIG');
@@ -503,10 +509,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   const processDestinationConfigInput = async (configInput: string, typeOverride?: string) => {
-    setCurrentStep('PROCESSING_DESTINATION'); // Update step for dynamic button text
+    setCurrentStep('PROCESSING_DESTINATION');
     const currentDestinationType = typeOverride || selectedDestinationType;
-
-    console.log('Frontend: Processing destination config input:', { configInput, currentDestinationType }); // DEBUG LOG
 
     if (!createdForm?.id || !currentDestinationType) {
       addError('Something went wrong. I lost the form or destination type. Please try again from the beginning.');
@@ -529,7 +533,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         break;
       case 'googlesheets':
         expectedInputPrompt = 'Please provide the Google Sheets Spreadsheet ID (from the URL, e.g., "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms").';
-        // Basic validation for spreadsheet ID (can be more robust)
         if (!configInput.match(/^[a-zA-Z0-9_-]+$/)) {
           validationError = 'That doesn\'t look like a valid Google Sheets Spreadsheet ID.';
         } else {
@@ -538,7 +541,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         break;
       case 'slack':
       case 'webhook':
-      case 'zapier': // Zapier also uses a webhook URL
+      case 'zapier':
         expectedInputPrompt = 'Please provide a valid URL for the webhook (e.g., "https://hooks.slack.com/services/..." or "https://hooks.zapier.com/hooks/catch/...").';
         if (!/^https?:\/\/\S+/.test(configInput)) {
           validationError = 'That doesn\'t look like a valid URL.';
@@ -549,7 +552,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     }
 
     if (validationError) {
-      console.log('Frontend: Validation error:', validationError); // DEBUG LOG
       addError(`${validationError} ${expectedInputPrompt}`);
       return;
     }
@@ -571,8 +573,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       configurePayload.guestToken = guestToken;
     }
 
-    console.log('Frontend: Sending configure destination payload:', configurePayload); // DEBUG LOG
-
     const configureResponse = await fetch(`/api/forms/${createdForm.id}/configure-destination`, {
       method: 'POST',
       headers: authHeaders,
@@ -582,18 +582,18 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const configureResult = await configureResponse.json();
 
     if (!configureResult.success) {
-      console.error('Frontend: Backend configure destination failed:', configureResult); // DEBUG LOG
       addError(configureResult.error || 'Failed to save destination configuration.');
       return;
     }
 
+    setIsDestinationConfigured(true); // Set destination configured status
     addSuccess('Destination configured successfully! Your form is now fully set up.');
     addPrompt(
-      "You can find your form in the 'My Forms' dashboard. Would you like to create another form?",
-      ['Yes', 'No'] // Pass string array
+      "Your form is ready! You can now get the embed code. Would you like to create another form?",
+      ['Yes', 'No']
     );
-    setCurrentStep('DONE'); // Transition to a final state where user can restart
-    onFormGenerated(createdForm); // Notify parent that a form was created
+    setCurrentStep('DESTINATION_CONFIGURED'); // New state
+    onFormGenerated(createdForm);
   };
 
   const handleRestart = (command: 'yes' | 'no') => {
@@ -611,13 +611,14 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setCreatedForm(null);
       setSelectedDestinationType(null);
       setDestinationConfig({});
+      setIsDestinationConfigured(false); // Reset
       setCurrentStep('ASK_URL');
       setCurrentContextSummary('');
-      setCurrentQuickResponses(null); // Clear quick responses on restart
+      setCurrentQuickResponses(null);
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!", null);
       setUserInput('');
-      setCurrentQuickResponses(null); // Clear quick responses
+      setCurrentQuickResponses(null);
     }
   };
 
@@ -635,9 +636,10 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setCreatedForm(null);
     setSelectedDestinationType(null);
     setDestinationConfig({});
+    setIsDestinationConfigured(false); // Reset
     setCurrentStep('ASK_URL');
     setCurrentContextSummary('');
-    setCurrentQuickResponses(null); // Clear quick responses on restart
+    setCurrentQuickResponses(null);
   };
 
   const formatTimestamp = (date: Date) => {
@@ -656,14 +658,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   return (
-    <div className="card conversational-builder-card"> {/* Added class for styling */}
+    <div className="card conversational-builder-card">
       {currentContextSummary && (
         <div className="context-summary">
           Current Form: {currentContextSummary}
         </div>
       )}
 
-      {/* Fixed height container for chat history */}
       <div className="chat-history-container">
         <div
           ref={chatHistoryRef}
@@ -686,18 +687,17 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
         </div>
       </div>
 
-      {/* Quick responses now outside chat-history-scroll but inside conversational-builder-card */}
       {currentQuickResponses && (
-        <div style={{ width: '100%', marginTop: '12px' }}> {/* Wrapper for quick responses */}
-          {currentStep === 'ASK_DESTINATION_TYPE' && (
+        <div style={{ width: '100%', marginTop: '12px' }}>
+          {(currentStep === 'ASK_DESTINATION_TYPE' || currentStep === 'FORM_GENERATED_REVIEW' || currentStep === 'DESTINATION_CONFIGURED') && (
             <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
-              Use the buttons above to select your destination
+              Use the buttons above to select your option
             </div>
           )}
           <div className="quick-reply-container">
             {currentQuickResponses.map((response, idx) => (
               <button key={idx} className="quick-reply-btn" onClick={() => handleQuickResponseClick(response)}>
-                {destinationIcons[response.toLowerCase().replace(/\s/g, '')]}
+                {destinationIcons[response.toLowerCase().replace(/\s/g, '')] || null}
                 {getDestinationLabel(response.toLowerCase().replace(/\s/g, ''))}
               </button>
             ))}

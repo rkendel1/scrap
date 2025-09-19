@@ -32,12 +32,14 @@ function App() {
     createdForm: SaaSForm | null;
     extractedDesignTokens: any | null;
     extractedVoiceAnalysis: any | null;
+    isDestinationConfigured: boolean; // Added
   }>({
     formData: {},
     generatedForm: null,
     createdForm: null,
     extractedDesignTokens: null,
     extractedVoiceAnalysis: null,
+    isDestinationConfigured: false, // Initialize
   });
 
   // Initialize authentication on app load
@@ -400,6 +402,7 @@ function App() {
                 extractedDesignTokens={builderState.extractedDesignTokens} // Pass new state
                 extractedVoiceAnalysis={builderState.extractedVoiceAnalysis} // Pass new state
                 onGetEmbedCodeClick={handleGetEmbedCodeClick} // Pass the new handler
+                isDestinationConfigured={builderState.isDestinationConfigured} // Pass new state
               />
             </div>
           </>
