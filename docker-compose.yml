@@ -31,8 +31,16 @@ services:
       - ./backend/.env # optional backend-specific overrides
     environment:
       DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:${DB_PORT:-5432}/${DB_NAME:-scrap_db}
-      # Removed redundant DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, PORT, NODE_ENV, FRONTEND_URL
-      # These are now sourced from ./.env or backend/.env via env_file
+      # Explicitly setting these from .env for clarity and robustness, though env_file should handle it.
+      # This ensures they are definitely available inside the container's environment.
+      PORT: ${PORT:-3001}
+      NODE_ENV: ${NODE_ENV:-development}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-scrap_db}
+      DB_USER: ${DB_USER:-scrap_user}
+      DB_PASSWORD: ${DB_PASSWORD:-scrap_password}
     ports:
       - "${PORT:-3001}:${PORT:-3001}" # Use PORT from .env
     volumes:
@@ -45,6 +53,11 @@ services:
       db:
         condition: service_healthy
     command: sh -c "npm install && npm run dev"
+    healthcheck: # <--- ADDED HEALTHCHECK FOR BACKEND
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Frontend React App
   frontend:
@@ -54,7 +67,6 @@ services:
     env_file:
       - ./.env          # shared root env
       - ./frontend/.env # optional frontend-specific overrides
-    # Removed the empty 'environment:' block as it's not needed and causes a YAML error.
     ports:
       - "5173:5173"
     volumes:
@@ -65,7 +77,8 @@ services:
       - ./frontend/tsconfig.json:/app/tsconfig.json
       - ./frontend/index.html:/app/index.html
     depends_on:
-      - backend
+      backend: # <--- ENSURE DEPENDS_ON BACKEND IS HEALTHY
+        condition: service_healthy
     command: npm run dev -- --host 0.0.0.0
 
   # n8n Workflow Automation
