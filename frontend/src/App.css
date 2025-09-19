@@ -543,7 +543,7 @@ main {
   justify-content: flex-start;
   text-align: center;
   padding: 24px;
-  background-color: #f0f2f5;
+  background-color: #ffffff; /* Changed to white */
   box-shadow: none;
   border: none;
   height: 100%; /* Take full height of parent column */
