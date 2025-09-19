@@ -20,8 +20,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    # Override the default command to ensure migrations run after DB is ready
-    command: postgres -c 'fsync=off'
 
   # Backend API
   backend:
@@ -54,7 +52,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "npm install && npm run dev && npm run migrate" # Run migrations from backend after dev starts
+    command: sh -c "npm install && npm run dev"
     healthcheck: # <--- ADDED HEALTHCHECK FOR BACKEND
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
