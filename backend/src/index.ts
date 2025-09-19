@@ -1027,7 +1027,7 @@ app.post('/api/customer-configs', authService.authenticateToken, async (req: Aut
       error: 'Failed to create customer configuration',
       message: error instanceof Error ? error.message : 'Unknown error'
     });
-  });
+  }
 });
 
 // Update customer configuration
@@ -1186,7 +1186,7 @@ app.post('/api/forms/:id/adapt-form', authService.authenticateToken, async (req:
       message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
-});
+});; // Added semicolon here
 
 // ====== LEGACY ENDPOINTS (for backward compatibility) ======
 
