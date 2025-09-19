@@ -78,7 +78,7 @@
                 font-family: ${styling.fontFamily || 'system-ui'};
                 border: 1px solid #e1e5e9;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                max-width: 500px;
+                max-width: ${styling.maxWidth || '350px'}; /* Use dynamic maxWidth or default to 350px */
                 margin: 0 auto;
             ">
                 <div style="margin-bottom: 24px;">
