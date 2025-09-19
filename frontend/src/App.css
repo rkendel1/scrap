@@ -32,11 +32,16 @@ html, body, #root, .App {
 /* Header */
 .header {
   background-color: #ffffff;
-  padding: 0px 0; /* Reduced padding to make it half its previous size */
+  padding: 0px 0; /* This padding is on the header itself, not the content inside */
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   position: relative; /* Needed for z-index to work */
   z-index: 10; /* Ensure header is always on top */
+}
+
+/* Specific padding for the container inside the header to control its height */
+.header .container {
+  padding: 10px 20px; /* Reduced vertical padding for a shorter header */
 }
 
 .header .logo {
@@ -70,9 +75,9 @@ main {
   gap: 24px;
   background-color: #f0f2f5; /* Match body background */
   /* Adjusted height calculation: 100vh - (header height + main-padding-top + main-padding-bottom) */
-  /* New header height: 12px (logo height) + 0px (top) + 0px (bottom) = 12px */
-  /* Total fixed vertical space: 12px (header) + 24px (main top padding) + 24px (main bottom padding) = 60px */
-  height: calc(100vh - 60px); 
+  /* New header height: 10px (container top padding) + 12px (logo height) + 10px (container bottom padding) = 32px */
+  /* Total fixed vertical space: 32px (header) + 24px (main top padding) + 24px (main bottom padding) = 80px */
+  height: calc(100vh - 80px); 
   min-height: 0; /* Allow flex item to shrink */
 }
 
@@ -326,7 +331,7 @@ main {
 /* Specific styles for the conversational builder and preview */
 .App > main {
   flex-direction: row;
-  height: calc(100vh - 60px); /* Set static height for main content area */
+  height: calc(100vh - 80px); /* Set static height for main content area */
 }
 
 .App > main > div {
@@ -685,6 +690,10 @@ main {
     padding: 16px;
   }
 
+  .header .container {
+    padding: 8px 16px; /* Adjusted vertical padding for smaller screens */
+  }
+
   .header .logo {
     font-size: 12px; /* Further decreased font size */
   }
@@ -740,8 +749,8 @@ main {
 }
 
 @media (max-width: 768px) {
-  .header {
-    padding: 0px 0; /* Adjusted padding */
+  .header .container {
+    padding: 6px 16px; /* Adjusted vertical padding for even smaller screens */
   }
   .header .logo {
     font-size: 10px; /* Further decreased font size */
