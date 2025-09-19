@@ -1125,21 +1125,21 @@ export class SaaSService {
         }
       }
 
-      // If no customer mapping or no n8n rule in customer config, use form_connectors
-      const query = `
-        SELECT c.type, fc.config
-        FROM form_connectors fc
-        JOIN connectors c ON fc.connector_id = c.id
-        WHERE fc.form_id = $1 AND fc.is_active = true
+      // If no customer mapping or no n8n rule in customer config, use the 'connectors' JSONB column
+      const formConnectorsQuery = `
+        SELECT connectors
+        FROM forms
+        WHERE id = $1
       `;
-      const result = await pool.query(query, [formId]);
-      const connectorConfigs: ConnectorConfig[] = result.rows.map(row => ({
-        type: row.type,
-        settings: row.config
-      }));
+      const formConnectorsResult = await pool.query(formConnectorsQuery, [formId]);
+      
+      let connectorConfigs: ConnectorConfig[] = [];
+      if (formConnectorsResult.rows.length > 0 && formConnectorsResult.rows[0].connectors) {
+        connectorConfigs = formConnectorsResult.rows[0].connectors;
+      }
 
       if (connectorConfigs.length > 0) {
-        console.log(`Dispatching to ${connectorConfigs.length} form_connectors for form ${formId}.`);
+        console.log(`Dispatching to ${connectorConfigs.length} configured connectors for form ${formId}.`);
         const dispatchResults = await dispatchToConnectors(submissionData, connectorConfigs);
         dispatchResults.forEach(res => {
           if (!res.success) {
@@ -1147,7 +1147,7 @@ export class SaaSService {
           }
         });
       } else {
-        console.log(`No active form_connectors configured for form ${formId}.`);
+        console.log(`No active connectors configured for form ${formId}.`);
       }
     } catch (error) {
       console.error(`Error triggering connectors for form ${formId}:`, error);
