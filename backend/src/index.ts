@@ -680,12 +680,15 @@ app.patch('/api/forms/:id/toggle-live', authService.authenticateToken, async (re
       return res.status(400).json({ error: 'Invalid form ID' });
     }
 
-    const isLive = await saasService.toggleFormLive(formId, req.user!.id);
+    const { isLive, message } = await saasService.toggleFormLive(formId, req.user!.id);
     
     res.json({
       success: true,
-      message: `Form ${isLive ? 'activated' : 'deactivated'}`,
-      isLive
+      message: message, // Use the message from the service
+      data: { // Wrap the actual data in a 'data' object
+        isLive: isLive,
+        message: message // Also include message here if frontend expects it in data
+      }
     });
   } catch (error) {
     console.error('Toggle form error:', error);
