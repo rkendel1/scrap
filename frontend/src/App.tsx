@@ -377,7 +377,6 @@ function App() {
           <>
             <div style={{ flex: 1, height: '100%' }}> {/* Left column for builder */}
               <ConversationalFormBuilder 
-                className="card conversational-builder-card" // Apply card class
                 onFormGenerated={handleFormGenerated}
                 user={user}
                 guestToken={guestToken || undefined}

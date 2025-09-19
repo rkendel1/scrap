@@ -16,7 +16,6 @@ interface ConversationalFormBuilderProps {
     isDestinationConfigured: boolean; // Added
   }) => void;
   onGetEmbedCodeClick: (form: SaaSForm) => void;
-  className?: string; // Add className prop
 }
 
 type ConversationEntry = {
@@ -42,7 +41,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   guestToken,
   onStateChange,
   onGetEmbedCodeClick,
-  className, // Destructure className
 }) => {
   const [currentStep, setCurrentStep] = useState<ConversationStep>('ASK_URL');
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([
@@ -657,7 +655,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   };
 
   return (
-    <div className={`conversational-builder-card ${className || ''}`}> {/* Apply className here */}
+    <div className="conversational-builder-card"> {/* Apply className here */}
       {currentContextSummary && (
         <div className="context-summary">
           Current Form: {currentContextSummary}
