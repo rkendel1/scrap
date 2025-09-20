@@ -50,7 +50,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    command: /app/start.sh # Use the custom start script
+    command: sh /app/start.sh # Explicitly execute with sh
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
