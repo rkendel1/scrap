@@ -22,12 +22,8 @@ RUN npm install
 # Build the TypeScript project
 RUN npm run build
 
-# Copy the start script
-COPY backend/start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
 # Expose the port the app runs on
 EXPOSE 3001
 
-# Command to run the application
-CMD ["sh", "/app/start.sh"]
+# Command to run the application (handled by docker-compose.yml now)
+CMD ["npm", "run", "dev"]
