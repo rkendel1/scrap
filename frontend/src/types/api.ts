@@ -103,6 +103,7 @@ export interface SaaSForm {
   // Form-specific fields
   generated_form: GeneratedForm;
   allowed_domains?: string[]; // Added allowed_domains
+  tags?: string[]; // Added tags for categorization
 }
 
 // Interface for the conversational form builder's internal state
