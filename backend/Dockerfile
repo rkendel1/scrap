@@ -1,32 +1,33 @@
-# Use a Node.js 18 Alpine image as the base
+# Use a Node.js base image
 FROM node:18-alpine
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json (or yarn.lock) to the working directory
-# This allows npm install to leverage Docker's cache if dependencies haven't changed
-COPY backend/package*.json ./
+# Copy package.json and install dependencies
+COPY backend/package.json ./backend/package.json
+COPY backend/tsconfig.json ./backend/tsconfig.json
+COPY backend/src ./src
+
+# Install wait-for-it.sh and make it executable
+COPY wait-for-it.sh /app/wait-for-it.sh
+RUN chmod +x /app/wait-for-it.sh
+
+# Install netcat for wait-for-it.sh
+RUN apk add --no-cache netcat-openbsd
 
 # Install dependencies
 RUN npm install
 
-# Copy the wait-for-it.sh script and the custom start script
-COPY wait-for-it.sh /app/wait-for-it.sh
-COPY backend/start.sh /app/start.sh
-
-# Make the scripts executable
-RUN chmod +x /app/wait-for-it.sh /app/start.sh
-
-# Copy the rest of the application source code
-COPY backend/. .
-
-# Build the TypeScript application
+# Build the TypeScript project
 RUN npm run build
 
-# Expose the port the application runs on
+# Copy the start script
+COPY backend/start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Expose the port the app runs on
 EXPOSE 3001
 
-# Define the command to run the application
-# This will be overridden by docker-compose.yml
-CMD ["npm", "run", "start"]
+# Command to run the application
+CMD ["sh", "/app/start.sh"]

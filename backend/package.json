@@ -29,7 +29,8 @@
     "nodemailer": "^6.9.14",
     "openai": "^4.52.7",
     "pg": "^8.11.3",
-    "stripe": "^16.2.0"
+    "stripe": "^16.2.0",
+    "undici": "^6.19.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
