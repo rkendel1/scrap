@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FormData, GeneratedForm, SaaSForm, FormField, ExtractedDesignTokensData } from '../types/api';
-import { ConnectorConfig } from './ConnectorConfig'; // Assuming ConnectorConfig is still useful for destination
+import { FormData, GeneratedForm, SaaSForm } from '../types/api';
 import { Mail, Sheet, Slack, Link, Zap, Copy, Check, Edit } from 'lucide-react'; // Import Lucide icons, including Copy, Check, and Edit
 
 interface ConversationalFormBuilderProps {
@@ -58,7 +57,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [userInput, setUserInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentContextSummary, setCurrentContextSummary] = useState<string>('');
   
   // Data collected throughout the conversation
   const [formData, setFormData] = useState<Partial<FormData>>({});
@@ -68,7 +66,6 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
   const [generatedForm, setGeneratedForm] = useState<GeneratedForm | null>(null);
   const [createdForm, setCreatedForm] = useState<SaaSForm | null>(null);
   const [selectedDestinationType, setSelectedDestinationType] = useState<string | null>(null);
-  const [destinationConfig, setDestinationConfig] = useState<any>({});
   const [isDestinationConfigured, setIsDestinationConfigured] = useState(false); // New state
   const [isGeneratingForm, setIsGeneratingForm] = useState(false); // New: Indicate if form generation is in progress
   const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle'); // State for copy button feedback
@@ -109,7 +106,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       const icon = destinationIcons[formData.destinationType] ? ' ' : '';
       summaryParts.push(`${icon} ${formData.destinationType.charAt(0).toUpperCase() + formData.destinationType.slice(1)}`);
     }
-    setCurrentContextSummary(summaryParts.join(' | '));
+    // setSummary functionality removed for now
   };
 
   useEffect(() => {
@@ -332,7 +329,13 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
             setCurrentStep('ASK_FORM_CHANGES');
             addPrompt("What changes would you like to make to the form? Tell me what you want to modify (e.g., 'make the email field optional', 'change the button color to green', 'add a phone number field').");
           } else if (parsedInput.command === 'im done') {
-            handleDoneClick();
+            // Navigate to the forms dashboard or complete the process
+            addPrompt("Great! Your form is ready. You can find it in your dashboard or get the embed code.",
+              [
+                { label: 'Get Embed Code', command: 'get embed code' },
+                { label: 'Create Another Form', command: 'yes' },
+              ]
+            );
           } else if (parsedInput.command === 'get embed code') {
             if (createdForm) {
               onGetEmbedCodeClick(createdForm);
@@ -557,8 +560,8 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     const generatePayload = {
       extractedRecordId,
       formPurpose: purpose,
-      formName: formData.formName,
-      formDescription: formData.formDescription,
+      formName: purpose, // Use purpose as formName
+      formDescription: purpose, // Use purpose as formDescription
       ...(guestToken && !user && { guestToken }),
     };
 
@@ -741,7 +744,7 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       return;
     }
 
-    setDestinationConfig(newConfig);
+    // setDestinationConfig(newConfig); - removed for now
     setFormData((prev) => ({ ...prev, destinationConfig: newConfig }));
 
     const authHeaders: HeadersInit = { 'Content-Type': 'application/json' };
@@ -928,11 +931,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
       setGeneratedForm(null);
       setCreatedForm(null);
       setSelectedDestinationType(null);
-      setDestinationConfig({});
+      // setDestinationConfig({});
       setIsDestinationConfigured(false); // Reset
       setIsGeneratingForm(false); // Reset
       setCurrentStep('ASK_URL');
-      setCurrentContextSummary('');
+      // setCurrentContextSummary('');
     } else if (command === 'no') {
       addPrompt("Alright! Feel free to come back anytime. Goodbye!");
       setUserInput('');
@@ -952,11 +955,11 @@ export const ConversationalFormBuilder: React.FC<ConversationalFormBuilderProps>
     setGeneratedForm(null);
     setCreatedForm(null);
     setSelectedDestinationType(null);
-    setDestinationConfig({});
+    // setDestinationConfig({});
     setIsDestinationConfigured(false); // Reset
     setIsGeneratingForm(false); // Reset
     setCurrentStep('ASK_URL');
-    setCurrentContextSummary('');
+    // setCurrentContextSummary('');
   };
 
   const formatTimestamp = (date: Date) => {

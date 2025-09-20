@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import pool from './database';
+import { profileService } from './profile-service';
 
 export interface SubscriptionPlan {
   id: string;
@@ -247,6 +248,18 @@ export class StripeService {
       `, [userId]);
 
       await client.query('COMMIT');
+
+      // Send notification about successful subscription
+      const plan = this.getPlan(planId);
+      if (plan) {
+        await profileService.createNotificationEvent(
+          userId,
+          'subscription_created',
+          'Subscription Activated',
+          `Your ${plan.name} subscription has been successfully activated! Welcome to premium features.`,
+          true
+        );
+      }
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -262,6 +275,16 @@ export class StripeService {
     const client = await pool.connect();
     
     try {
+      await client.query('BEGIN');
+
+      // Get user ID for notifications
+      const userResult = await client.query(`
+        SELECT user_id FROM user_subscriptions 
+        WHERE stripe_subscription_id = $1
+      `, [subscription.id]);
+
+      const userId = userResult.rows[0]?.user_id;
+
       await client.query(`
         UPDATE user_subscriptions 
         SET 
@@ -296,6 +319,48 @@ export class StripeService {
         )
       `, [subscriptionTier, subscriptionStatus, subscription.id]);
 
+      await client.query('COMMIT');
+
+      // Send notifications based on subscription status changes
+      if (userId) {
+        if (subscription.status === 'past_due') {
+          await profileService.createNotificationEvent(
+            userId,
+            'payment_failed',
+            'Payment Failed',
+            'Your last payment failed. Please update your payment method to avoid service interruption.',
+            true
+          );
+        } else if (subscription.cancel_at_period_end) {
+          const periodEnd = new Date(((subscription as any).current_period_end as number) * 1000);
+          await profileService.createNotificationEvent(
+            userId,
+            'subscription_will_cancel',
+            'Subscription Will Cancel',
+            `Your subscription is set to cancel at the end of your billing period (${periodEnd.toLocaleDateString()}). You can reactivate it anytime before then.`,
+            true
+          );
+        } else if (subscription.status === 'active') {
+          // Check if this is a renewal
+          const currentPeriodStart = new Date(((subscription as any).current_period_start as number) * 1000);
+          const now = new Date();
+          const timeDiff = now.getTime() - currentPeriodStart.getTime();
+          
+          // If the period started recently (within 24 hours), it's likely a renewal
+          if (timeDiff < 24 * 60 * 60 * 1000) {
+            await profileService.createNotificationEvent(
+              userId,
+              'subscription_renewed',
+              'Subscription Renewed',
+              'Your subscription has been successfully renewed. Thank you for continuing with us!',
+              true
+            );
+          }
+        }
+      }
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
     } finally {
       client.release();
     }
@@ -309,6 +374,14 @@ export class StripeService {
     
     try {
       await client.query('BEGIN');
+
+      // Get user ID for notifications
+      const userResult = await client.query(`
+        SELECT user_id FROM user_subscriptions 
+        WHERE stripe_subscription_id = $1
+      `, [subscription.id]);
+
+      const userId = userResult.rows[0]?.user_id;
 
       // Update subscription status
       await client.query(`
@@ -328,6 +401,17 @@ export class StripeService {
       `, [subscription.id]);
 
       await client.query('COMMIT');
+
+      // Send cancellation notification
+      if (userId) {
+        await profileService.createNotificationEvent(
+          userId,
+          'subscription_cancelled',
+          'Subscription Cancelled',
+          'Your subscription has been cancelled. You can resubscribe anytime to regain access to premium features.',
+          true
+        );
+      }
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

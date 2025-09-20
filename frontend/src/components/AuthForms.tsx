@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 interface LoginFormProps {
   onSuccess: (user: any, token: string) => void;
   onSwitchToRegister: () => void;
+  onSwitchToForgotPassword?: () => void;
   onError: (error: string) => void;
 }
 
@@ -17,6 +18,7 @@ interface RegisterFormProps {
 export const LoginForm: React.FC<LoginFormProps> = ({ 
   onSuccess, 
   onSwitchToRegister, 
+  onSwitchToForgotPassword,
   onError 
 }) => {
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +108,18 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           {isLoading ? 'Signing In...' : 'Sign In'}
         </button>
       </form>
+
+      {onSwitchToForgotPassword && (
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <button 
+            onClick={onSwitchToForgotPassword}
+            className="btn-link"
+            style={{ fontSize: '14px', color: '#007bff' }}
+          >
+            Forgot your password?
+          </button>
+        </div>
+      )}
 
       <div style={{ textAlign: 'center' }}>
         <span style={{ color: '#666' }}>Don't have an account? </span>
