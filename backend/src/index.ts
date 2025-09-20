@@ -1549,6 +1549,88 @@ app.post('/api/extract', authService.optionalAuth, async (req: AuthRequest, res)
   }
 });
 
+// ====== NEW FORM MANAGEMENT ENDPOINTS ======
+
+// Duplicate form
+app.post('/api/forms/:id/duplicate', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    if (isNaN(formId)) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID' });
+    }
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const duplicatedForm = await saasService.duplicateForm(formId, req.user.id);
+    res.json({
+      success: true,
+      data: duplicatedForm
+    });
+  } catch (error) {
+    console.error('Duplicate form error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Delete form
+app.delete('/api/forms/:id', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    if (isNaN(formId)) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID' });
+    }
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    await saasService.deleteForm(formId, req.user.id);
+    res.json({
+      success: true,
+      message: 'Form deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete form error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update form tags
+app.patch('/api/forms/:id/tags', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const formId = parseInt(req.params.id);
+    const { tags } = req.body;
+    
+    if (isNaN(formId)) {
+      return res.status(400).json({ success: false, message: 'Invalid form ID' });
+    }
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    if (!Array.isArray(tags)) {
+      return res.status(400).json({ success: false, message: 'Tags must be an array' });
+    }
+
+    await saasService.updateFormTags(formId, req.user.id, tags);
+    res.json({
+      success: true,
+      data: { tags }
+    });
+  } catch (error) {
+    console.error('Update form tags error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // ====== ENHANCED STRUCTURED FLOW ENDPOINTS ======
 
 // Initialize form creation flow

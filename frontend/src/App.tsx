@@ -12,6 +12,7 @@ import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
 import { SubscriptionManager } from './components/SubscriptionManager'; // New import
 import { FormDashboard } from './components/FormDashboard'; // New import
 import { FormTemplates } from './components/FormTemplates'; // New import
+import { LandingPage } from './components/LandingPage'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -26,7 +27,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display' | 'subscription' | 'templates'>('builder'); // Added 'templates'
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display' | 'subscription' | 'templates' | 'landing'>('landing'); // Added 'landing' and set as default
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -57,11 +58,14 @@ function App() {
     if (savedToken && savedUser) {
       setAuthToken(savedToken);
       setUser(JSON.parse(savedUser));
+      setCurrentView('dashboard'); // Go to dashboard if logged in
     } else if (!savedGuestToken) {
       // Create guest token for anonymous users
       createGuestToken();
+      setCurrentView('landing'); // Show landing page for non-authenticated users
     } else {
       setGuestToken(savedGuestToken);
+      setCurrentView('landing'); // Show landing page for guests
     }
 
     setLoading(false);
@@ -126,6 +130,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.removeItem('guestToken'); // Clear guest token
     setShowAuth(false);
+    setCurrentView('dashboard'); // Go to dashboard after login
   };
 
   const handleLogout = () => {
@@ -142,6 +147,7 @@ function App() {
       createGuestToken(); // This will fetch a new one from the backend and save to localStorage
     }
     setShowAuth(false);
+    setCurrentView('landing'); // Go back to landing page after logout
   };
 
   const handleAuthError = (errorMessage: string) => {
@@ -407,81 +413,83 @@ function App() {
 
   return (
     <div className="App">
-      <header className="header">
+      <header className={`header ${currentView === 'landing' ? 'landing-header' : ''}`}>
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <div className="logo">
+            <div className="logo" onClick={() => setCurrentView(user ? 'dashboard' : 'landing')} style={{ cursor: 'pointer' }}>
               <div className="logo-icon">F</div>
               FormCraft AI
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {user ? (
-                <>
-                  {/* Authenticated user's main actions */}
-                  <button 
-                    onClick={() => setCurrentView('builder')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    ✨ New Form
-                  </button>
-                  <button 
-                    onClick={() => setCurrentView('templates')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    📋 Templates
-                  </button>
-                  <button 
-                    onClick={() => setCurrentView('dashboard')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    📊 My Forms
-                  </button>
-                  <button 
-                    onClick={() => setCurrentView('subscription')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    💳 Subscription
-                  </button>
-                  <span style={{ fontSize: '14px', color: '#666' }}>
-                    Welcome, {user.first_name || user.email}
-                    {user.subscription_tier === 'paid' && (
-                      <span style={{ 
-                        marginLeft: '8px', 
-                        padding: '2px 8px', 
-                        backgroundColor: '#10b981', /* Green for PRO */
-                        color: 'white', 
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        PRO
-                      </span>
-                    )}
-                  </span>
-                  <button onClick={handleLogout} className="btn btn-secondary btn-header-small">
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                null // No main actions for guest here, they go to utility
-              )}
-              {/* Utility actions, always on the far right */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: user ? '12px' : 'auto' }}>
-                <a 
-                  href="/test-embed.html" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="btn btn-secondary btn-header-small"
-                >
-                  🧪 Test Embed Page
-                </a>
-                {!user && ( // Only show Sign In/Register if not authenticated
-                  <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
-                    Sign In / Register
-                  </button>
+            {currentView !== 'landing' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {user ? (
+                  <>
+                    {/* Authenticated user's main actions */}
+                    <button 
+                      onClick={() => setCurrentView('builder')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      ✨ New Form
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('templates')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      📋 Templates
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('dashboard')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      📊 My Forms
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('subscription')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      💳 Subscription
+                    </button>
+                    <span style={{ fontSize: '14px', color: '#666' }}>
+                      Welcome, {user.first_name || user.email}
+                      {user.subscription_tier === 'paid' && (
+                        <span style={{ 
+                          marginLeft: '8px', 
+                          padding: '2px 8px', 
+                          backgroundColor: '#10b981', /* Green for PRO */
+                          color: 'white', 
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          PRO
+                        </span>
+                      )}
+                    </span>
+                    <button onClick={handleLogout} className="btn btn-secondary btn-header-small">
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  null // No main actions for guest here, they go to utility
                 )}
+                {/* Utility actions, always on the far right */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: user ? '12px' : 'auto' }}>
+                  <a 
+                    href="/test-embed.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn btn-secondary btn-header-small"
+                  >
+                    🧪 Test Embed Page
+                  </a>
+                  {!user && ( // Only show Sign In/Register if not authenticated
+                    <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
+                      Sign In / Register
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </header>
@@ -499,9 +507,14 @@ function App() {
         </div>
       )}
 
-      <main className="container">
+      <main className={currentView === 'landing' ? '' : 'container'}>
         {/* Main Content */}
-        {currentView === 'builder' ? (
+        {currentView === 'landing' && !user ? (
+          <LandingPage
+            onGetStarted={() => setCurrentView('builder')}
+            onSignIn={() => setShowAuth(true)}
+          />
+        ) : currentView === 'builder' ? (
           <div className="builder-layout"> {/* New wrapper div */}
             <div className="builder-column"> {/* Left column for builder */}
               <ConversationalFormBuilder 
