@@ -108,4 +108,113 @@ export const apiService = {
     const response = await api.post('/api/subscription/billing-portal');
     return response.data;
   },
+
+  // Profile management endpoints
+  updateProfile: async (data: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    profile_picture_url?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.patch('/api/profile', data);
+    return response.data;
+  },
+
+  updatePassword: async (data: {
+    current_password: string;
+    new_password: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.patch('/api/profile/password', data);
+    return response.data;
+  },
+
+  forgotPassword: async (email: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/api/profile/forgot-password', { email });
+    return response.data;
+  },
+
+  resetPassword: async (token: string, newPassword: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/api/profile/reset-password', {
+      token,
+      new_password: newPassword,
+    });
+    return response.data;
+  },
+
+  getNotificationPreferences: async (): Promise<ApiResponse<{
+    email_notifications: boolean;
+    marketing_emails: boolean;
+    billing_alerts: boolean;
+    subscription_updates: boolean;
+  }>> => {
+    const response = await api.get('/api/profile/notifications');
+    return response.data;
+  },
+
+  updateNotificationPreferences: async (preferences: {
+    email_notifications: boolean;
+    marketing_emails: boolean;
+    billing_alerts: boolean;
+    subscription_updates: boolean;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.patch('/api/profile/notifications', preferences);
+    return response.data;
+  },
+
+  deactivateAccount: async (reason?: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/api/profile/deactivate', { reason });
+    return response.data;
+  },
+
+  getNotifications: async (limit?: number, offset?: number): Promise<ApiResponse<{
+    notifications: Array<{
+      id: number;
+      event_type: string;
+      title: string;
+      message: string;
+      read: boolean;
+      created_at: string;
+    }>;
+  }>> => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    
+    const response = await api.get(`/api/profile/notifications/events?${params.toString()}`);
+    return response.data;
+  },
+
+  markNotificationAsRead: async (notificationId: number): Promise<ApiResponse<any>> => {
+    const response = await api.patch(`/api/profile/notifications/events/${notificationId}/read`);
+    return response.data;
+  },
+
+  getBillingHistory: async (limit?: number, offset?: number): Promise<ApiResponse<Array<{
+    id: number;
+    amount: number;
+    currency: string;
+    status: string;
+    description: string;
+    date: string;
+    invoice_id: string;
+    plan: string;
+  }>>> => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    
+    const response = await api.get(`/api/subscription/billing-history?${params.toString()}`);
+    return response.data;
+  },
+
+  getUpcomingBilling: async (): Promise<ApiResponse<{
+    next_billing_date: string;
+    amount: number | null;
+    plan: string;
+    status: string;
+    cancel_at_period_end: boolean;
+  }>> => {
+    const response = await api.get('/api/subscription/upcoming-billing');
+    return response.data;
+  },
 };

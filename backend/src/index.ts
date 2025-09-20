@@ -9,6 +9,7 @@ import fs from 'fs'; // Import fs module
 import { WebsiteExtractor } from './extractor';
 import { DatabaseService } from './database-service';
 import { AuthService, AuthRequest } from './auth-service';
+import { profileService } from './profile-service';
 import { LLMService } from './llm-service';
 import { SaaSService } from './saas-service';
 import { StripeService } from './stripe-service';
@@ -388,6 +389,286 @@ app.get('/api/auth/profile', authService.authenticateToken, async (req: AuthRequ
     success: true,
     user: req.user
   });
+});
+
+// ====== PROFILE MANAGEMENT ENDPOINTS ======
+
+// Update user profile
+app.patch('/api/profile', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { first_name, last_name, email, profile_picture_url } = req.body;
+
+    // Validate email format if provided
+    if (email && !profileService.isValidEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const updatedUser = await profileService.updateProfile(req.user.id, {
+      first_name,
+      last_name,
+      email,
+      profile_picture_url,
+    });
+
+    res.json({
+      success: true,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Update profile error:', error);
+    const statusCode = error instanceof Error && error.message === 'Email address is already in use' ? 409 : 500;
+    res.status(statusCode).json({
+      error: 'Failed to update profile',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update password
+app.patch('/api/profile/password', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { current_password, new_password } = req.body;
+
+    if (!current_password || !new_password) {
+      return res.status(400).json({ error: 'Current password and new password are required' });
+    }
+
+    // Validate new password strength
+    const passwordValidation = profileService.isValidPassword(new_password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        error: 'Password does not meet requirements',
+        details: passwordValidation.errors,
+      });
+    }
+
+    await profileService.updatePassword(req.user.id, {
+      current_password,
+      new_password,
+    });
+
+    res.json({
+      success: true,
+      message: 'Password updated successfully',
+    });
+  } catch (error) {
+    console.error('Update password error:', error);
+    const statusCode = error instanceof Error && error.message === 'Current password is incorrect' ? 400 : 500;
+    res.status(statusCode).json({
+      error: 'Failed to update password',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Forgot password - request reset
+app.post('/api/profile/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    if (!profileService.isValidEmail(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const token = await profileService.generatePasswordResetToken(email);
+    
+    if (token) {
+      await profileService.sendPasswordResetEmail(email, token);
+    }
+
+    // Always return success to prevent email enumeration
+    res.json({
+      success: true,
+      message: 'If the email exists, a password reset link has been sent',
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      error: 'Failed to process password reset request',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Reset password with token
+app.post('/api/profile/reset-password', async (req, res) => {
+  try {
+    const { token, new_password } = req.body;
+
+    if (!token || !new_password) {
+      return res.status(400).json({ error: 'Token and new password are required' });
+    }
+
+    // Validate new password strength
+    const passwordValidation = profileService.isValidPassword(new_password);
+    if (!passwordValidation.isValid) {
+      return res.status(400).json({
+        error: 'Password does not meet requirements',
+        details: passwordValidation.errors,
+      });
+    }
+
+    await profileService.resetPasswordWithToken(token, new_password);
+
+    res.json({
+      success: true,
+      message: 'Password reset successfully',
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    const statusCode = error instanceof Error && error.message.includes('Invalid or expired') ? 400 : 500;
+    res.status(statusCode).json({
+      error: 'Failed to reset password',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get notification preferences
+app.get('/api/profile/notifications', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const preferences = await profileService.getNotificationPreferences(req.user.id);
+
+    res.json({
+      success: true,
+      preferences,
+    });
+  } catch (error) {
+    console.error('Get notification preferences error:', error);
+    res.status(500).json({
+      error: 'Failed to get notification preferences',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update notification preferences
+app.patch('/api/profile/notifications', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { email_notifications, marketing_emails, billing_alerts, subscription_updates } = req.body;
+
+    const preferences = {
+      email_notifications: email_notifications !== undefined ? email_notifications : true,
+      marketing_emails: marketing_emails !== undefined ? marketing_emails : false,
+      billing_alerts: billing_alerts !== undefined ? billing_alerts : true,
+      subscription_updates: subscription_updates !== undefined ? subscription_updates : true,
+    };
+
+    await profileService.updateNotificationPreferences(req.user.id, preferences);
+
+    res.json({
+      success: true,
+      preferences,
+    });
+  } catch (error) {
+    console.error('Update notification preferences error:', error);
+    res.status(500).json({
+      error: 'Failed to update notification preferences',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Deactivate account
+app.post('/api/profile/deactivate', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const { reason } = req.body;
+
+    await profileService.deactivateAccount(req.user.id, reason);
+
+    res.json({
+      success: true,
+      message: 'Account deactivated successfully',
+    });
+  } catch (error) {
+    console.error('Deactivate account error:', error);
+    res.status(500).json({
+      error: 'Failed to deactivate account',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get user notifications
+app.get('/api/profile/notifications/events', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    const notifications = await profileService.getUserNotifications(req.user.id, limit, offset);
+
+    res.json({
+      success: true,
+      notifications,
+    });
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({
+      error: 'Failed to get notifications',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Mark notification as read
+app.patch('/api/profile/notifications/events/:id/read', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const notificationId = parseInt(req.params.id);
+    if (isNaN(notificationId)) {
+      return res.status(400).json({ error: 'Invalid notification ID' });
+    }
+
+    const success = await profileService.markNotificationAsRead(req.user.id, notificationId);
+
+    if (success) {
+      res.json({
+        success: true,
+        message: 'Notification marked as read',
+      });
+    } else {
+      res.status(404).json({
+        error: 'Notification not found',
+      });
+    }
+  } catch (error) {
+    console.error('Mark notification as read error:', error);
+    res.status(500).json({
+      error: 'Failed to mark notification as read',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });
 
 // Create guest token
@@ -1753,6 +2034,99 @@ app.post('/api/subscription/billing-portal', authService.authenticateToken, asyn
     res.status(500).json({ 
       success: false, 
       error: 'Failed to create billing portal session' 
+    });
+  }
+});
+
+// Get billing history
+app.get('/api/subscription/billing-history', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 20;
+    const offset = parseInt(req.query.offset as string) || 0;
+
+    // Get payment history from database
+    const query = `
+      SELECT 
+        ph.id,
+        ph.stripe_payment_intent_id,
+        ph.stripe_invoice_id,
+        ph.amount,
+        ph.currency,
+        ph.status,
+        ph.description,
+        ph.created_at,
+        us.plan_id
+      FROM payment_history ph
+      LEFT JOIN user_subscriptions us ON ph.user_id = us.user_id
+      WHERE ph.user_id = $1
+      ORDER BY ph.created_at DESC
+      LIMIT $2 OFFSET $3
+    `;
+
+    const result = await pool.query(query, [req.user.id, limit, offset]);
+
+    // Format the response
+    const billingHistory = result.rows.map(row => ({
+      id: row.id,
+      amount: row.amount / 100, // Convert from cents to dollars
+      currency: row.currency?.toUpperCase() || 'USD',
+      status: row.status,
+      description: row.description,
+      date: row.created_at,
+      invoice_id: row.stripe_invoice_id,
+      plan: row.plan_id,
+    }));
+
+    res.json({
+      success: true,
+      data: billingHistory,
+    });
+  } catch (error) {
+    console.error('Get billing history error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get billing history',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get upcoming billing information
+app.get('/api/subscription/upcoming-billing', authService.authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const subscription = await stripeService.getUserSubscription(req.user.id);
+    if (!subscription || !subscription.stripe_subscription_id) {
+      return res.status(404).json({ 
+        error: 'No active subscription found' 
+      });
+    }
+
+    const upcomingBilling = {
+      next_billing_date: subscription.current_period_end,
+      amount: null, // Will be filled by Stripe data if needed
+      plan: subscription.plan_id,
+      status: subscription.status,
+      cancel_at_period_end: subscription.cancel_at_period_end,
+    };
+
+    res.json({
+      success: true,
+      data: upcomingBilling,
+    });
+  } catch (error) {
+    console.error('Get upcoming billing error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get upcoming billing information',
+      message: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
