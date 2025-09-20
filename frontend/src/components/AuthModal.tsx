@@ -154,12 +154,11 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({
         backgroundColor: 'white',
         borderRadius: '8px',
         padding: '0',
-        maxWidth: '95vw',
+        maxWidth: '900px',
         maxHeight: '95vh',
         overflow: 'auto',
         position: 'relative',
         width: '100%',
-        maxWidth: '900px',
       }}>
         <button
           onClick={onClose}
