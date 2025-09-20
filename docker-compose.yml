@@ -50,8 +50,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Use bash -c to explicitly execute wait-for-it.sh
-    command: bash -c "/app/wait-for-it.sh --host=db --port=${DB_PORT:-5432} -- npm run build && npm run migrate && npm run dev"
+    # Corrected command: Use sh -c to properly execute the npm commands after wait-for-it.sh
+    command: bash -c "/app/wait-for-it.sh --host=db --port=${DB_PORT:-5432} -- sh -c \"npm run build && npm run migrate && npm run dev\""
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
