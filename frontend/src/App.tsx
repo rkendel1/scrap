@@ -11,6 +11,7 @@ import { FormEditor } from './components/FormEditor'; // New import
 import { ToggleSwitch } from './components/ToggleSwitch'; // New import
 import { FormThumbnail } from './components/FormThumbnail'; // New import
 import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
+import { SubscriptionManager } from './components/SubscriptionManager'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -25,7 +26,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display'>('builder'); // Added 'embed-code-display'
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display' | 'subscription'>('builder'); // Added 'subscription'
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -330,6 +331,12 @@ function App() {
                   >
                     📊 My Forms
                   </button>
+                  <button 
+                    onClick={() => setCurrentView('subscription')} 
+                    className="btn btn-secondary btn-header-small"
+                  >
+                    💳 Subscription
+                  </button>
                   <span style={{ fontSize: '14px', color: '#666' }}>
                     Welcome, {user.first_name || user.email}
                     {user.subscription_tier === 'paid' && (
@@ -564,6 +571,8 @@ function App() {
             user={user}
             onBack={handleBackToDashboard}
           />
+        ) : currentView === 'subscription' && user ? ( // New subscription view
+          <SubscriptionManager />
         ) : currentView === 'legacy' ? (
           <>
             {/* URL Input Form */}

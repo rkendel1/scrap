@@ -48,8 +48,11 @@ const database_service_1 = require("./database-service");
 const auth_service_1 = require("./auth-service");
 const llm_service_1 = require("./llm-service");
 const saas_service_1 = require("./saas-service");
+const stripe_service_1 = require("./stripe-service");
+const subscription_middleware_1 = require("./subscription-middleware");
 const customer_config_service_1 = require("./customer-config-service");
 const database_1 = __importDefault(require("./database"));
+const stripe_1 = __importDefault(require("stripe"));
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -61,12 +64,16 @@ let dbService;
 let authService;
 let llmService;
 let saasService;
+let stripeService;
+let subscriptionMiddleware;
 try {
     extractor = new extractor_1.WebsiteExtractor();
     dbService = new database_service_1.DatabaseService();
     authService = new auth_service_1.AuthService();
     llmService = new llm_service_1.LLMService();
     saasService = new saas_service_1.SaaSService();
+    stripeService = new stripe_service_1.StripeService();
+    subscriptionMiddleware = new subscription_middleware_1.SubscriptionMiddleware();
     console.log('Backend: All services initialized successfully.');
 }
 catch (initError) {
@@ -466,7 +473,13 @@ app.post('/api/forms/extract-design-tokens', authService.optionalAuth, async (re
     }
 });
 // MODIFIED: Create AI-generated form from pre-extracted website data
-app.post('/api/forms/generate', authService.optionalAuth, async (req, res) => {
+app.post('/api/forms/generate', authService.optionalAuth, (req, res, next) => {
+    // Only check form limits for authenticated users
+    if (req.user) {
+        return subscriptionMiddleware.checkFormCreationLimit(req, res, next);
+    }
+    next();
+}, async (req, res) => {
     try {
         const { extractedRecordId, // Now expects an ID instead of a URL
         formPurpose, formName, formDescription, guestToken } = req.body;
@@ -575,6 +588,16 @@ app.post('/api/forms/generate', authService.optionalAuth, async (req, res) => {
             extractedAt: extractedDataRecord.extracted_at.toISOString()
         });
         console.log('Backend: Form created with user_id:', form.user_id);
+        // Track form creation for authenticated users
+        if (req.user) {
+            try {
+                await subscriptionMiddleware.trackFormCreation(req.user.id);
+            }
+            catch (trackingError) {
+                console.error('Form creation tracking error:', trackingError);
+                // Don't fail the request if tracking fails
+            }
+        }
         res.json({
             success: true,
             message: 'Form generated successfully',
@@ -760,6 +783,16 @@ app.post('/api/forms/submit-public/:embedCode', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Embed code, submission data, and hostname are required' });
         }
         const result = await saasService.submitPublicForm(embedCode, submissionData, metadata);
+        // Track usage for successful submissions
+        if (result.success && result.formOwnerId) {
+            try {
+                await subscriptionMiddleware.trackSubmission(result.formOwnerId);
+            }
+            catch (trackingError) {
+                console.error('Usage tracking error:', trackingError);
+                // Don't fail the request if usage tracking fails
+            }
+        }
         if (!result.success && result.message?.includes('Rate limit exceeded')) {
             return res.status(429).json(result);
         }
@@ -1440,6 +1473,174 @@ app.get('/api/forms/:id/embed-status', authService.optionalAuth, async (req, res
         });
     }
 });
+// ============================================
+// STRIPE SUBSCRIPTION ENDPOINTS
+// ============================================
+// Get subscription plans
+app.get('/api/subscription/plans', (req, res) => {
+    try {
+        const plans = stripeService.getPlans();
+        res.json({ success: true, data: plans });
+    }
+    catch (error) {
+        console.error('Get plans error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get subscription plans'
+        });
+    }
+});
+// Get user's current subscription
+app.get('/api/subscription/current', authService.authenticateToken, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const subscription = await stripeService.getUserSubscription(req.user.id);
+        const usage = await subscriptionMiddleware.getUserUsage(req.user.id);
+        res.json({
+            success: true,
+            data: {
+                subscription,
+                usage: usage.limits,
+                currentUsage: {
+                    formsCreated: usage.formsCreated,
+                    submissionsReceived: usage.submissionsReceived
+                }
+            }
+        });
+    }
+    catch (error) {
+        console.error('Get subscription error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get subscription details'
+        });
+    }
+});
+// Create checkout session
+app.post('/api/subscription/checkout', authService.authenticateToken, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const { planId } = req.body;
+        if (!planId) {
+            return res.status(400).json({ error: 'Plan ID is required' });
+        }
+        // Create or get Stripe customer
+        const customerId = await stripeService.createOrGetCustomer(req.user.id, req.user.email, req.user.first_name ? `${req.user.first_name} ${req.user.last_name || ''}`.trim() : undefined);
+        // Create checkout session
+        const checkoutUrl = await stripeService.createCheckoutSession(req.user.id, planId, customerId, `${FRONTEND_URL}/subscription/success`, `${FRONTEND_URL}/subscription/cancel`);
+        res.json({ success: true, data: { checkoutUrl } });
+    }
+    catch (error) {
+        console.error('Create checkout session error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create checkout session'
+        });
+    }
+});
+// Create billing portal session
+app.post('/api/subscription/billing-portal', authService.authenticateToken, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ error: 'Authentication required' });
+        }
+        const subscription = await stripeService.getUserSubscription(req.user.id);
+        if (!subscription || !subscription.stripe_customer_id) {
+            return res.status(404).json({
+                error: 'No subscription found'
+            });
+        }
+        const portalUrl = await stripeService.createBillingPortalSession(subscription.stripe_customer_id, `${FRONTEND_URL}/subscription`);
+        res.json({ success: true, data: { portalUrl } });
+    }
+    catch (error) {
+        console.error('Create billing portal error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create billing portal session'
+        });
+    }
+});
+// Stripe webhook endpoint (must use raw body)
+app.post('/api/webhooks/stripe', express_1.default.raw({ type: 'application/json' }), async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+        console.error('STRIPE_WEBHOOK_SECRET not configured');
+        return res.status(500).send('Webhook secret not configured');
+    }
+    let event;
+    try {
+        // Verify webhook signature
+        const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY);
+        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    }
+    catch (err) {
+        console.error('Webhook signature verification failed:', err);
+        return res.status(400).send(`Webhook Error: ${err}`);
+    }
+    // Check if we've already processed this event
+    const client = await database_1.default.connect();
+    try {
+        const existingEvent = await client.query('SELECT id FROM stripe_webhook_events WHERE stripe_event_id = $1', [event.id]);
+        if (existingEvent.rows.length > 0) {
+            console.log(`Event ${event.id} already processed`);
+            return res.json({ received: true });
+        }
+        // Store the event
+        await client.query(`
+      INSERT INTO stripe_webhook_events (stripe_event_id, event_type, data, processed)
+      VALUES ($1, $2, $3, false)
+    `, [event.id, event.type, JSON.stringify(event.data)]);
+        // Process the webhook
+        switch (event.type) {
+            case 'customer.subscription.created':
+                await stripeService.handleSubscriptionCreated(event.data.object);
+                break;
+            case 'customer.subscription.updated':
+                await stripeService.handleSubscriptionUpdated(event.data.object);
+                break;
+            case 'customer.subscription.deleted':
+                await stripeService.handleSubscriptionDeleted(event.data.object);
+                break;
+            case 'invoice.payment_succeeded':
+                // Handle successful payment
+                const invoice = event.data.object;
+                const invoiceAny = invoice;
+                if (invoiceAny.subscription) {
+                    console.log(`Payment succeeded for subscription: ${invoiceAny.subscription}`);
+                }
+                break;
+            case 'invoice.payment_failed':
+                // Handle failed payment
+                const failedInvoice = event.data.object;
+                const failedInvoiceAny = failedInvoice;
+                if (failedInvoiceAny.subscription) {
+                    console.log(`Payment failed for subscription: ${failedInvoiceAny.subscription}`);
+                }
+                break;
+            default:
+                console.log(`Unhandled event type: ${event.type}`);
+        }
+        // Mark event as processed
+        await client.query('UPDATE stripe_webhook_events SET processed = true, processed_at = NOW() WHERE stripe_event_id = $1', [event.id]);
+    }
+    catch (error) {
+        console.error('Webhook processing error:', error);
+        return res.status(500).json({ error: 'Webhook processing failed' });
+    }
+    finally {
+        client.release();
+    }
+    res.json({ received: true });
+});
+// ============================================
+// END STRIPE ENDPOINTS
+// ============================================
 // 404 handler
 app.use((req, res) => {
     res.status(404).json({ error: 'Endpoint not found' });

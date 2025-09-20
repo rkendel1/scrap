@@ -746,7 +746,7 @@ export class SaaSService {
       hostname?: string;
       isTestSubmission?: boolean; // Added isTestSubmission flag
     }
-  ): Promise<{ success: boolean; message: string; remaining?: number }> {
+  ): Promise<{ success: boolean; message: string; remaining?: number; formOwnerId?: number }> {
     try {
       const client = await pool.connect();
       
@@ -844,7 +844,8 @@ export class SaaSService {
         return { 
           success: true, 
           message: 'Form submitted successfully',
-          remaining: rateLimit.remaining 
+          remaining: rateLimit.remaining,
+          formOwnerId: embedResult.rows[0].user_id
         };
       } catch (error) {
         await client.query('ROLLBACK');
