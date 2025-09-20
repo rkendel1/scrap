@@ -16,15 +16,8 @@ RUN npm install
 # Copy the rest of the backend source code
 COPY backend/src ./src
 
-# Copy wait-for-it.sh to the root /app directory (outside of /app/backend)
-# This path is relative to the build context (project root)
-COPY wait-for-it.sh /app/wait-for-it.sh
-
-# Install netcat, bash, and dos2unix for wait-for-it.sh
-RUN apk add --no-cache netcat-openbsd bash dos2unix
-
-# Convert wait-for-it.sh to Unix line endings and make it executable
-RUN dos2unix /app/wait-for-it.sh && chmod +x /app/wait-for-it.sh
+# Install netcat and bash (keeping them as they might be useful for other debugging or scripts)
+RUN apk add --no-cache netcat-openbsd bash
 
 # Build the TypeScript project
 RUN npm run build
@@ -33,7 +26,6 @@ RUN npm run build
 EXPOSE 3001
 
 # Set the entrypoint to sh, and then define the command to run
-# The wait-for-it.sh script is at /app/wait-for-it.sh, so reference it absolutely.
 # The npm commands are run from /app/backend.
 ENTRYPOINT ["/bin/sh", "-c"]
-CMD ["/app/wait-for-it.sh --host=db --port=${DB_PORT:-5432} -- npm run build && npm run migrate && npm run dev"]
+CMD ["npm run build && npm run migrate && npm run dev"]

@@ -46,13 +46,9 @@ services:
       - ./backend/package.json:/app/backend/package.json # Corrected path for package.json
       - ./backend/tsconfig.json:/app/backend/tsconfig.json # Corrected path for tsconfig.json
       - backend_node_modules:/app/node_modules
-      - ./wait-for-it.sh:/app/wait-for-it.sh # Ensure wait-for-it.sh is copied to /app
     depends_on:
       db:
         condition: service_healthy
-    # The command is now fully defined in the Dockerfile's ENTRYPOINT and CMD.
-    # We can remove the 'entrypoint' and 'command' from here, or keep a simple CMD if needed.
-    # For now, let's remove them to rely fully on the Dockerfile.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
