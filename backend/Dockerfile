@@ -14,7 +14,7 @@ COPY wait-for-it.sh /app/wait-for-it.sh
 RUN chmod +x /app/wait-for-it.sh
 
 # Install netcat for wait-for-it.sh
-RUN apk add --no-cache netcat-openbsd
+RUN apk add --no-cache netcat-openbsd bash # Add bash as well for robustness
 
 # Install dependencies
 RUN npm install
@@ -25,5 +25,8 @@ RUN npm run build
 # Expose the port the app runs on
 EXPOSE 3001
 
-# Command to run the application (handled by docker-compose.yml now)
-CMD ["npm", "run", "dev"]
+# Set the entrypoint to sh, and then define the command to run
+# This ensures that the shell is always the primary process,
+# and it executes the wait-for-it script followed by npm commands.
+ENTRYPOINT ["/bin/sh", "-c"]
+CMD ["/app/wait-for-it.sh --host=db --port=${DB_PORT:-5432} -- npm run build && npm run migrate && npm run dev"]

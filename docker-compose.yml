@@ -50,8 +50,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Corrected command: Use sh -c to properly execute the npm commands after wait-for-it.sh
-    command: bash -c "/app/wait-for-it.sh --host=db --port=${DB_PORT:-5432} -- sh -c \"npm run build && npm run migrate && npm run dev\""
+    # The command is now fully defined in the Dockerfile's ENTRYPOINT and CMD.
+    # We can remove the 'entrypoint' and 'command' from here, or keep a simple CMD if needed.
+    # For now, let's remove them to rely fully on the Dockerfile.
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
