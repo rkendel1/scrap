@@ -5,8 +5,8 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package.json and install dependencies
-COPY backend/package.json ./backend/package.json
-COPY backend/tsconfig.json ./backend/tsconfig.json
+COPY backend/package.json ./package.json # Corrected path
+COPY backend/tsconfig.json ./tsconfig.json # Corrected path
 COPY backend/src ./src
 
 # Install wait-for-it.sh and make it executable
