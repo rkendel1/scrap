@@ -14,7 +14,7 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
+      - ./backend/migrations:/docker-entrypoint-initdb.d # Keep this for initial setup
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-scrap_user} -d ${DB_NAME:-scrap_db}"]
       interval: 30s
@@ -24,15 +24,13 @@ services:
   # Backend API
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: . # Set context to project root
+      dockerfile: backend/Dockerfile # Specify Dockerfile path
     env_file:
       - ./.env         # shared root env
       - ./backend/.env # optional backend-specific overrides
     environment:
       DATABASE_URL: postgresql://${DB_USER:-scrap_user}:${DB_PASSWORD:-scrap_password}@db:${DB_PORT:-5432}/${DB_NAME:-scrap_db}
-      # Explicitly setting these from .env for clarity and robustness, though env_file should handle it.
-      # This ensures they are definitely available inside the container's environment.
       PORT: ${PORT:-3001}
       NODE_ENV: ${NODE_ENV:-development}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
@@ -45,15 +43,15 @@ services:
       - "${PORT:-3001}:${PORT:-3001}" # Use PORT from .env
     volumes:
       - ./backend/src:/app/src
-      - ./backend/package.json:/app/package.json
-      - ./backend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/public:/app/frontend/public
+      - ./backend/package.json:/app/backend/package.json # Corrected path for package.json
+      - ./backend/tsconfig.json:/app/backend/tsconfig.json # Corrected path for tsconfig.json
       - backend_node_modules:/app/node_modules
+      # Removed explicit mounts for wait-for-it.sh and start.sh as they are copied during build
     depends_on:
       db:
         condition: service_healthy
-    command: sh -c "npm install && npm run dev"
-    healthcheck: # <--- ADDED HEALTHCHECK FOR BACKEND
+    command: /app/start.sh # Use the custom start script
+    healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3001}/health"]
       interval: 10s
       timeout: 5s
@@ -62,8 +60,8 @@ services:
   # Frontend React App
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: . # Set context to project root
+      dockerfile: frontend/Dockerfile # Specify Dockerfile path
     env_file:
       - ./.env          # shared root env
       - ./frontend/.env # optional frontend-specific overrides
@@ -75,14 +73,14 @@ services:
       - ./frontend/package.json:/app/package.json
       - ./frontend/vite.config.ts:/app/vite.config.ts
       - ./frontend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json # Added this line
+      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
       - ./frontend/index.html:/app/index.html
-      - frontend_node_modules:/app/node_modules # New volume for node_modules
+      - frontend_node_modules:/app/node_modules
     depends_on:
-      backend: # <--- ENSURE DEPENDS_ON BACKEND IS HEALTHY
+      backend:
         condition: service_healthy
-    command: sh -c "npm install && npm run dev -- --host 0.0.0.0" # Run npm install before dev
-    healthcheck: # Add healthcheck for frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5173"]
       interval: 10s
       timeout: 5s
@@ -127,4 +125,4 @@ volumes:
   postgres_data:
   n8n_data:
   backend_node_modules:
-  frontend_node_modules: # New named volume for frontend node_modules
+  frontend_node_modules:
