@@ -19,10 +19,12 @@ COPY backend/src ./src
 # Copy wait-for-it.sh to the root /app directory (outside of /app/backend)
 # This path is relative to the build context (project root)
 COPY wait-for-it.sh /app/wait-for-it.sh
-RUN chmod +x /app/wait-for-it.sh
 
-# Install netcat and bash for wait-for-it.sh
-RUN apk add --no-cache netcat-openbsd bash
+# Install netcat, bash, and dos2unix for wait-for-it.sh
+RUN apk add --no-cache netcat-openbsd bash dos2unix
+
+# Convert wait-for-it.sh to Unix line endings and make it executable
+RUN dos2unix /app/wait-for-it.sh && chmod +x /app/wait-for-it.sh
 
 # Build the TypeScript project
 RUN npm run build
