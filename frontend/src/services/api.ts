@@ -11,7 +11,47 @@ const api = axios.create({
   },
 });
 
+// Add token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 export const apiService = {
+  // Set authentication header
+  setAuthToken: (token: string) => {
+    localStorage.setItem('authToken', token);
+  },
+
+  // Clear authentication
+  clearAuth: () => {
+    localStorage.removeItem('authToken');
+  },
+
+  // Generic request methods
+  get: async (url: string): Promise<any> => {
+    const response = await api.get(url);
+    return response.data;
+  },
+
+  post: async (url: string, data?: any): Promise<any> => {
+    const response = await api.post(url, data);
+    return response.data;
+  },
+
+  put: async (url: string, data?: any): Promise<any> => {
+    const response = await api.put(url, data);
+    return response.data;
+  },
+
+  delete: async (url: string): Promise<any> => {
+    const response = await api.delete(url);
+    return response.data;
+  },
+
   // Extract website data
   extractWebsite: async (data: ExtractRequest): Promise<ApiResponse<FormRecord>> => {
     const response = await api.post('/api/extract', data);
@@ -45,6 +85,27 @@ export const apiService = {
   // Health check
   healthCheck: async (): Promise<any> => {
     const response = await api.get('/health');
+    return response.data;
+  },
+
+  // Subscription endpoints
+  getSubscriptionPlans: async (): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/api/subscription/plans');
+    return response.data;
+  },
+
+  getCurrentSubscription: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/api/subscription/current');
+    return response.data;
+  },
+
+  createCheckoutSession: async (planId: string): Promise<ApiResponse<{ checkoutUrl: string }>> => {
+    const response = await api.post('/api/subscription/checkout', { planId });
+    return response.data;
+  },
+
+  createBillingPortalSession: async (): Promise<ApiResponse<{ portalUrl: string }>> => {
+    const response = await api.post('/api/subscription/billing-portal');
     return response.data;
   },
 };
