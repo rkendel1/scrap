@@ -1168,4 +1168,93 @@ export class SaaSService {
       console.error(`Error triggering connectors for form ${formId}:`, error);
     }
   }
+
+  /**
+   * Duplicate a form
+   */
+  async duplicateForm(formId: number, userId: number): Promise<any> {
+    try {
+      // First, get the original form
+      const originalFormQuery = `
+        SELECT * FROM forms WHERE id = $1 AND user_id = $2
+      `;
+      const originalFormResult = await pool.query(originalFormQuery, [formId, userId]);
+      
+      if (originalFormResult.rows.length === 0) {
+        throw new Error('Form not found or access denied');
+      }
+      
+      const originalForm = originalFormResult.rows[0];
+      
+      // Create a copy with a new name
+      const newFormName = `${originalForm.form_name} (Copy)`;
+      const newEmbedCode = this.generateEmbedCode();
+      
+      const insertQuery = `
+        INSERT INTO forms (
+          user_id, url, form_name, form_description, is_live, embed_code,
+          title, description, favicon, generated_form, tags
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        RETURNING *
+      `;
+      
+      const insertResult = await pool.query(insertQuery, [
+        userId,
+        originalForm.url,
+        newFormName,
+        originalForm.form_description,
+        false, // New forms start as draft
+        newEmbedCode,
+        originalForm.title,
+        originalForm.description,
+        originalForm.favicon,
+        originalForm.generated_form,
+        originalForm.tags || []
+      ]);
+      
+      return insertResult.rows[0];
+    } catch (error) {
+      console.error('Error duplicating form:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a form
+   */
+  async deleteForm(formId: number, userId: number): Promise<void> {
+    try {
+      const deleteQuery = `
+        DELETE FROM forms WHERE id = $1 AND user_id = $2
+      `;
+      const result = await pool.query(deleteQuery, [formId, userId]);
+      
+      if (result.rowCount === 0) {
+        throw new Error('Form not found or access denied');
+      }
+    } catch (error) {
+      console.error('Error deleting form:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update form tags
+   */
+  async updateFormTags(formId: number, userId: number, tags: string[]): Promise<void> {
+    try {
+      const updateQuery = `
+        UPDATE forms SET tags = $1, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2 AND user_id = $3
+      `;
+      const result = await pool.query(updateQuery, [JSON.stringify(tags), formId, userId]);
+      
+      if (result.rowCount === 0) {
+        throw new Error('Form not found or access denied');
+      }
+    } catch (error) {
+      console.error('Error updating form tags:', error);
+      throw error;
+    }
+  }
 }

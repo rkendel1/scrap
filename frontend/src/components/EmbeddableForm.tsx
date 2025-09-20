@@ -13,7 +13,6 @@ interface EmbeddableFormProps {
 export const EmbeddableForm: React.FC<EmbeddableFormProps> = ({ 
   form, 
   embedCode, 
-  showBranding = true,
   onSubmit 
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});

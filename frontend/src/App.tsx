@@ -8,10 +8,11 @@ import { ConnectorManager } from './components/ConnectorManager';
 import { LiveFormPreview } from './components/LiveFormPreview';
 import { FormAnalytics } from './components/FormAnalytics'; // New import
 import { FormEditor } from './components/FormEditor'; // New import
-import { ToggleSwitch } from './components/ToggleSwitch'; // New import
-import { FormThumbnail } from './components/FormThumbnail'; // New import
 import { EmbedCodeDisplay } from './components/EmbedCodeDisplay'; // New import
 import { SubscriptionManager } from './components/SubscriptionManager'; // New import
+import { FormDashboard } from './components/FormDashboard'; // New import
+import { FormTemplates } from './components/FormTemplates'; // New import
+import { LandingPage } from './components/LandingPage'; // New import
 import { apiService } from './services/api';
 import { FormRecord, User, SaaSForm, FormData, GeneratedForm, ApiResponse } from './types/api'; // Import ApiResponse
 
@@ -26,7 +27,7 @@ function App() {
   const [guestToken, setGuestToken] = useState<string | null>(null);
   const [showAuth, setShowAuth] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display' | 'subscription'>('builder'); // Added 'subscription'
+  const [currentView, setCurrentView] = useState<'builder' | 'legacy' | 'dashboard' | 'form-manage' | 'analytics' | 'form-editor' | 'embed-code-display' | 'subscription' | 'templates' | 'landing'>('landing'); // Added 'landing' and set as default
   const [selectedForm, setSelectedForm] = useState<SaaSForm | null>(null); // Changed from selectedFormId to selectedForm
 
   // State for the conversational builder's internal data, passed to LiveFormPreview
@@ -57,11 +58,14 @@ function App() {
     if (savedToken && savedUser) {
       setAuthToken(savedToken);
       setUser(JSON.parse(savedUser));
+      setCurrentView('dashboard'); // Go to dashboard if logged in
     } else if (!savedGuestToken) {
       // Create guest token for anonymous users
       createGuestToken();
+      setCurrentView('landing'); // Show landing page for non-authenticated users
     } else {
       setGuestToken(savedGuestToken);
+      setCurrentView('landing'); // Show landing page for guests
     }
 
     setLoading(false);
@@ -126,6 +130,7 @@ function App() {
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.removeItem('guestToken'); // Clear guest token
     setShowAuth(false);
+    setCurrentView('dashboard'); // Go to dashboard after login
   };
 
   const handleLogout = () => {
@@ -142,6 +147,7 @@ function App() {
       createGuestToken(); // This will fetch a new one from the backend and save to localStorage
     }
     setShowAuth(false);
+    setCurrentView('landing'); // Go back to landing page after logout
   };
 
   const handleAuthError = (errorMessage: string) => {
@@ -190,6 +196,105 @@ function App() {
     setCurrentView('dashboard');
     setError(null); // Clear any previous errors when navigating back
     fetchUserForms(); // Refresh forms list after returning to dashboard
+  };
+
+  const handleDuplicateForm = async (form: SaaSForm) => {
+    if (!authToken) {
+      setError('You must be logged in to duplicate forms.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${form.id}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result: ApiResponse<SaaSForm> = await response.json();
+
+      if (result.success && result.data) {
+        setForms(prevForms => [result.data!, ...prevForms]);
+        setError(null);
+      } else {
+        setError(result.message || 'Failed to duplicate form.');
+      }
+    } catch (err: any) {
+      console.error('Duplicate form error:', err);
+      setError(err.message || 'Failed to duplicate form. Please try again.');
+    }
+  };
+
+  const handleDeleteForm = async (form: SaaSForm) => {
+    if (!authToken) {
+      setError('You must be logged in to delete forms.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${form.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      const result: ApiResponse<void> = await response.json();
+
+      if (result.success) {
+        setForms(prevForms => prevForms.filter(f => f.id !== form.id));
+        setError(null);
+      } else {
+        setError(result.message || 'Failed to delete form.');
+      }
+    } catch (err: any) {
+      console.error('Delete form error:', err);
+      setError(err.message || 'Failed to delete form. Please try again.');
+    }
+  };
+
+  const handleUpdateFormTags = async (formId: number, tags: string[]) => {
+    if (!authToken) {
+      setError('You must be logged in to update form tags.');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${formId}/tags`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ tags })
+      });
+      const result: ApiResponse<{ tags: string[] }> = await response.json();
+
+      if (result.success) {
+        setForms(prevForms => 
+          prevForms.map(form => 
+            form.id === formId ? { ...form, tags } : form
+          )
+        );
+        setError(null);
+      } else {
+        setError(result.message || 'Failed to update form tags.');
+      }
+    } catch (err: any) {
+      console.error('Update form tags error:', err);
+      setError(err.message || 'Failed to update form tags. Please try again.');
+    }
+  };
+
+  const handleSelectTemplate = (generatedForm: GeneratedForm) => {
+    // Set the builder state with the template
+    setBuilderState(prev => ({
+      ...prev,
+      generatedForm,
+      isGeneratingForm: false
+    }));
+    setCurrentView('builder');
   };
 
   const handleDeleteRecord = async (id: number) => {
@@ -308,75 +413,83 @@ function App() {
 
   return (
     <div className="App">
-      <header className="header">
+      <header className={`header ${currentView === 'landing' ? 'landing-header' : ''}`}>
         <div className="container">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <div className="logo">
+            <div className="logo" onClick={() => setCurrentView(user ? 'dashboard' : 'landing')} style={{ cursor: 'pointer' }}>
               <div className="logo-icon">F</div>
               FormCraft AI
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              {user ? (
-                <>
-                  {/* Authenticated user's main actions */}
-                  <button 
-                    onClick={() => setCurrentView('builder')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    ✨ New Form
-                  </button>
-                  <button 
-                    onClick={() => setCurrentView('dashboard')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    📊 My Forms
-                  </button>
-                  <button 
-                    onClick={() => setCurrentView('subscription')} 
-                    className="btn btn-secondary btn-header-small"
-                  >
-                    💳 Subscription
-                  </button>
-                  <span style={{ fontSize: '14px', color: '#666' }}>
-                    Welcome, {user.first_name || user.email}
-                    {user.subscription_tier === 'paid' && (
-                      <span style={{ 
-                        marginLeft: '8px', 
-                        padding: '2px 8px', 
-                        backgroundColor: '#10b981', /* Green for PRO */
-                        color: 'white', 
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        PRO
-                      </span>
-                    )}
-                  </span>
-                  <button onClick={handleLogout} className="btn btn-secondary btn-header-small">
-                    Sign Out
-                  </button>
-                </>
-              ) : (
-                null // No main actions for guest here, they go to utility
-              )}
-              {/* Utility actions, always on the far right */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: user ? '12px' : 'auto' }}>
-                <a 
-                  href="/test-embed.html" 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="btn btn-secondary btn-header-small"
-                >
-                  🧪 Test Embed Page
-                </a>
-                {!user && ( // Only show Sign In/Register if not authenticated
-                  <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
-                    Sign In / Register
-                  </button>
+            {currentView !== 'landing' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {user ? (
+                  <>
+                    {/* Authenticated user's main actions */}
+                    <button 
+                      onClick={() => setCurrentView('builder')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      ✨ New Form
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('templates')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      📋 Templates
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('dashboard')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      📊 My Forms
+                    </button>
+                    <button 
+                      onClick={() => setCurrentView('subscription')} 
+                      className="btn btn-secondary btn-header-small"
+                    >
+                      💳 Subscription
+                    </button>
+                    <span style={{ fontSize: '14px', color: '#666' }}>
+                      Welcome, {user.first_name || user.email}
+                      {user.subscription_tier === 'paid' && (
+                        <span style={{ 
+                          marginLeft: '8px', 
+                          padding: '2px 8px', 
+                          backgroundColor: '#10b981', /* Green for PRO */
+                          color: 'white', 
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600'
+                        }}>
+                          PRO
+                        </span>
+                      )}
+                    </span>
+                    <button onClick={handleLogout} className="btn btn-secondary btn-header-small">
+                      Sign Out
+                    </button>
+                  </>
+                ) : (
+                  null // No main actions for guest here, they go to utility
                 )}
+                {/* Utility actions, always on the far right */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: user ? '12px' : 'auto' }}>
+                  <a 
+                    href="/test-embed.html" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="btn btn-secondary btn-header-small"
+                  >
+                    🧪 Test Embed Page
+                  </a>
+                  {!user && ( // Only show Sign In/Register if not authenticated
+                    <button onClick={() => setShowAuth(true)} className="btn btn-secondary btn-header-small">
+                      Sign In / Register
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </header>
@@ -394,9 +507,14 @@ function App() {
         </div>
       )}
 
-      <main className="container">
+      <main className={currentView === 'landing' ? '' : 'container'}>
         {/* Main Content */}
-        {currentView === 'builder' ? (
+        {currentView === 'landing' && !user ? (
+          <LandingPage
+            onGetStarted={() => setCurrentView('builder')}
+            onSignIn={() => setShowAuth(true)}
+          />
+        ) : currentView === 'builder' ? (
           <div className="builder-layout"> {/* New wrapper div */}
             <div className="builder-column"> {/* Left column for builder */}
               <ConversationalFormBuilder 
@@ -427,103 +545,20 @@ function App() {
             </div>
           </div>
         ) : currentView === 'dashboard' && user ? (
-          <div>
-            <div className="card">
-              <h2>📊 Your Forms Dashboard</h2>
-              <p>Manage your AI-generated forms, view analytics, and get embed codes.</p>
-              
-              {forms.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px' }}>
-                  <p>No forms yet. Create your first AI-powered form!</p>
-                  <button 
-                    onClick={() => setCurrentView('builder')}
-                    className="btn btn-primary"
-                  >
-                    Create Form
-                  </button>
-                </div>
-              ) : (
-                <div>
-                  {forms.map((form) => (
-                    <div key={form.id} style={{
-                      border: '1px solid #e9edf5',
-                      borderRadius: '12px',
-                      padding: '18px',
-                      marginBottom: '16px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
-                    }}>
-                      <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                        {/* Thumbnail on the left */}
-                        <FormThumbnail form={form} />
-
-                        {/* Form details on the right */}
-                        <div style={{ flexGrow: 1 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <h4 style={{ margin: '0', fontSize: '18px', color: '#1a202c' }}>{form.form_name}</h4>
-                            <ToggleSwitch
-                              isOn={form.is_live}
-                              onToggle={() => handleToggleFormLive(form.id)}
-                              label={form.is_live ? 'Live' : 'Draft'}
-                              disabled={!user} // Disable if not logged in
-                            />
-                          </div>
-                          <p style={{ margin: '0 0 8px 0', color: '#6b7280', fontSize: '14px' }}>
-                            {form.form_description}
-                          </p>
-                          <p style={{ margin: '0 0 8px 0', color: '#007bff', fontSize: '13px' }}>
-                            <a href={form.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                {form.url.length > 50 ? form.url.substring(0, 47) + '...' : form.url}
-                            </a>
-                          </p>
-                          <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span>📊 {form.submissions_count} submissions</span>
-                            <span>•</span>
-                            <span>Created: {new Date(form.created_at).toLocaleDateString()}</span>
-                            {form.updated_at && (
-                              <>
-                                <span>•</span>
-                                <span>Updated: {new Date(form.updated_at).toLocaleDateString()}</span>
-                              </>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
-                            <button 
-                              onClick={() => handleManageForm(form)} // Pass full form object
-                              className="btn btn-secondary" 
-                              style={{ fontSize: '12px' }}
-                            >
-                              🔌 Connectors
-                            </button>
-                            <button 
-                              onClick={() => handleEditForm(form)} // Pass full form object
-                              className="btn btn-secondary" 
-                              style={{ fontSize: '12px' }}
-                            >
-                              ⚙️ Edit
-                            </button>
-                            <button 
-                              onClick={() => handleGetEmbedCodeClick(form)} // Pass full form object
-                              className="btn btn-secondary" 
-                              style={{ fontSize: '12px' }}
-                            >
-                              📋 Embed Code
-                            </button>
-                            <button 
-                              onClick={() => handleShowAnalytics(form)} // Pass full form object
-                              className="btn btn-secondary" 
-                              style={{ fontSize: '12px' }}
-                            >
-                              📈 Analytics
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+          <FormDashboard
+            forms={forms}
+            user={user}
+            onCreateForm={() => setCurrentView('builder')}
+            onShowTemplates={() => setCurrentView('templates')}
+            onManageForm={handleManageForm}
+            onEditForm={handleEditForm}
+            onGetEmbedCode={handleGetEmbedCodeClick}
+            onShowAnalytics={handleShowAnalytics}
+            onToggleFormLive={handleToggleFormLive}
+            onDuplicateForm={handleDuplicateForm}
+            onDeleteForm={handleDeleteForm}
+            onUpdateFormTags={handleUpdateFormTags}
+          />
         ) : currentView === 'form-manage' && user && selectedForm ? (
           <div>
             <div className="card">
@@ -573,6 +608,11 @@ function App() {
           />
         ) : currentView === 'subscription' && user ? ( // New subscription view
           <SubscriptionManager />
+        ) : currentView === 'templates' ? ( // New templates view
+          <FormTemplates
+            onSelectTemplate={handleSelectTemplate}
+            onBack={() => setCurrentView(user ? 'dashboard' : 'builder')}
+          />
         ) : currentView === 'legacy' ? (
           <>
             {/* URL Input Form */}

@@ -10,52 +10,6 @@ interface FormEditorProps {
   onCancel: () => void;
 }
 
-// Helper to determine if a color is light (simplified for demo)
-const isLightColor = (color: string): boolean => {
-  if (!color) return false;
-  let r, g, b;
-
-  // Handle hex colors
-  if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    if (hex.length === 3) { // #rgb
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) { // #rrggbb
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
-    } else {
-      return false;
-    }
-  } 
-  // Handle rgb/rgba colors
-  else if (color.startsWith('rgb')) {
-    const parts = color.match(/\d+/g)?.map(Number);
-    if (parts && parts.length >= 3) {
-      [r, g, b] = parts;
-    } else {
-      return false;
-    }
-  }
-  // Handle hsl/hsla colors
-  else if (color.startsWith('hsl')) {
-    const lightnessMatch = color.match(/hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*(\d+)%\s*(?:,\s*\d*\.?\d+)?\)/);
-    if (lightnessMatch && lightnessMatch[1]) {
-      const lightness = parseInt(lightnessMatch[1]);
-      return lightness > 70;
-    }
-    return false;
-  }
-  else {
-    return false;
-  }
-
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.7;
-};
-
 export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onCancel }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,27 +19,29 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
   const [showEmbedCodeSection, setShowEmbedCodeSection] = useState(false); // State for embed code section visibility
 
 
-  const { register, handleSubmit, control, watch, setValue, formState: { errors } } = useForm<GeneratedForm>({
+  const { register, handleSubmit, control, watch, formState: { errors } } = useForm<GeneratedForm>({
     defaultValues: form.generated_form,
   });
 
-  const { fields, append, remove, move } = useFieldArray({
+  const { fields, append, remove } = useFieldArray({
     control,
     name: 'fields',
   });
 
   const watchedFormConfig = watch(); // Watch the entire form for live preview
 
-  // Reconstruct extracted data for LiveFormPreview
+  // Note: Design tokens are not available on the SaaSForm interface
+  // This would need to be enhanced if design token editing is required
   useEffect(() => {
     if (form) {
+      // Set minimal extracted data for preview compatibility
       setExtractedDesignTokens({
-        colorPalette: form.color_palette,
-        primaryColors: form.primary_colors,
-        fontFamilies: form.font_families,
-        messaging: form.messaging,
+        colorPalette: [],
+        primaryColors: [],
+        fontFamilies: [],
+        messaging: [],
       });
-      setExtractedVoiceAnalysis(form.voice_tone);
+      setExtractedVoiceAnalysis({});
     }
   }, [form]);
 
@@ -133,7 +89,6 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
 
   const renderFieldEditor = (field: FormField, index: number) => {
     const fieldType = watch(`fields.${index}.type`);
-    const fieldName = watch(`fields.${index}.name`);
 
     return (
       <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-3">
@@ -206,7 +161,6 @@ export const FormEditor: React.FC<FormEditorProps> = ({ form, onSaveSuccess, onC
             <textarea
               {...register(`fields.${index}.options`, {
                 setValueAs: (value) => value.split(',').map((s: string) => s.trim()).filter(Boolean),
-                valueAsArray: true,
               })}
               defaultValue={Array.isArray(field.options) ? field.options.join(', ') : ''}
               className="form-input"

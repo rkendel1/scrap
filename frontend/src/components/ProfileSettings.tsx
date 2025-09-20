@@ -104,7 +104,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUserUp
     try {
       const response = await apiService.updateProfile(data);
       if (response.success) {
-        onUserUpdate(response.user);
+        onUserUpdate(response.data);
         showMessage('success', 'Profile updated successfully!');
       } else {
         showMessage('error', response.message || 'Failed to update profile');
@@ -140,7 +140,12 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUserUp
     try {
       const response = await apiService.getNotificationPreferences();
       if (response.success) {
-        setNotificationPrefs(response.preferences);
+        setNotificationPrefs(response.data || {
+          email_notifications: true,
+          marketing_emails: false,
+          billing_alerts: true,
+          subscription_updates: true
+        });
       }
     } catch (error) {
       console.error('Failed to load notification preferences:', error);
@@ -151,7 +156,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUserUp
     try {
       const response = await apiService.getNotifications();
       if (response.success) {
-        setNotifications(response.notifications);
+        setNotifications(response.data?.notifications || []);
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);
@@ -162,7 +167,7 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ user, onUserUp
     try {
       const response = await apiService.getBillingHistory();
       if (response.success) {
-        setBillingHistory(response.data);
+        setBillingHistory(response.data || []);
       }
     } catch (error) {
       console.error('Failed to load billing history:', error);

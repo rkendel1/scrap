@@ -1,55 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { EmbeddableForm } from './EmbeddableForm';
-import { FormData, GeneratedForm, SaaSForm, FormField } from '../types/api';
-import { CheckCircle, Lock, Copy, EyeOff, Palette, Type, Mic, Sparkles } from 'lucide-react'; // Import new Lucide icons
-
-// Helper to determine if a color is light (simplified for demo)
-const isLightColor = (color: string): boolean => {
-  if (!color) return false;
-  let r, g, b;
-
-  // Handle hex colors
-  if (color.startsWith('#')) {
-    const hex = color.slice(1);
-    if (hex.length === 3) { // #rgb
-      r = parseInt(hex[0] + hex[0], 16);
-      g = parseInt(hex[1] + hex[1], 16);
-      b = parseInt(hex[2] + hex[2], 16);
-    } else if (hex.length === 6) { // #rrggbb
-      r = parseInt(hex.substring(0, 2), 16);
-      g = parseInt(hex.substring(2, 4), 16);
-      b = parseInt(hex.substring(4, 6), 16);
-    } else {
-      return false;
-    }
-  } 
-  // Handle rgb/rgba colors
-  else if (color.startsWith('rgb')) {
-    const parts = color.match(/\d+/g)?.map(Number);
-    if (parts && parts.length >= 3) {
-      [r, g, b] = parts;
-    } else {
-      return false;
-    }
-  }
-  // Handle hsl/hsla colors
-  else if (color.startsWith('hsl')) {
-    // For simplicity, treat HSL as dark if lightness is low
-    const lightnessMatch = color.match(/hsla?\(\s*\d+\s*,\s*\d+%\s*,\s*(\d+)%\s*(?:,\s*\d*\.?\d+)?\)/);
-    if (lightnessMatch && lightnessMatch[1]) {
-      const lightness = parseInt(lightnessMatch[1]);
-      return lightness > 70; // Arbitrary threshold for light HSL
-    }
-    return false;
-  }
-  else {
-    return false; // Not a recognized color format
-  }
-
-  // Calculate luminance (simplified)
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.7; // Threshold for "light"
-};
+import { FormData, GeneratedForm, SaaSForm } from '../types/api';
+import { CheckCircle } from 'lucide-react';
 
 interface LiveFormPreviewProps {
   formData?: Partial<FormData>; // Optional for editor mode
@@ -75,22 +27,15 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
   formData,
   generatedForm,
   createdForm,
-  user,
   extractedDesignTokens,
   extractedVoiceAnalysis,
-  onGetEmbedCodeClick,
   isDestinationConfigured,
   className,
-  showEmbedCodeSection,
-  onToggleEmbedCodeSection,
   isGeneratingForm = false, // Default to false
   previewGeneratedForm, // New prop
-  hideEmbedSection = false, // New prop
   hideAnalysisSection = false, // New prop
 }) => {
-  const { url, purpose, destinationType } = formData || {}; // Use optional chaining
-
-  const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:3001' : 'https://formcraft.ai';
+  const { url, destinationType } = formData || {}; // Use optional chaining
 
   const getPreviewForm = (): GeneratedForm | null => {
     // Prioritize direct preview form (for FormEditor)
@@ -153,8 +98,8 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     const { 
       colorPalette, primaryColors, colorUsage, fontFamilies, headings, textSamples,
       margins, paddings, spacingScale, layoutStructure, gridSystem, breakpoints,
-      buttons, formFields, cards, navigation, images, cssVariables, rawCSS, formSchema,
-      logoUrl, brandColors, icons, messaging
+      buttons, formFields, cards, navigation, cssVariables, rawCSS,
+      brandColors, messaging
     } = extractedDesignTokens || {};
     const { tone, personalityTraits, audienceAnalysis } = extractedVoiceAnalysis || {};
 
@@ -229,7 +174,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
             {/* Card 2: Typography */}
             <div 
               style={{ padding: '5px', borderRadius: '5px', border: '1px solid #e9ecef', backgroundColor: '#f8f9fa' }}
-              title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map(h => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
+              title={`Font Families: ${formatArray(fontFamilies || [], 5)}\nHeadings: ${formatArray((headings || []).map((h: any) => h.text), 5)}\nText Samples: ${formatArray(textSamples || [], 2)}`}
             >
               <strong style={{ color: '#28a745', display: 'block', marginBottom: '3px', fontSize: '10px' }}>Typography:</strong>
               {(fontFamilies && fontFamilies.length > 0) ? (
@@ -334,18 +279,7 @@ export const LiveFormPreview: React.FC<LiveFormPreviewProps> = ({
     );
   };
 
-  const scriptEmbedCode = createdForm?.embed_code
-    ? `<script src="${API_BASE}/embed.js" data-form="${createdForm.embed_code}"></script>`
-    : '<!-- Form embed code not available. -->';
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(scriptEmbedCode);
-    alert('Embed code copied to clipboard!');
-  };
-
-  // Determine if the zero state is active (no form generated yet)
-  const isZeroState = !currentFormToRender;
-  
+  // Note: embed code generation moved to EmbedCodeDisplay component
 
   // Determine the appropriate justify-content class for the wrapper
   // Always center vertically now
